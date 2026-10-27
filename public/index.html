@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Yes I Do · Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#141210; --muted:#6B655E; --line:#E6E1DA; --cream:#FAF7F2; --gold:#B8956A; --ok:#3F6B4E; --warn:#9B6A2E; --bad:#9B3B2E;
+         --h:"Cormorant Garamond",Georgia,serif; --b:"Inter",system-ui,sans-serif; }
+  *{ box-sizing:border-box } body{ margin:0; background:#fff; color:var(--ink); font:400 15px/1.55 var(--b); }
+  header{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:22px 28px; border-bottom:1px solid var(--line); }
+  header h1{ margin:0; font:500 26px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
+  header small{ display:block; font:500 11px/1 var(--b); letter-spacing:.2em; color:var(--gold); text-transform:uppercase; margin-bottom:6px; }
+  main{ max-width:1180px; margin:0 auto; padding:26px 28px 60px; }
+  .login{ max-width:420px; margin:60px auto; display:grid; gap:14px; text-align:center; }
+  .login h2{ margin:0; font:500 30px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
+  input, select, textarea{ width:100%; min-height:46px; padding:11px 14px; border:1px solid var(--line); border-radius:12px; font:400 15px/1.4 var(--b); color:var(--ink); background:#fff; }
+  textarea{ min-height:180px; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
+  button{ min-height:44px; padding:10px 20px; border-radius:999px; border:1px solid var(--ink); background:var(--ink); color:#fff; font:500 12px/1 var(--b); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+  button.ghost{ background:#fff; color:var(--ink); border-color:var(--line); } button.ghost:hover{ border-color:var(--ink); }
+  button[disabled]{ opacity:.5; cursor:default; }
+  .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 22px; }
+  .tabs button{ background:#fff; color:var(--ink); border-color:var(--line); } .tabs button[aria-pressed=true]{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:22px; }
+  .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
+  .wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:16px; }
+  table{ border-collapse:collapse; width:100%; font-size:13.5px; } th,td{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; vertical-align:top; } th{ font:500 11px/1.2 var(--b); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:var(--cream); position:sticky; top:0; }
+  td.wrapcell{ white-space:normal; min-width:260px; }
+  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; background:var(--cream); } .pill.ok{ background:#E6EFE8; color:var(--ok);} .pill.warn{ background:#F5ECDD; color:var(--warn);} .pill.bad{ background:#F3E3E0; color:var(--bad);}
+  .card{ border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:16px; } .card h2{ margin:0 0 8px; font:600 22px/1.2 var(--h); } .card p{ margin:0 0 12px; color:var(--muted); }
+  .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .msg{ margin-top:12px; font-size:14px; } .muted{ color:var(--muted); }
+  a{ color:var(--ink); }
+  [hidden]{ display:none!important; }
+  /* voyants */
+  .lights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+  .light{ border:1px solid var(--line); border-radius:16px; padding:20px 22px; display:grid; grid-template-columns:18px 1fr; gap:14px; align-items:start; }
+  .dot{ width:14px; height:14px; border-radius:50%; margin-top:5px; background:var(--line); box-shadow:0 0 0 4px var(--cream); }
+  .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
+  .light b{ display:block; font:600 20px/1.2 var(--h); margin-bottom:4px; } .light span{ font-size:13.5px; color:var(--muted); word-break:break-word; }
+  .version{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="row" style="gap:18px"><img src="/logo.png" alt="Yes I Do" style="height:46px;width:auto"><div><small>Yes I Do</small><h1>Administration</h1></div></div>
+  <div class="row" id="bar" hidden>
+    <select id="wsel" style="width:auto"></select>
+    <span class="version" id="ver"></span>
+    <button class="ghost" id="logout">Se déconnecter</button>
+  </div>
+</header>
+<main>
+  <div class="login" id="login">
+    <img src="/logo.png" alt="Yes I Do" style="height:64px;width:auto;margin:0 auto 6px"><h2>Connexion</h2>
+    <p class="muted" style="margin:0">Accès réservé à l'équipe Yes I Do.</p>
+    <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
+    <button id="go">Entrer</button>
+    <div class="msg" id="lmsg"></div>
+  </div>
+
+  <div id="app" hidden>
+    <div class="tabs">
+      <button id="tCheck" aria-pressed="true">Connexion</button>
+      <button id="tSuivi" aria-pressed="false">Suivi des foyers</button>
+      <button id="tImport" aria-pressed="false">Importer la liste</button>
+      <button id="tExport" aria-pressed="false">Exports et Excel</button>
+      <button id="tJournal" aria-pressed="false">Journal</button>
+    </div>
+
+    <section id="pCheck">
+      <div class="card">
+        <h2>Vérifier la connexion</h2>
+        <p>Trois voyants : la base de données, l'espace SharePoint (lecture du site et écriture d'un fichier de vérification dans « Listes d'invités »), et la boîte email (autorisation d'envoi accordée à l'application). Chaque vérification est inscrite au journal.</p>
+        <div class="row"><button id="check">Vérifier la connexion</button><span class="msg muted" id="cmsg" style="margin:0"></span></div>
+      </div>
+      <div class="lights">
+        <div class="light"><div class="dot" id="d-base"></div><div><b>Base de données</b><span id="t-base">Pas encore vérifiée.</span></div></div>
+        <div class="light"><div class="dot" id="d-sp"></div><div><b>SharePoint</b><span id="t-sp">Pas encore vérifié.</span></div></div>
+        <div class="light"><div class="dot" id="d-mail"></div><div><b>Boîte email</b><span id="t-mail">Pas encore vérifiée.</span></div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Mariages connus</h2>
+        <p>Les mariages que l'application connaît aujourd'hui. L'écran Paramètres pour déclarer un mariage arrive avec la version 1.1.</p>
+        <div class="wrap"><table><thead><tr><th>Code</th><th>Prénoms</th><th>Statut</th><th>Dossier SharePoint</th><th>Plateforme</th><th>Créé le</th></tr></thead><tbody id="mrows"></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="pSuivi" hidden>
+      <div class="kpis" id="kpis"></div>
+      <div class="row" style="margin-bottom:12px"><input id="search" placeholder="Rechercher un foyer" style="max-width:320px"><select id="filter" style="max-width:260px"><option value="">Tous les foyers</option><option value="nc">Confirmation en attente</option><option value="nv">Voyage à compléter</option><option value="nh">Hébergement non renseigné</option><option value="inner">Cercle des proches</option></select><button class="ghost" id="refresh">Actualiser</button></div>
+      <div class="wrap"><table><thead><tr><th>Foyer</th><th>Proches</th><th>Confirmation</th><th>Voyage</th><th>Hébergement</th><th>Chauffeur</th><th>Navettes</th><th>Charte</th><th>Dernière activité</th><th>Lien personnel</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </section>
+
+    <section id="pImport" hidden>
+      <div class="card">
+        <h2>Importer la liste qualifiée</h2>
+        <p>Une ligne par foyer, colonnes : <b>foyer ; membres ; enfants ; proches ; email ; telephone ; langue ; accompagnant ; cle</b>. Les membres et les enfants sont séparés par une barre oblique : « Sarah Miller / James Miller » et « Léo Miller (8) / Emma Miller (5) ». Proches et accompagnant : oui ou non. Langue : en, fr ou nl. Un foyer déjà présent garde sa clé ; un nouveau foyer reçoit une clé et un lien personnel. Cet import disparaît à la phase Recevoir les contacts, où la liste naît des contacts reçus.</p>
+        <input type="file" id="file" accept=".csv,text/csv">
+        <p class="muted" style="margin-top:12px">ou coller le contenu :</p>
+        <textarea id="csv" placeholder="foyer;membres;enfants;proches;email;telephone;langue;accompagnant&#10;Famille Miller;Sarah Miller / James Miller;Léo Miller (8);oui;sarah@example.com;+1 555 0100;en;non"></textarea>
+        <div class="row" style="margin-top:12px"><button id="doImport">Importer</button></div>
+        <div class="msg" id="imsg"></div>
+      </div>
+    </section>
+
+    <section id="pExport" hidden>
+      <div class="card">
+        <h2>Exports</h2>
+        <p>Dernière réponse de chaque foyer, au format CSV lisible par Excel.</p>
+        <div class="row">
+          <button class="ghost" data-x="suivi">Suivi</button><button class="ghost" data-x="invites">Invités et menus</button><button class="ghost" data-x="voyages">Voyages</button>
+          <button class="ghost" data-x="hebergement">Hébergement</button><button class="ghost" data-x="ailleurs">Logés ailleurs</button><button class="ghost" data-x="transferts">Transferts</button>
+          <button class="ghost" data-x="navettes">Navettes</button><button class="ghost" data-x="conciergerie">Conciergerie</button><button class="ghost" data-x="charte">Charte</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Excel SharePoint</h2>
+        <p id="xinfo">Chaque réponse est ajoutée en direct au classeur de réponses. Si l'écriture échoue, la ligne est gardée en file d'attente et renvoyée à la synchronisation suivante.</p>
+        <div class="row"><button id="sync">Synchroniser maintenant</button><button class="ghost" id="heads">Voir les en-têtes attendus</button></div>
+        <div class="msg" id="smsg"></div>
+      </div>
+    </section>
+
+    <section id="pJournal" hidden>
+      <div class="card">
+        <h2>Journal</h2>
+        <p>Les deux cents dernières opérations : qui, quand, quoi, avant, après. Le journal ne s'écrit qu'en ajout.</p>
+        <div class="row"><button class="ghost" id="jall">Toute l'application</button><button class="ghost" id="jw">Ce mariage</button></div>
+      </div>
+      <div class="wrap"><table><thead><tr><th>Date</th><th>Opération</th><th>Détail</th><th>Avant</th><th>Après</th><th>Opérateur</th></tr></thead><tbody id="jrows"></tbody></table></div>
+    </section>
+  </div>
+</main>
+<script>
+(function(){
+  var TOKEN = ""; try { TOKEN = sessionStorage.getItem("yid_token") || ""; } catch(e){}
+  var W = "", DATA = [], MARIAGES = [];
+  var $ = function(id){ return document.getElementById(id); };
+  function api(action, payload, extra){
+    return fetch("/api/forms?action=" + action + (W ? "&w=" + W : "") + (extra || ""), { method:"POST", headers:{ "Content-Type":"application/json", "X-Admin-Token": TOKEN }, body: JSON.stringify(payload || {}) })
+      .then(function(r){ return r.json().then(function(j){ if (r.status === 401) { throw new Error("Session expirée ou mot de passe refusé"); } if (!j.ok) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
+  }
+  function download(name, csv){ var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  function pill(t){ var c = /reçue|complet|lue|oui|Hôtel|Ailleurs|jour/.test(t) ? "ok" : /attente|compléter/.test(t) ? "warn" : /non renseigné/.test(t) ? "bad" : ""; return t ? '<span class="pill ' + c + '">' + esc(t) + '</span>' : '<span class="muted">·</span>'; }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]; }); }
+  function fmt(iso){ return String(iso || "").replace("T"," ").slice(0,16); }
+
+  /* ---------- connexion ---------- */
+  function enter(){
+    var pw = $("pw").value; $("lmsg").textContent = "";
+    fetch("/api/forms?action=admin-login", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: pw }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? "Mot de passe refusé" : (j.detail || "Connexion impossible")); TOKEN = j.token; try{ sessionStorage.setItem("yid_token", TOKEN); }catch(e){} $("ver").textContent = "Version " + j.version; opened(); })
+      .catch(function(e){ $("lmsg").textContent = e.message; });
+  }
+  function opened(){
+    $("login").hidden = true; $("app").hidden = false; $("bar").hidden = false;
+    api("admin-mariages").then(function(j){
+      MARIAGES = j.mariages || [];
+      $("wsel").innerHTML = MARIAGES.map(function(m){ return '<option value="' + esc(m.code) + '">' + esc(m.prenoms) + (m.statut === "Test" ? " (test)" : "") + "</option>"; }).join("");
+      var pref = ""; try { pref = sessionStorage.getItem("yid_w") || ""; } catch(e){}
+      W = MARIAGES.some(function(m){ return m.code === pref; }) ? pref : (MARIAGES[0] ? MARIAGES[0].code : "");
+      $("wsel").value = W;
+      $("mrows").innerHTML = MARIAGES.map(function(m){ return "<tr><td><b>" + esc(m.code) + "</b></td><td>" + esc(m.prenoms) + "</td><td>" + pill(m.statut) + "</td><td>" + esc(m.dossier || "") + "</td><td>" + (m.site ? '<a href="' + esc(m.site) + '" target="_blank" rel="noopener">ouvrir</a>' : "") + "</td><td>" + fmt(m.cree_le) + "</td></tr>"; }).join("") || '<tr><td colspan="6" class="muted">Aucun mariage.</td></tr>';
+      load();
+    }).catch(function(e){ logout(e.message); });
+  }
+  function logout(msg){ try{ sessionStorage.removeItem("yid_token"); }catch(e){} TOKEN = ""; $("login").hidden = false; $("app").hidden = true; $("bar").hidden = true; if (msg) $("lmsg").textContent = msg; }
+
+  /* ---------- voyants ---------- */
+  function light(id, st){ $("d-" + id).className = "dot " + (st.ok ? "ok" : "ko"); $("t-" + id).textContent = st.detail || ""; if (st.url && st.ok) { $("t-" + id).innerHTML += ' <a href="' + esc(st.url) + '" target="_blank" rel="noopener">ouvrir</a>'; } }
+  $("check").onclick = function(){
+    ["base","sp","mail"].forEach(function(id){ $("d-" + id).className = "dot wait"; $("t-" + id).textContent = "Vérification en cours"; });
+    $("cmsg").textContent = ""; $("check").disabled = true;
+    api("admin-check").then(function(j){ light("base", j.base); light("sp", j.sharepoint); light("mail", j.boite); var n = [j.base, j.sharepoint, j.boite].filter(function(x){ return x.ok; }).length; $("cmsg").textContent = n === 3 ? "Les trois voyants sont verts." : n + " voyant(s) sur 3 au vert."; })
+      .catch(function(e){ $("cmsg").textContent = e.message; ["base","sp","mail"].forEach(function(id){ $("d-" + id).className = "dot"; $("t-" + id).textContent = "Non vérifié."; }); })
+      .then(function(){ $("check").disabled = false; });
+  };
+
+  /* ---------- suivi ---------- */
+  function load(){ if (!W) return; api("admin-list").then(show).catch(function(e){ alertBox(e.message); }); }
+  function alertBox(t){ $("smsg").textContent = t; }
+  function show(j){
+    DATA = j.households || [];
+    var n = DATA.length, c = DATA.filter(function(h){ return h.confirmation === "reçue"; }).length, v = DATA.filter(function(h){ return h.voyage === "à compléter"; }).length,
+        hb = DATA.filter(function(h){ return h.hebergement !== "non renseigné"; }).length, inner = DATA.filter(function(h){ return h.proches === "oui"; }).length;
+    $("kpis").innerHTML = [[n,"foyers"],[c,"confirmations reçues"],[n-c,"confirmations en attente"],[v,"voyages à compléter"],[hb,"hébergements connus"],[inner,"foyers du cercle des proches"]]
+      .map(function(k){ return '<div class="kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join("");
+    $("xinfo").textContent = "Stockage : " + j.storage + " · Excel : " + j.excel + (j.pending ? " · " + j.pending + " écriture(s) en attente" : "") + ". Chaque réponse est ajoutée en direct au classeur de réponses ; une écriture qui échoue est gardée en file d'attente et renvoyée à la synchronisation suivante.";
+    table();
+  }
+  function table(){
+    var s = (($("search").value) || "").toLowerCase(), f = $("filter").value;
+    var list = DATA.filter(function(h){
+      if (s && h.foyer.toLowerCase().indexOf(s) < 0) return false;
+      if (f === "nc") return h.confirmation !== "reçue"; if (f === "nv") return h.voyage === "à compléter"; if (f === "nh") return h.hebergement === "non renseigné"; if (f === "inner") return h.proches === "oui"; return true;
+    });
+    $("rows").innerHTML = list.map(function(h){
+      return "<tr><td><b>" + esc(h.foyer) + "</b></td><td>" + (h.proches === "oui" ? pill("oui") : "") + "</td><td>" + pill(h.confirmation) + "</td><td>" + pill(h.voyage) + "</td><td>" + pill(h.hebergement) + "</td><td>" + pill(h.chauffeur) + "</td><td>" + pill(h.navettes) + "</td><td>" + pill(h.charte) + "</td><td>" + esc(fmt(h.derniere_activite)) + '</td><td><a href="' + esc(h.lien) + '" target="_blank" rel="noopener">ouvrir</a></td></tr>';
+    }).join("") || '<tr><td colspan="10" class="muted">Aucun foyer pour l\'instant.</td></tr>';
+  }
+  function tab(id){ ["Check","Suivi","Import","Export","Journal"].forEach(function(t){ $("t"+t).setAttribute("aria-pressed", String(t===id)); $("p"+t).hidden = t!==id; }); }
+
+  /* ---------- journal ---------- */
+  function journal(all){
+    var J = all ? (function(){ var w = W; W = ""; var p = api("admin-journal"); W = w; return p; })() : api("admin-journal");
+    J.then(function(j){
+      $("jrows").innerHTML = (j.journal || []).map(function(l){ return "<tr><td>" + fmt(l.cree_le) + "</td><td><b>" + esc(l.operation) + "</b></td><td class=\"wrapcell\">" + esc(l.detail || "") + "</td><td class=\"wrapcell\">" + esc(l.avant ? JSON.stringify(l.avant) : "") + "</td><td class=\"wrapcell\">" + esc(l.apres ? JSON.stringify(l.apres) : "") + "</td><td>" + esc(l.operateur || "") + "</td></tr>"; }).join("") || '<tr><td colspan="6" class="muted">Journal vide.</td></tr>';
+    }).catch(function(e){ $("jrows").innerHTML = '<tr><td colspan="6">' + esc(e.message) + "</td></tr>"; });
+  }
+
+  $("go").onclick = enter; $("pw").onkeydown = function(e){ if (e.key === "Enter") enter(); };
+  $("logout").onclick = function(){ logout(""); location.reload(); };
+  $("wsel").onchange = function(){ W = this.value; try{ sessionStorage.setItem("yid_w", W); }catch(e){} load(); };
+  $("tCheck").onclick = function(){ tab("Check"); }; $("tSuivi").onclick = function(){ tab("Suivi"); load(); }; $("tImport").onclick = function(){ tab("Import"); }; $("tExport").onclick = function(){ tab("Export"); }; $("tJournal").onclick = function(){ tab("Journal"); journal(true); };
+  $("jall").onclick = function(){ journal(true); }; $("jw").onclick = function(){ journal(false); };
+  $("search").oninput = table; $("filter").onchange = table; $("refresh").onclick = load;
+  $("file").onchange = function(){ var f = this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function(){ $("csv").value = r.result; }; r.readAsText(f, "utf-8"); };
+  $("doImport").onclick = function(){
+    $("imsg").textContent = "Import en cours";
+    api("admin-import", { csv: $("csv").value }).then(function(j){ $("imsg").textContent = j.count + " foyer(s) importé(s), dont " + j.created + " nouveau(x). Le fichier des liens personnels est téléchargé."; download("Liens personnels " + W + ".csv", j.csv); load(); })
+      .catch(function(e){ $("imsg").textContent = e.message; });
+  };
+  document.querySelectorAll("[data-x]").forEach(function(b){ b.onclick = function(){ var k = b.getAttribute("data-x"); api("admin-export", { kind:k }).then(function(j){ download(k + " " + W + ".csv", j.csv); }).catch(function(e){ alertBox(e.message); }); }; });
+  $("sync").onclick = function(){ $("smsg").textContent = "Synchronisation"; api("admin-sync").then(function(j){ $("smsg").textContent = j.skipped ? "Excel non branché : les réponses restent en base." : (j.ok ? "Excel à jour." : j.pending + " écriture(s) toujours en attente, voir la configuration Microsoft."); load(); }).catch(function(e){ $("smsg").textContent = e.message; }); };
+  $("heads").onclick = function(){ api("admin-headers").then(function(j){ $("smsg").innerHTML = "Classeur : <b>" + esc(j.path) + "</b><br>" + Object.keys(j.tables).map(function(t){ return "<b>" + esc(t) + "</b> : " + esc(j.tables[t].join(" | ")); }).join("<br>"); }); };
+  if (TOKEN) opened();
+})();
+</script>
+</body>
+</html>

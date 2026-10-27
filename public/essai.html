@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Yes I Do · Banc d'essai des formulaires</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --yid-ink:#141210; --yid-muted:#6B655E; --yid-line:#E6E1DA; --yid-cream:#FAF7F2; --yid-gold:#B8956A; --yid-h:"Cormorant Garamond",Georgia,serif; --yid-b:"Inter",system-ui,sans-serif; }
+  body{ margin:0; background:#fff; color:var(--yid-ink); font:400 15px/1.55 var(--yid-b); }
+  .bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:16px 20px; border-bottom:1px solid var(--yid-line); background:var(--yid-cream); }
+  .bar b{ font:600 20px/1 var(--yid-h); margin-right:12px; }
+  select, input{ min-height:42px; padding:8px 12px; border:1px solid var(--yid-line); border-radius:10px; font:inherit; background:#fff; }
+  button{ min-height:42px; padding:8px 18px; border-radius:999px; border:1px solid var(--yid-ink); background:var(--yid-ink); color:#fff; font:500 12px/1 var(--yid-b); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+  main{ max-width:720px; margin:30px auto; padding:0 16px; }
+  .frame{ border:1px solid var(--yid-line); border-radius:18px; padding:26px clamp(16px,4vw,32px); }
+  p.note{ color:var(--yid-muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Banc d'essai</b>
+  <select id="w"><option value="AK00">Awa &amp; Kévin (test)</option><option value="AM27">Alleta &amp; Mark</option></select>
+  <select id="f"><option value="confirm">Confirmation</option><option value="accommodation">Hébergement</option><option value="elsewhere">Logé ailleurs</option><option value="driver">Chauffeur</option><option value="shuttle">Navettes</option><option value="concierge">Conciergerie</option><option value="charter">Charte</option></select>
+  <input id="k" placeholder="Clé du foyer (vide = invité sans lien)" style="min-width:220px">
+  <input id="x" placeholder="hotel=Pavie ou driver=no" style="min-width:180px">
+  <select id="l"><option>en</option><option>fr</option><option>nl</option></select>
+  <button id="go">Afficher</button>
+</div>
+<main><p class="note">Chaque envoi depuis cette page est une vraie réponse : elle est enregistrée et écrite dans l'Excel du mariage choisi. Pour les essais, rester sur Awa &amp; Kévin.</p><div class="frame" id="box"></div></main>
+<script src="/yid-forms.js"></script>
+<script>
+  var $ = function(i){ return document.getElementById(i); };
+  var q = new URLSearchParams(location.search); if (q.get("k")) $("k").value = q.get("k"); if (q.get("f")) $("f").value = q.get("f");
+  function go(){
+    var extra = {}; ($("x").value || "").split("&").forEach(function(kv){ var i = kv.indexOf("="); if (i > 0) extra[kv.slice(0,i).trim()] = kv.slice(i+1).trim(); });
+    YIDForms.mount($("box"), { api: location.origin, w: $("w").value, k: $("k").value.trim(), form: $("f").value, extra: extra, lang: $("l").value });
+  }
+  $("go").onclick = go; go();
+</script>
+</body>
+</html>
