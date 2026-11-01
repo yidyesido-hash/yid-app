@@ -4,150 +4,98 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Yes I Do · Administration</title>
+<title>Yes I Do · L'application</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{ --ink:#141210; --muted:#6B655E; --line:#E6E1DA; --cream:#FAF7F2; --gold:#B8956A; --ok:#3F6B4E; --warn:#9B6A2E; --bad:#9B3B2E;
          --h:"Cormorant Garamond",Georgia,serif; --b:"Inter",system-ui,sans-serif; }
   *{ box-sizing:border-box } body{ margin:0; background:#fff; color:var(--ink); font:400 15px/1.55 var(--b); }
-  header{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:22px 28px; border-bottom:1px solid var(--line); }
-  header h1{ margin:0; font:500 26px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
+  header{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:18px 28px; border-bottom:1px solid var(--line); }
+  header h1{ margin:0; font:500 24px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
   header small{ display:block; font:500 11px/1 var(--b); letter-spacing:.2em; color:var(--gold); text-transform:uppercase; margin-bottom:6px; }
+  header img{ height:44px; width:auto; }
+  nav a{ font:500 11px/1 var(--b); letter-spacing:.14em; text-transform:uppercase; color:var(--ink); text-decoration:none; padding:10px 16px; border:1px solid var(--line); border-radius:999px; margin-left:6px; }
+  nav a.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
   main{ max-width:1180px; margin:0 auto; padding:26px 28px 60px; }
   .login{ max-width:420px; margin:60px auto; display:grid; gap:14px; text-align:center; }
   .login h2{ margin:0; font:500 30px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
   input, select, textarea{ width:100%; min-height:46px; padding:11px 14px; border:1px solid var(--line); border-radius:12px; font:400 15px/1.4 var(--b); color:var(--ink); background:#fff; }
-  textarea{ min-height:180px; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
+  textarea{ min-height:120px; }
+  textarea.mono{ min-height:180px; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
   button{ min-height:44px; padding:10px 20px; border-radius:999px; border:1px solid var(--ink); background:var(--ink); color:#fff; font:500 12px/1 var(--b); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
   button.ghost{ background:#fff; color:var(--ink); border-color:var(--line); } button.ghost:hover{ border-color:var(--ink); }
   button[disabled]{ opacity:.5; cursor:default; }
-  .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 22px; }
-  .tabs button{ background:#fff; color:var(--ink); border-color:var(--line); } .tabs button[aria-pressed=true]{ background:var(--ink); color:#fff; border-color:var(--ink); }
-  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:22px; }
-  .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
-  .wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:16px; }
-  table{ border-collapse:collapse; width:100%; font-size:13.5px; } th,td{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; vertical-align:top; } th{ font:500 11px/1.2 var(--b); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:var(--cream); position:sticky; top:0; }
-  td.wrapcell{ white-space:normal; min-width:260px; }
-  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; background:var(--cream); } .pill.ok{ background:#E6EFE8; color:var(--ok);} .pill.warn{ background:#F5ECDD; color:var(--warn);} .pill.bad{ background:#F3E3E0; color:var(--bad);}
-  .card{ border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:16px; } .card h2{ margin:0 0 8px; font:600 22px/1.2 var(--h); } .card p{ margin:0 0 12px; color:var(--muted); }
+  h2.sec{ margin:0 0 6px; font:500 22px/1.2 var(--h); letter-spacing:.06em; text-transform:uppercase; }
+  .lead{ color:var(--muted); margin:0 0 16px; }
+  .card{ border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:16px; } .card h3{ margin:0 0 8px; font:600 20px/1.2 var(--h); } .card p{ margin:0 0 12px; color:var(--muted); }
   .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-  .msg{ margin-top:12px; font-size:14px; } .muted{ color:var(--muted); }
+  .msg{ margin-top:12px; font-size:14px; } .muted{ color:var(--muted); } .small{ font-size:12.5px; }
   a{ color:var(--ink); }
   [hidden]{ display:none!important; }
-  /* voyants */
-  .lights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
-  .light{ border:1px solid var(--line); border-radius:16px; padding:20px 22px; display:grid; grid-template-columns:18px 1fr; gap:14px; align-items:start; }
-  .dot{ width:14px; height:14px; border-radius:50%; margin-top:5px; background:var(--line); box-shadow:0 0 0 4px var(--cream); }
-  .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
-  .light b{ display:block; font:600 20px/1.2 var(--h); margin-bottom:4px; } .light span{ font-size:13.5px; color:var(--muted); word-break:break-word; }
+  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; background:var(--cream); } .pill.ok{ background:#E6EFE8; color:var(--ok);} .pill.warn{ background:#F5ECDD; color:var(--warn);} .pill.bad{ background:#F3E3E0; color:var(--bad);} .pill.gold{ background:#F3EADF; color:#7d5f3b; }
+  .wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:16px; }
+  table{ border-collapse:collapse; width:100%; font-size:13.5px; } th,td{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; vertical-align:top; } th{ font:500 11px/1.2 var(--b); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:var(--cream); position:sticky; top:0; }
+  td.wrapcell{ white-space:normal; min-width:240px; }
+  /* accueil */
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; margin-bottom:26px; }
+  .wcard{ border:1px solid var(--line); border-radius:18px; padding:20px 22px; display:grid; grid-template-columns:96px 1fr; gap:18px; align-items:center; cursor:pointer; transition:border-color .15s; } .wcard:hover{ border-color:var(--gold); }
+  .wcard h3{ margin:0 0 4px; font:600 22px/1.15 var(--h); } .wcard .meta{ font-size:13px; color:var(--muted); line-height:1.5; }
+  .gauge{ width:96px; height:96px; position:relative; } .gauge svg{ transform:rotate(-90deg); } .gauge b{ position:absolute; inset:0; display:grid; place-items:center; font:500 22px/1 var(--h); }
+  .chem{ white-space:pre-wrap; line-height:1.7; }
+  .chem p{ margin:0 0 10px; }
+  .lights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+  .light{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; display:grid; grid-template-columns:18px 1fr; gap:12px; align-items:start; }
+  .dot{ width:12px; height:12px; border-radius:50%; margin-top:5px; background:var(--line); box-shadow:0 0 0 4px var(--cream); } .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
+  .light b{ display:block; font:600 18px/1.2 var(--h); margin-bottom:2px; } .light span{ font-size:13px; color:var(--muted); word-break:break-word; }
+  /* mariage : étapes */
+  .layout{ display:grid; grid-template-columns:300px 1fr; gap:24px; } @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
+  .steps{ border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .step{ display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .step:last-child{ border-bottom:0; } .step.on{ background:var(--cream); } .step.off{ color:var(--muted); }
+  .step .n{ width:28px; height:28px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font:600 13px/1 var(--h); } .step.done .n{ background:var(--ok); color:#fff; border-color:var(--ok);} .step.on .n{ border-color:var(--gold); color:var(--gold); }
+  .step .t{ font-size:14px; }
+  .field{ margin-bottom:18px; } .field label{ display:block; font:600 15px/1.35 var(--b); margin-bottom:4px; } .field .q{ font:600 16px/1.4 var(--b); margin-bottom:6px; } .field .h{ font:400 12.5px/1.45 var(--b); font-style:italic; color:var(--muted); margin-top:6px; }
+  .field .num{ font:500 11px/1 var(--b); letter-spacing:.14em; color:var(--gold); margin-bottom:4px; }
+  .radios{ display:flex; gap:8px; flex-wrap:wrap; } .radios label{ font:400 14px/1 var(--b); padding:10px 16px; border:1px solid var(--line); border-radius:999px; cursor:pointer; } .radios input{ display:none; } .radios input:checked + span{ font-weight:600; } .radios label.sel{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .err{ color:var(--bad); font-size:13px; }
   .version{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:22px; }
+  .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <div class="row" style="gap:18px"><img src="/logo.png" alt="Yes I Do" style="height:46px;width:auto"><div><small>Yes I Do</small><h1>Administration</h1></div></div>
-  <div class="row" id="bar" hidden>
-    <select id="wsel" style="width:auto"></select>
-    <span class="version" id="ver"></span>
-    <button class="ghost" id="logout">Se déconnecter</button>
-  </div>
+  <div class="row" style="gap:18px"><img src="/logo.png" alt="Yes I Do"><div><small>Yes I Do</small><h1>L'application</h1></div></div>
+  <nav id="nav" hidden><a href="#/" data-v="accueil">Accueil</a><a href="#/nouveau" data-v="nouveau">Déclarer un mariage</a><a href="#/reglages" data-v="reglages">Réglages</a><a href="#" id="logout">Se déconnecter</a> <span class="version" id="ver"></span></nav>
 </header>
 <main>
   <div class="login" id="login">
-    <img src="/logo.png" alt="Yes I Do" style="height:64px;width:auto;margin:0 auto 6px"><h2>Connexion</h2>
+    <img src="/logo.png" alt="Yes I Do" style="height:64px;width:auto;margin:0 auto 6px">
+    <h2>Connexion</h2>
     <p class="muted" style="margin:0">Accès réservé à l'équipe Yes I Do.</p>
     <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
     <button id="go">Entrer</button>
     <div class="msg" id="lmsg"></div>
   </div>
-
-  <div id="app" hidden>
-    <div class="tabs">
-      <button id="tCheck" aria-pressed="true">Connexion</button>
-      <button id="tSuivi" aria-pressed="false">Suivi des foyers</button>
-      <button id="tImport" aria-pressed="false">Importer la liste</button>
-      <button id="tExport" aria-pressed="false">Exports et Excel</button>
-      <button id="tJournal" aria-pressed="false">Journal</button>
-    </div>
-
-    <section id="pCheck">
-      <div class="card">
-        <h2>Vérifier la connexion</h2>
-        <p>Trois voyants : la base de données, l'espace SharePoint (lecture du site et écriture d'un fichier de vérification dans « Listes d'invités »), et la boîte email (autorisation d'envoi accordée à l'application). Chaque vérification est inscrite au journal.</p>
-        <div class="row"><button id="check">Vérifier la connexion</button><span class="msg muted" id="cmsg" style="margin:0"></span></div>
-      </div>
-      <div class="lights">
-        <div class="light"><div class="dot" id="d-base"></div><div><b>Base de données</b><span id="t-base">Pas encore vérifiée.</span></div></div>
-        <div class="light"><div class="dot" id="d-sp"></div><div><b>SharePoint</b><span id="t-sp">Pas encore vérifié.</span></div></div>
-        <div class="light"><div class="dot" id="d-mail"></div><div><b>Boîte email</b><span id="t-mail">Pas encore vérifiée.</span></div></div>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <h2>Mariages connus</h2>
-        <p>Les mariages que l'application connaît aujourd'hui. L'écran Paramètres pour déclarer un mariage arrive avec la version 1.1.</p>
-        <div class="wrap"><table><thead><tr><th>Code</th><th>Prénoms</th><th>Statut</th><th>Dossier SharePoint</th><th>Plateforme</th><th>Créé le</th></tr></thead><tbody id="mrows"></tbody></table></div>
-      </div>
-    </section>
-
-    <section id="pSuivi" hidden>
-      <div class="kpis" id="kpis"></div>
-      <div class="row" style="margin-bottom:12px"><input id="search" placeholder="Rechercher un foyer" style="max-width:320px"><select id="filter" style="max-width:260px"><option value="">Tous les foyers</option><option value="nc">Confirmation en attente</option><option value="nv">Voyage à compléter</option><option value="nh">Hébergement non renseigné</option><option value="inner">Cercle des proches</option></select><button class="ghost" id="refresh">Actualiser</button></div>
-      <div class="wrap"><table><thead><tr><th>Foyer</th><th>Proches</th><th>Confirmation</th><th>Voyage</th><th>Hébergement</th><th>Chauffeur</th><th>Navettes</th><th>Charte</th><th>Dernière activité</th><th>Lien personnel</th></tr></thead><tbody id="rows"></tbody></table></div>
-    </section>
-
-    <section id="pImport" hidden>
-      <div class="card">
-        <h2>Importer la liste qualifiée</h2>
-        <p>Une ligne par foyer, colonnes : <b>foyer ; membres ; enfants ; proches ; email ; telephone ; langue ; accompagnant ; cle</b>. Les membres et les enfants sont séparés par une barre oblique : « Sarah Miller / James Miller » et « Léo Miller (8) / Emma Miller (5) ». Proches et accompagnant : oui ou non. Langue : en, fr ou nl. Un foyer déjà présent garde sa clé ; un nouveau foyer reçoit une clé et un lien personnel. Cet import disparaît à la phase Recevoir les contacts, où la liste naît des contacts reçus.</p>
-        <input type="file" id="file" accept=".csv,text/csv">
-        <p class="muted" style="margin-top:12px">ou coller le contenu :</p>
-        <textarea id="csv" placeholder="foyer;membres;enfants;proches;email;telephone;langue;accompagnant&#10;Famille Miller;Sarah Miller / James Miller;Léo Miller (8);oui;sarah@example.com;+1 555 0100;en;non"></textarea>
-        <div class="row" style="margin-top:12px"><button id="doImport">Importer</button></div>
-        <div class="msg" id="imsg"></div>
-      </div>
-    </section>
-
-    <section id="pExport" hidden>
-      <div class="card">
-        <h2>Exports</h2>
-        <p>Dernière réponse de chaque foyer, au format CSV lisible par Excel.</p>
-        <div class="row">
-          <button class="ghost" data-x="suivi">Suivi</button><button class="ghost" data-x="invites">Invités et menus</button><button class="ghost" data-x="voyages">Voyages</button>
-          <button class="ghost" data-x="hebergement">Hébergement</button><button class="ghost" data-x="ailleurs">Logés ailleurs</button><button class="ghost" data-x="transferts">Transferts</button>
-          <button class="ghost" data-x="navettes">Navettes</button><button class="ghost" data-x="conciergerie">Conciergerie</button><button class="ghost" data-x="charte">Charte</button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Excel SharePoint</h2>
-        <p id="xinfo">Chaque réponse est ajoutée en direct au classeur de réponses. Si l'écriture échoue, la ligne est gardée en file d'attente et renvoyée à la synchronisation suivante.</p>
-        <div class="row"><button id="sync">Synchroniser maintenant</button><button class="ghost" id="heads">Voir les en-têtes attendus</button></div>
-        <div class="msg" id="smsg"></div>
-      </div>
-    </section>
-
-    <section id="pJournal" hidden>
-      <div class="card">
-        <h2>Journal</h2>
-        <p>Les deux cents dernières opérations : qui, quand, quoi, avant, après. Le journal ne s'écrit qu'en ajout.</p>
-        <div class="row"><button class="ghost" id="jall">Toute l'application</button><button class="ghost" id="jw">Ce mariage</button></div>
-      </div>
-      <div class="wrap"><table><thead><tr><th>Date</th><th>Opération</th><th>Détail</th><th>Avant</th><th>Après</th><th>Opérateur</th></tr></thead><tbody id="jrows"></tbody></table></div>
-    </section>
-  </div>
+  <div id="view" hidden></div>
 </main>
 <script>
 (function(){
   var TOKEN = ""; try { TOKEN = sessionStorage.getItem("yid_token") || ""; } catch(e){}
-  var W = "", DATA = [], MARIAGES = [];
   var $ = function(id){ return document.getElementById(id); };
-  function api(action, payload, extra){
-    return fetch("/api/forms?action=" + action + (W ? "&w=" + W : "") + (extra || ""), { method:"POST", headers:{ "Content-Type":"application/json", "X-Admin-Token": TOKEN }, body: JSON.stringify(payload || {}) })
-      .then(function(r){ return r.json().then(function(j){ if (r.status === 401) { throw new Error("Session expirée ou mot de passe refusé"); } if (!j.ok) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
+  var V = $("view");
+  function api(action, payload, w){
+    return fetch("/api/forms?action=" + action + (w ? "&w=" + encodeURIComponent(w) : ""), { method:"POST", headers:{ "Content-Type":"application/json", "X-Admin-Token": TOKEN }, body: JSON.stringify(payload || {}) })
+      .then(function(r){ return r.json().then(function(j){ if (r.status === 401) { logout("Session expirée, reconnectez vous."); throw new Error("Session expirée"); } if (!j.ok && r.status !== 422) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
   }
-  function download(name, csv){ var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
-  function pill(t){ var c = /reçue|complet|lue|oui|Hôtel|Ailleurs|jour/.test(t) ? "ok" : /attente|compléter/.test(t) ? "warn" : /non renseigné/.test(t) ? "bad" : ""; return t ? '<span class="pill ' + c + '">' + esc(t) + '</span>' : '<span class="muted">·</span>'; }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]; }); }
-  function fmt(iso){ return String(iso || "").replace("T"," ").slice(0,16); }
+  function fmt(iso){ if (!iso) return ""; var d = new Date(String(iso).replace(" ", "T")); if (isNaN(d)) return String(iso).slice(0,16); return d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" }); }
+  function fdate(d){ if (!d) return ""; var p = String(d).slice(0,10).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : d; }
+  function pill(t, c){ return t ? '<span class="pill ' + (c || "") + '">' + esc(t) + '</span>' : ""; }
+  function statutClass(s){ return s === "En préparation" || s === "Signé" ? "ok" : s === "Prospect" ? "warn" : s === "Test" ? "gold" : ""; }
+  function download(name, csv){ var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  function gauge(p){ var r = 40, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, p)) / 100); return '<div class="gauge"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="' + r + '" fill="none" stroke="#E6E1DA" stroke-width="7"/><circle cx="48" cy="48" r="' + r + '" fill="none" stroke="#B8956A" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg><b>' + p + '%</b></div>'; }
 
   /* ---------- connexion ---------- */
   function enter(){
@@ -157,77 +105,161 @@
       .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? "Mot de passe refusé" : (j.detail || "Connexion impossible")); TOKEN = j.token; try{ sessionStorage.setItem("yid_token", TOKEN); }catch(e){} $("ver").textContent = "Version " + j.version; opened(); })
       .catch(function(e){ $("lmsg").textContent = e.message; });
   }
-  function opened(){
-    $("login").hidden = true; $("app").hidden = false; $("bar").hidden = false;
-    api("admin-mariages").then(function(j){
-      MARIAGES = j.mariages || [];
-      $("wsel").innerHTML = MARIAGES.map(function(m){ return '<option value="' + esc(m.code) + '">' + esc(m.prenoms) + (m.statut === "Test" ? " (test)" : "") + "</option>"; }).join("");
-      var pref = ""; try { pref = sessionStorage.getItem("yid_w") || ""; } catch(e){}
-      W = MARIAGES.some(function(m){ return m.code === pref; }) ? pref : (MARIAGES[0] ? MARIAGES[0].code : "");
-      $("wsel").value = W;
-      $("mrows").innerHTML = MARIAGES.map(function(m){ return "<tr><td><b>" + esc(m.code) + "</b></td><td>" + esc(m.prenoms) + "</td><td>" + pill(m.statut) + "</td><td>" + esc(m.dossier || "") + "</td><td>" + (m.site ? '<a href="' + esc(m.site) + '" target="_blank" rel="noopener">ouvrir</a>' : "") + "</td><td>" + fmt(m.cree_le) + "</td></tr>"; }).join("") || '<tr><td colspan="6" class="muted">Aucun mariage.</td></tr>';
-      load();
-    }).catch(function(e){ logout(e.message); });
-  }
-  function logout(msg){ try{ sessionStorage.removeItem("yid_token"); }catch(e){} TOKEN = ""; $("login").hidden = false; $("app").hidden = true; $("bar").hidden = true; if (msg) $("lmsg").textContent = msg; }
+  function opened(){ $("login").hidden = true; V.hidden = false; $("nav").hidden = false; route(); }
+  function logout(msg){ try{ sessionStorage.removeItem("yid_token"); }catch(e){} TOKEN = ""; $("login").hidden = false; V.hidden = true; $("nav").hidden = true; if (msg) $("lmsg").textContent = msg; }
+  $("go").onclick = enter; $("pw").onkeydown = function(e){ if (e.key === "Enter") enter(); };
+  $("logout").onclick = function(e){ e.preventDefault(); logout(""); location.hash = "#/"; };
 
-  /* ---------- voyants ---------- */
-  function light(id, st){ $("d-" + id).className = "dot " + (st.ok ? "ok" : "ko"); $("t-" + id).textContent = st.detail || ""; if (st.url && st.ok) { $("t-" + id).innerHTML += ' <a href="' + esc(st.url) + '" target="_blank" rel="noopener">ouvrir</a>'; } }
-  $("check").onclick = function(){
+  /* ---------- routeur ---------- */
+  function route(){
+    if (!TOKEN) return;
+    var h = location.hash || "#/";
+    document.querySelectorAll("#nav a[data-v]").forEach(function(a){ a.classList.toggle("on", (h === "#/" && a.dataset.v === "accueil") || h.indexOf("#/" + a.dataset.v) === 0); });
+    var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d))?/);
+    if (m) return mariage(m[1].toUpperCase(), m[2] ? +m[2] : null);
+    if (h.indexOf("#/nouveau") === 0) return cadrage(null);
+    if (h.indexOf("#/reglages") === 0) return reglages();
+    return accueil();
+  }
+  window.addEventListener("hashchange", route);
+
+  /* ---------- voyants (réutilisés) ---------- */
+  function lightsHtml(){ return '<div class="lights"><div class="light"><div class="dot" id="d-base"></div><div><b>Base de données</b><span id="t-base">Pas encore vérifiée.</span></div></div><div class="light"><div class="dot" id="d-sp"></div><div><b>SharePoint</b><span id="t-sp">Pas encore vérifié.</span></div></div><div class="light"><div class="dot" id="d-mail"></div><div><b>Boîte email</b><span id="t-mail">Pas encore vérifiée.</span></div></div></div>'; }
+  function light(id, st){ $("d-" + id).className = "dot " + (st.ok ? "ok" : "ko"); $("t-" + id).textContent = st.detail || ""; if (st.url && st.ok) $("t-" + id).innerHTML += ' <a href="' + esc(st.url) + '" target="_blank" rel="noopener">ouvrir</a>'; }
+  function runCheck(){
     ["base","sp","mail"].forEach(function(id){ $("d-" + id).className = "dot wait"; $("t-" + id).textContent = "Vérification en cours"; });
     $("cmsg").textContent = ""; $("check").disabled = true;
     api("admin-check").then(function(j){ light("base", j.base); light("sp", j.sharepoint); light("mail", j.boite); var n = [j.base, j.sharepoint, j.boite].filter(function(x){ return x.ok; }).length; $("cmsg").textContent = n === 3 ? "Les trois voyants sont verts." : n + " voyant(s) sur 3 au vert."; })
-      .catch(function(e){ $("cmsg").textContent = e.message; ["base","sp","mail"].forEach(function(id){ $("d-" + id).className = "dot"; $("t-" + id).textContent = "Non vérifié."; }); })
-      .then(function(){ $("check").disabled = false; });
-  };
-
-  /* ---------- suivi ---------- */
-  function load(){ if (!W) return; api("admin-list").then(show).catch(function(e){ alertBox(e.message); }); }
-  function alertBox(t){ $("smsg").textContent = t; }
-  function show(j){
-    DATA = j.households || [];
-    var n = DATA.length, c = DATA.filter(function(h){ return h.confirmation === "reçue"; }).length, v = DATA.filter(function(h){ return h.voyage === "à compléter"; }).length,
-        hb = DATA.filter(function(h){ return h.hebergement !== "non renseigné"; }).length, inner = DATA.filter(function(h){ return h.proches === "oui"; }).length;
-    $("kpis").innerHTML = [[n,"foyers"],[c,"confirmations reçues"],[n-c,"confirmations en attente"],[v,"voyages à compléter"],[hb,"hébergements connus"],[inner,"foyers du cercle des proches"]]
-      .map(function(k){ return '<div class="kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join("");
-    $("xinfo").textContent = "Stockage : " + j.storage + " · Excel : " + j.excel + (j.pending ? " · " + j.pending + " écriture(s) en attente" : "") + ". Chaque réponse est ajoutée en direct au classeur de réponses ; une écriture qui échoue est gardée en file d'attente et renvoyée à la synchronisation suivante.";
-    table();
+      .catch(function(e){ $("cmsg").textContent = e.message; }).then(function(){ if ($("check")) $("check").disabled = false; });
   }
-  function table(){
-    var s = (($("search").value) || "").toLowerCase(), f = $("filter").value;
-    var list = DATA.filter(function(h){
-      if (s && h.foyer.toLowerCase().indexOf(s) < 0) return false;
-      if (f === "nc") return h.confirmation !== "reçue"; if (f === "nv") return h.voyage === "à compléter"; if (f === "nh") return h.hebergement === "non renseigné"; if (f === "inner") return h.proches === "oui"; return true;
+
+  /* ---------- accueil ---------- */
+  function accueil(){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-accueil").then(function(j){
+      var encours = j.mariages.filter(function(m){ return m.statut !== "Clos" && m.statut !== "Test"; }), autres = j.mariages.filter(function(m){ return m.statut === "Clos" || m.statut === "Test"; });
+      var card = function(m){ return '<div class="wcard" onclick="location.hash=\'#/m/' + m.code + '\'">' + gauge(m.progression) + '<div><h3>' + esc(m.prenoms) + '</h3><div class="meta">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "date à fixer") + (m.lieu ? " · " + esc(m.lieu) : "") + '<br>Étape ' + m.etape + ' sur 8 : ' + esc(j.reglages.etapes[m.etape - 1] || "") + '<br>' + (m.date_remise ? "Liste attendue le " + fdate(m.date_remise) + " · " : "") + (m.date_arret ? "Clôture le " + fdate(m.date_arret) : "") + '<br>' + m.foyers + ' foyer(s)' + (m.anomalies ? ' · <span class="pill warn">' + m.anomalies + ' anomalie(s)</span>' : "") + '</div></div></div>'; };
+      V.innerHTML =
+        '<h2 class="sec">Mariages en cours</h2><p class="lead">Une carte par mariage, la jauge indique les étapes franchies sur huit. Cliquer pour ouvrir.</p>' +
+        '<div class="grid">' + (encours.map(card).join("") || '<div class="card"><p>Aucun mariage en cours. <a href="#/nouveau">Déclarer un mariage</a> ouvre l\'étape Cadrage.</p></div>') + '</div>' +
+        (autres.length ? '<h2 class="sec">Tests et mariages clos</h2><div class="grid">' + autres.map(card).join("") + '</div>' : "") +
+        '<h2 class="sec">Le cheminement d\'un mariage</h2><p class="lead">Les huit étapes, dans l\'ordre où un mariage les traverse. Ce texte se modifie dans <a href="#/reglages">Réglages</a>.</p><div class="card chem">' + j.reglages.cheminement.split("\n").map(function(l){ return "<p>" + esc(l) + "</p>"; }).join("") + '</div>' +
+        '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
+        '<h2 class="sec" style="margin-top:26px">Journal récent</h2><div class="wrap"><table><thead><tr><th>Date</th><th>Opération</th><th>Détail</th><th>Opérateur</th></tr></thead><tbody>' + (j.journal.map(function(l){ return "<tr><td>" + fmt(l.cree_le) + "</td><td><b>" + esc(l.operation) + "</b></td><td class=\"wrapcell\">" + esc(l.detail || "") + "</td><td>" + esc(l.operateur || "") + "</td></tr>"; }).join("") || '<tr><td colspan="4" class="muted">Journal vide.</td></tr>') + '</tbody></table></div>';
+      $("check").onclick = runCheck;
+    }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+
+  /* ---------- réglages ---------- */
+  function reglages(){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-reglages").then(function(j){
+      V.innerHTML = '<h2 class="sec">Réglages</h2><p class="lead">Les textes vivants de l\'outil. Ce qui est écrit ici s\'affiche tel quel à toute l\'équipe.</p>' +
+        '<div class="card"><h3>Le cheminement d\'un mariage</h3><p>Affiché sur l\'accueil. Une ligne par étape, dans l\'ordre ; ajoutez ou retirez librement au fil de l\'avancement de l\'outil.</p><textarea id="chem" class="mono" style="min-height:320px">' + esc(j.cheminement) + '</textarea><div class="row" style="margin-top:12px"><button id="savechem">Enregistrer</button><span class="muted" id="rmsg"></span></div></div>' +
+        '<div class="card"><h3>Les huit étapes</h3><p>Les intitulés des étapes d\'un mariage, identiques à la feuille de route remise au couple.</p><ol>' + j.etapes.map(function(e){ return "<li>" + esc(e) + "</li>"; }).join("") + '</ol></div>';
+      $("savechem").onclick = function(){ $("rmsg").textContent = "Enregistrement"; api("admin-reglages", { cle: "cheminement", valeur: $("chem").value }).then(function(){ $("rmsg").textContent = "Enregistré."; }).catch(function(e){ $("rmsg").textContent = e.message; }); };
     });
-    $("rows").innerHTML = list.map(function(h){
-      return "<tr><td><b>" + esc(h.foyer) + "</b></td><td>" + (h.proches === "oui" ? pill("oui") : "") + "</td><td>" + pill(h.confirmation) + "</td><td>" + pill(h.voyage) + "</td><td>" + pill(h.hebergement) + "</td><td>" + pill(h.chauffeur) + "</td><td>" + pill(h.navettes) + "</td><td>" + pill(h.charte) + "</td><td>" + esc(fmt(h.derniere_activite)) + '</td><td><a href="' + esc(h.lien) + '" target="_blank" rel="noopener">ouvrir</a></td></tr>';
-    }).join("") || '<tr><td colspan="10" class="muted">Aucun foyer pour l\'instant.</td></tr>';
-  }
-  function tab(id){ ["Check","Suivi","Import","Export","Journal"].forEach(function(t){ $("t"+t).setAttribute("aria-pressed", String(t===id)); $("p"+t).hidden = t!==id; }); }
-
-  /* ---------- journal ---------- */
-  function journal(all){
-    var J = all ? (function(){ var w = W; W = ""; var p = api("admin-journal"); W = w; return p; })() : api("admin-journal");
-    J.then(function(j){
-      $("jrows").innerHTML = (j.journal || []).map(function(l){ return "<tr><td>" + fmt(l.cree_le) + "</td><td><b>" + esc(l.operation) + "</b></td><td class=\"wrapcell\">" + esc(l.detail || "") + "</td><td class=\"wrapcell\">" + esc(l.avant ? JSON.stringify(l.avant) : "") + "</td><td class=\"wrapcell\">" + esc(l.apres ? JSON.stringify(l.apres) : "") + "</td><td>" + esc(l.operateur || "") + "</td></tr>"; }).join("") || '<tr><td colspan="6" class="muted">Journal vide.</td></tr>';
-    }).catch(function(e){ $("jrows").innerHTML = '<tr><td colspan="6">' + esc(e.message) + "</td></tr>"; });
   }
 
-  $("go").onclick = enter; $("pw").onkeydown = function(e){ if (e.key === "Enter") enter(); };
-  $("logout").onclick = function(){ logout(""); location.reload(); };
-  $("wsel").onchange = function(){ W = this.value; try{ sessionStorage.setItem("yid_w", W); }catch(e){} load(); };
-  $("tCheck").onclick = function(){ tab("Check"); }; $("tSuivi").onclick = function(){ tab("Suivi"); load(); }; $("tImport").onclick = function(){ tab("Import"); }; $("tExport").onclick = function(){ tab("Export"); }; $("tJournal").onclick = function(){ tab("Journal"); journal(true); };
-  $("jall").onclick = function(){ journal(true); }; $("jw").onclick = function(){ journal(false); };
-  $("search").oninput = table; $("filter").onchange = table; $("refresh").onclick = load;
-  $("file").onchange = function(){ var f = this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function(){ $("csv").value = r.result; }; r.readAsText(f, "utf-8"); };
-  $("doImport").onclick = function(){
-    $("imsg").textContent = "Import en cours";
-    api("admin-import", { csv: $("csv").value }).then(function(j){ $("imsg").textContent = j.count + " foyer(s) importé(s), dont " + j.created + " nouveau(x). Le fichier des liens personnels est téléchargé."; download("Liens personnels " + W + ".csv", j.csv); load(); })
-      .catch(function(e){ $("imsg").textContent = e.message; });
-  };
-  document.querySelectorAll("[data-x]").forEach(function(b){ b.onclick = function(){ var k = b.getAttribute("data-x"); api("admin-export", { kind:k }).then(function(j){ download(k + " " + W + ".csv", j.csv); }).catch(function(e){ alertBox(e.message); }); }; });
-  $("sync").onclick = function(){ $("smsg").textContent = "Synchronisation"; api("admin-sync").then(function(j){ $("smsg").textContent = j.skipped ? "Excel non branché : les réponses restent en base." : (j.ok ? "Excel à jour." : j.pending + " écriture(s) toujours en attente, voir la configuration Microsoft."); load(); }).catch(function(e){ $("smsg").textContent = e.message; }); };
-  $("heads").onclick = function(){ api("admin-headers").then(function(j){ $("smsg").innerHTML = "Classeur : <b>" + esc(j.path) + "</b><br>" + Object.keys(j.tables).map(function(t){ return "<b>" + esc(t) + "</b> : " + esc(j.tables[t].join(" | ")); }).join("<br>"); }); };
+  /* ---------- mariage : les huit étapes ---------- */
+  function mariage(code, etape){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-mariage", {}, code).then(function(j){
+      var m = j.mariage, cur = etape || m.etape || 1, done = m.etapes || {};
+      var steps = m.etapes_libelles.map(function(t, i){ var n = i + 1, cls = done[n] ? "done" : (n === m.etape ? "" : "off"); return '<div class="step ' + cls + (n === cur ? " on" : "") + '" onclick="location.hash=\'#/m/' + m.code + '/' + n + '\'"><div class="n">' + n + '</div><div class="t">' + esc(t) + '</div><div>' + (done[n] ? pill("franchie", "ok") : n === m.etape ? pill("en cours", "gold") : "") + '</div></div>'; }).join("");
+      V.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h2 class="sec">' + esc(m.prenoms) + '</h2><div class="muted">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + ' · code ' + esc(m.code) + '</div></div>' + gauge(Math.round(Object.keys(done).length / 8 * 100)) + '</div>' +
+        '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
+      var pane = $("pane");
+      if (cur === 1) { cadrage(m, pane); return; }
+      if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
+      var titles = m.etapes_libelles, versions = { 2: "1.2", 3: "1.3", 4: "1.5", 5: "1.6", 6: "1.7", 7: "1.8", 8: "1.8" };
+      pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape arrive avec la version ' + versions[cur] + ' de l\'application. ' + (cur === 2 ? "Les contacts du couple arriveront ici, par email sur la boîte du mariage ou par dépôt ; l'outil construira la liste." : cur === 3 ? "La liste se qualifiera ici, ligne par ligne, et chaque foyer complet recevra sa clé." : cur === 5 ? "Le suivi des foyers, les confirmations et les relances vivront ici." : "") + '</p></div>';
+    }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+
+  /* ---------- étape 1 : cadrage (checklist du call 1) ---------- */
+  var CHK = null;
+  function cadrage(m, pane){
+    var target = pane || V;
+    if (!pane) V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-checklist").then(function(j){
+      CHK = j;
+      var vals = (m && m.checklist) || {};
+      if (!m) { vals.statut = "Signé"; vals.langue_defaut = "fr"; }
+      var html = (pane ? "" : '<h2 class="sec">Déclarer un mariage</h2><p class="lead">La checklist du premier rendez vous. En gras, ce qui se dit au couple ; en italique, comment remplir. En validant, le mariage existe, son dossier et ses classeurs sont créés sur SharePoint, la fiche est archivée en PDF.</p>') +
+        (pane ? '<div class="card"><h3>1. Cadrage</h3><p>La fiche du premier rendez vous. Modifier un champ et enregistrer réécrit l\'onglet Paramètres du classeur et archive une nouvelle version de la fiche.' + (m.fiche_pdf ? ' Dernière fiche : ' + esc(m.fiche_pdf.split("/").pop()) + '.' : '') + (m.dossier ? ' Dossier SharePoint : ' + esc(m.dossier) + '.' : '') + '</p></div>' : "") +
+        '<form id="chk" onsubmit="return false">' + j.sections.map(function(s){
+          return '<div class="card"><h3>' + esc(s.titre) + '</h3><p>' + esc(s.aide) + '</p>' + s.champs.map(function(f){ return field(f, vals[f.k]); }).join("") + '</div>';
+        }).join("") + '<div class="card"><div class="row"><button id="save">' + (m ? "Enregistrer les modifications" : "Déclarer le mariage") + '</button><span class="muted" id="smsg"></span></div><div id="serr" class="err"></div><div id="sres"></div></div></form>';
+      target.innerHTML = html;
+      wire(m);
+    }).catch(function(e){ target.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function field(f, v){
+    var val = Array.isArray(v) ? v.join(" ; ") : (v == null ? "" : v);
+    var input;
+    if (f.t === "select") input = '<select name="' + f.k + '"><option value="">Choisir</option>' + f.o.map(function(o){ return '<option' + (o === val ? " selected" : "") + '>' + esc(o) + '</option>'; }).join("") + '</select>';
+    else if (f.t === "ouinon") input = '<div class="radios">' + ["Oui","Non"].map(function(o){ return '<label class="' + (o === val ? "sel" : "") + '"><input type="radio" name="' + f.k + '" value="' + o + '"' + (o === val ? " checked" : "") + '><span>' + o + '</span></label>'; }).join("") + '</div>';
+    else if (f.t === "date") input = '<input type="date" name="' + f.k + '" value="' + esc(val) + '">';
+    else if (f.t === "int") input = '<input type="number" name="' + f.k + '" value="' + esc(val) + '" inputmode="numeric">';
+    else if (f.t === "liste") input = '<input type="text" name="' + f.k + '" value="' + esc(val) + '" placeholder="Séparés par des points virgules">';
+    else input = '<input type="text" name="' + f.k + '" value="' + esc(val) + '">';
+    return '<div class="field" data-k="' + f.k + '"><div class="num">' + esc(f.n) + (f.req ? "" : " · facultatif") + '</div>' + (f.q ? '<div class="q">' + esc(f.q) + '</div>' : '<label>' + esc(f.l) + '</label>') + (f.q ? '<label class="small muted" style="font-weight:400">' + esc(f.l) + '</label>' : "") + input + '<div class="h">' + esc(f.h || "") + '</div><div class="err" data-err="' + f.k + '"></div></div>';
+  }
+  function values(){ var o = {}; var fm = $("chk"); CHK.sections.forEach(function(s){ s.champs.forEach(function(f){ var el = fm.elements[f.k]; if (!el) return; if (f.t === "ouinon") { var c = fm.querySelector('input[name="' + f.k + '"]:checked'); o[f.k] = c ? c.value : ""; } else o[f.k] = el.value; }); }); return o; }
+  function visible(f, v){ if (!f.si) return true; var x = v[f.si.k]; if (f.si.eq !== undefined) return x === f.si.eq; if (f.si.ne !== undefined) return x !== f.si.ne && x !== undefined && x !== ""; if (f.si.filled) return !!(x && String(x).trim()); return true; }
+  function refresh(){ var v = values(); CHK.sections.forEach(function(s){ s.champs.forEach(function(f){ var d = document.querySelector('.field[data-k="' + f.k + '"]'); if (d) d.hidden = !visible(f, v); }); }); document.querySelectorAll(".radios label").forEach(function(l){ l.classList.toggle("sel", l.querySelector("input").checked); }); }
+  function wire(m){
+    var fm = $("chk");
+    fm.addEventListener("change", function(e){
+      refresh();
+      if (e.target.name === "date_mariage" || e.target.name === "delai_arret_jours") {
+        var v = values(); if (!v.date_mariage) return;
+        api("admin-checklist", { date_mariage: v.date_mariage, delai_arret_jours: v.delai_arret_jours }).then(function(j){
+          var rem = fm.elements["date_remise"]; if (j.remise && !rem.value) { rem.value = j.remise; }
+          var h = document.querySelector('.field[data-k="date_remise"] .h'); if (h && j.remise) h.textContent = "Proposée par le barème : " + fdate(j.remise) + ". Confirmée à voix haute avec le couple, modifiable." ;
+          var ha = document.querySelector('.field[data-k="delai_arret_jours"] .h'); if (ha && j.arret) ha.textContent = "Article 4 du devis. Date de clôture calculée : " + fdate(j.arret) + ".";
+        });
+      }
+    });
+    refresh();
+    $("save").onclick = function(){
+      $("smsg").textContent = m ? "Enregistrement, puis mise à jour de SharePoint" : "Création du mariage, du dossier SharePoint, des classeurs et de la fiche"; $("serr").textContent = ""; $("sres").innerHTML = ""; $("save").disabled = true;
+      document.querySelectorAll("[data-err]").forEach(function(d){ d.textContent = ""; });
+      api("admin-declarer", { data: values() }, m ? m.code : null).then(function(j){
+        if (!j.ok) { $("smsg").textContent = ""; (j.errors || []).forEach(function(e){ var d = document.querySelector('[data-err="' + e.k + '"]'); if (d) d.textContent = e.msg; }); $("serr").textContent = (j.errors || []).length + " champ(s) à corriger."; return; }
+        var sp = j.sharepoint || {}, lines = [];
+        lines.push(sp.dossier ? "Dossier SharePoint : " + sp.dossier : "Dossier SharePoint : non créé.");
+        (sp.classeurs || []).forEach(function(c){ lines.push("Classeur : " + c.split("/").pop()); });
+        if (sp.fiche) lines.push("Fiche call 1 archivée : " + sp.fiche.split("/").pop());
+        (sp.erreurs || []).forEach(function(e){ lines.push("Attention : " + e); });
+        if (j.boite) lines.push((j.boite.ok ? "Boîte email : " : "Boîte email, à régler : ") + j.boite.detail);
+        $("smsg").textContent = j.created ? "Mariage déclaré, code " + j.code + "." : "Modifications enregistrées, fiche version " + j.version + ".";
+        $("sres").innerHTML = '<ul>' + lines.map(function(l){ return "<li>" + esc(l) + "</li>"; }).join("") + '</ul>' + (j.created ? '<p><a href="#/m/' + j.code + '">Ouvrir le mariage</a></p>' : "");
+        if (j.created) location.hash = "#/m/" + j.code;
+      }).catch(function(e){ $("smsg").textContent = e.message; }).then(function(){ $("save").disabled = false; });
+    };
+  }
+
+  /* ---------- étape 5 provisoire : les écrans de la v1.0 (formulaires existants) ---------- */
+  function legacy(m, pane){
+    var W = m.code;
+    pane.innerHTML = '<div class="card"><h3>5. Confirmations et suivi</h3><p>Écrans provisoires de la version 1.0 pour ce mariage, en attendant les étapes 2 et 3 : l\'import de la liste qualifiée, le suivi des foyers et les exports. Ils disparaîtront quand la liste naîtra des contacts reçus.</p></div>' +
+      '<div class="kpis" id="kpis"></div><div class="row" style="margin-bottom:12px"><input id="search" placeholder="Rechercher un foyer" style="max-width:320px"><button class="ghost" id="refresh">Actualiser</button></div>' +
+      '<div class="wrap"><table><thead><tr><th>Foyer</th><th>Proches</th><th>Confirmation</th><th>Voyage</th><th>Hébergement</th><th>Chauffeur</th><th>Navettes</th><th>Charte</th><th>Dernière activité</th><th>Lien personnel</th></tr></thead><tbody id="rows"></tbody></table></div>' +
+      '<div class="card" style="margin-top:16px"><h3>Importer la liste qualifiée</h3><p>Colonnes : foyer ; membres ; enfants ; proches ; email ; telephone ; langue ; accompagnant ; cle. Un foyer déjà présent garde sa clé.</p><textarea id="csv" class="mono" placeholder="foyer;membres;enfants;proches;email;telephone;langue;accompagnant"></textarea><div class="row" style="margin-top:12px"><button id="doImport">Importer</button><span class="muted" id="imsg"></span></div></div>' +
+      '<div class="card"><h3>Exports et Excel</h3><div class="row">' + ["suivi","invites","voyages","hebergement","ailleurs","transferts","navettes","conciergerie","charte"].map(function(k){ return '<button class="ghost" data-x="' + k + '">' + k + '</button>'; }).join("") + '<button class="ghost" id="sync">Synchroniser Excel</button></div><div class="msg" id="smsg2"></div></div>';
+    var DATA = [];
+    function pl(t){ var c = /reçue|complet|lue|oui|Hôtel|Ailleurs|jour/.test(t) ? "ok" : /attente|compléter/.test(t) ? "warn" : /non renseigné/.test(t) ? "bad" : ""; return t ? '<span class="pill ' + c + '">' + esc(t) + '</span>' : '<span class="muted">·</span>'; }
+    function table(){ var s = ($("search").value || "").toLowerCase(); $("rows").innerHTML = DATA.filter(function(h){ return !s || h.foyer.toLowerCase().indexOf(s) >= 0; }).map(function(h){ return "<tr><td><b>" + esc(h.foyer) + "</b></td><td>" + (h.proches === "oui" ? pl("oui") : "") + "</td><td>" + pl(h.confirmation) + "</td><td>" + pl(h.voyage) + "</td><td>" + pl(h.hebergement) + "</td><td>" + pl(h.chauffeur) + "</td><td>" + pl(h.navettes) + "</td><td>" + pl(h.charte) + "</td><td>" + esc(fmt(h.derniere_activite)) + '</td><td><a href="' + esc(h.lien) + '" target="_blank" rel="noopener">ouvrir</a></td></tr>'; }).join("") || '<tr><td colspan="10" class="muted">Aucun foyer pour l\'instant.</td></tr>'; }
+    function load(){ api("admin-list", {}, W).then(function(j){ DATA = j.households || []; var n = DATA.length, c = DATA.filter(function(h){ return h.confirmation === "reçue"; }).length; $("kpis").innerHTML = [[n,"foyers"],[c,"confirmations reçues"],[n-c,"en attente"]].map(function(k){ return '<div class="kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join(""); table(); }).catch(function(e){ $("smsg2").textContent = e.message; }); }
+    $("search").oninput = table; $("refresh").onclick = load;
+    $("doImport").onclick = function(){ $("imsg").textContent = "Import en cours"; api("admin-import", { csv: $("csv").value }, W).then(function(j){ $("imsg").textContent = j.count + " foyer(s), dont " + j.created + " nouveau(x). Liens personnels téléchargés."; download("Liens personnels " + W + ".csv", j.csv); load(); }).catch(function(e){ $("imsg").textContent = e.message; }); };
+    pane.querySelectorAll("[data-x]").forEach(function(b){ b.onclick = function(){ api("admin-export", { kind: b.dataset.x }, W).then(function(j){ download(b.dataset.x + " " + W + ".csv", j.csv); }).catch(function(e){ $("smsg2").textContent = e.message; }); }; });
+    $("sync").onclick = function(){ api("admin-sync", {}, W).then(function(j){ $("smsg2").textContent = j.skipped ? "Excel non branché pour ce mariage." : (j.ok ? "Excel à jour." : j.pending + " écriture(s) en attente."); }).catch(function(e){ $("smsg2").textContent = e.message; }); };
+    load();
+  }
+
   if (TOKEN) opened();
 })();
 </script>

@@ -3,12 +3,15 @@
 Une seule application porte tout le parcours invité, du premier contact à la suppression des données.
 Les classeurs Excel SharePoint en sont les miroirs de contrôle : rien ne part jamais d'un Excel.
 
-Version 1.0 · le socle : Postgres (Neon), le modèle de données, la connexion de l'équipe, la vérification des trois voyants.
+Version 1.1 · l'accueil (mariages, jauges, cheminement vivant, voyants, journal), les réglages, l'étape Cadrage (checklist du call 1, dossier SharePoint, classeurs miroirs, fiche PDF, boîte vérifiée). Version 1.0 : le socle Postgres, la connexion, les trois voyants.
 
 - `api/forms.js` : l'API (formulaires invités, connexion, vérification, suivi, imports, exports, journal)
 - `lib/db.js` : Postgres Neon en production, PGlite en local ; `lib/migrations/` : le schéma, une version par fichier
 - `lib/store.js` : foyers et personnes, réponses versionnées, journal, file d'attente Excel
-- `lib/graph.js` : Microsoft 365 (SharePoint, Excel, autorisations email)
+- `lib/graph.js` : Microsoft 365 (SharePoint, Excel, boîtes, autorisations)
+- `lib/checklist.js` : la checklist du call 1 (champs, validation, barème des dates)
+- `lib/mariage.js` : déclaration d'un mariage, dossier et classeurs SharePoint, fiche PDF, accueil, réglages
+- `lib/xlsx.js`, `lib/pdf.js` : classeurs Excel et fiches PDF sans dépendance
 - `lib/engine.js` : construction et validation des formulaires, lignes Excel
 - `lib/weddings/` : la configuration des mariages (reprise par l'écran Paramètres en 1.1)
 - `public/index.html` : administration ; `public/yid-forms.js` : moteur chargé par la plateforme Squarespace ; `public/essai.html` : banc d'essai

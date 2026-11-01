@@ -14,6 +14,12 @@
      ?action=admin-sync     POST  rejoue la file d'attente Excel
      ?action=admin-headers  POST  en-têtes attendus dans le classeur
      ?action=admin-journal  POST  dernières opérations du journal
+     ?action=admin-accueil  POST  l'accueil : mariages, jauges, cheminement, journal récent
+     ?action=admin-checklist POST la checklist du call 1 (structure) et la date de remise proposée
+     ?action=admin-declarer POST  déclarer un mariage (ou le mettre à jour avec w=CODE) : base, SharePoint, fiche PDF, boîte
+     ?action=admin-mariage  POST  la fiche d'un mariage (w=CODE)
+     ?action=admin-boite    POST  revérifier la boîte email d'un mariage (w=CODE)
+     ?action=admin-reglages POST  lire (sans corps) ou enregistrer (cle, valeur) un réglage
    ===================================================================== */
 const crypto = require("crypto");
 const store = require("../lib/store");
@@ -21,7 +27,9 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.0";
+const VERSION = "1.1";
+const mariages = require("../lib/mariage");
+const checklist = require("../lib/checklist");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -173,6 +181,25 @@ module.exports = async (req, res) => {
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
       return send(res, 200, { ok: true, mariages: await store.mariages() });
     }
+    if (action === "admin-accueil") {
+      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
+      return send(res, 200, Object.assign({ ok: true, version: VERSION }, await mariages.accueil()));
+    }
+    if (action === "admin-checklist") {
+      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      return send(res, 200, { ok: true, sections: checklist.SECTIONS, etapes: checklist.ETAPES, remise: b.date_mariage ? checklist.dateRemiseProposee(b.date_mariage) : null, arret: b.date_mariage && b.delai_arret_jours ? checklist.dateArret(b.date_mariage, b.delai_arret_jours) : null });
+    }
+    if (action === "admin-declarer") {
+      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const r = await mariages.declarer(b.data || {}, "administrateur", q.w || b.w || null);
+      return send(res, r.ok ? 200 : 422, r);
+    }
+    if (action === "admin-reglages") {
+      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      if (b.cle) { await mariages.saveReglage(String(b.cle).slice(0, 60), String(b.valeur || ""), "administrateur"); }
+      return send(res, 200, Object.assign({ ok: true }, await mariages.reglages()));
+    }
     if (action === "admin-journal") {
       if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
       const m = q.w || b.w ? await store.mariage(q.w || b.w) : null;
@@ -180,6 +207,18 @@ module.exports = async (req, res) => {
     }
 
     const w = String(q.w || b.w || "").toUpperCase();
+    if (action === "admin-mariage" || action === "admin-boite") {
+      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const m = await mariages.fiche(w);
+      if (!m) return send(res, 404, { ok: false, error: "wedding" });
+      if (action === "admin-boite") {
+        const r = await graph.mailboxCheck(m.boite_email);
+        if (r.ok) await require("../lib/db").query("UPDATE mariage SET boite_verifiee_le = now() WHERE code = $1", [w]);
+        await store.journal(m.id, "Vérification de la boîte du mariage", r.detail, null, null, "administrateur");
+        return send(res, 200, { ok: true, boite: r });
+      }
+      return send(res, 200, { ok: true, mariage: m, formulaires: !!WEDDINGS[w] });
+    }
     const cfg = WEDDINGS[w];
     if (!cfg) return send(res, 404, { ok: false, error: "wedding" });
     await store.ensureMariage(cfg);

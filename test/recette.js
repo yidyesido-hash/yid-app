@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.0, base locale");
+  console.log("Recette yid-app v1.1, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -70,6 +70,35 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
 
   r = await call("POST", "/api/forms?action=admin-list&w=AK00", {}, { "x-admin-token": "faux.jeton" });
   check("jeton falsifié refusé", r.status === 401);
+
+  /* ---------- v1.1 : accueil, cadrage, réglages ---------- */
+  r = await call("POST", "/api/forms?action=admin-accueil", {}, H);
+  check("accueil : mariages, cheminement, journal", r.json.ok && r.json.mariages.length === 2 && r.json.reglages.cheminement.indexOf("1. Cadrage") === 0 && r.json.journal.length > 0);
+  r = await call("POST", "/api/forms?action=admin-checklist", { date_mariage: "2027-07-10", delai_arret_jours: 45 }, H);
+  check("checklist : 3 sections, remise proposée, clôture calculée", r.json.sections.length === 3 && r.json.remise && r.json.arret === "2027-05-26", r.json.remise + " / " + r.json.arret);
+  const fiche = { pack: "Signature", prevu_contrat: 120, seuil: 130, date_mariage: "2027-07-10", delai_arret_jours: 45, conciergerie: "Oui", hebergement: "Une partie des invités", lieux_hebergement: "Domaine de la Muette", volume_estime: 110, multi_periodes: "Non", regie: "Oui",
+    prenoms: "Alexander et Clarisse", lieu: "Domaine de la Muette, Seine et Marne", initiales: "ac", pays: "France", regime_enfants: "Mixte", consigne_enfants: "Enfants des proches uniquement", proches: "Kevin (frère de l'époux) ; Tante Awa (tante de l'épouse)", listes_attendues: "Tante Awa", quotas: "Tante Awa = 12", date_remise: r.json.remise, support: "Oui", telephone_epoux: "Android", telephone_epouse: "iPhone",
+    statut: "Test", langue_defaut: "fr", boite_email: "", site: "" };
+  r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { prevu_contrat: "abc" }) }, H);
+  check("déclaration refusée avec un champ faux (422)", r.status === 422 && r.json.errors.some(e => e.k === "prevu_contrat"));
+  r = await call("POST", "/api/forms?action=admin-declarer", { data: fiche }, H);
+  check("mariage déclaré, code AC27, étape 1 franchie", r.status === 200 && r.json.ok && r.json.code === "AC27" && r.json.created && r.json.mariage.etape === 2 && r.json.mariage.etapes["1"], r.status !== 200 ? JSON.stringify(r.json).slice(0, 300) : "clôture " + r.json.mariage.date_arret);
+  check("SharePoint non configuré en local : signalé, pas bloquant", r.json.sharepoint && r.json.sharepoint.erreurs.length === 1);
+  r = await call("POST", "/api/forms?action=admin-mariage&w=AC27", {}, H);
+  check("fiche du mariage : checklist conservée, quotas lus", r.json.mariage.checklist.quotas_map["Tante Awa"] === 12 && r.json.mariage.parametres.regime_enfants === "Mixte");
+  r = await call("POST", "/api/forms?action=admin-declarer&w=AC27", { data: Object.assign({}, fiche, { prevu_contrat: 130 }) }, H);
+  check("mise à jour : fiche version 2, code inchangé", r.json.ok && !r.json.created && r.json.version === 2 && r.json.code === "AC27");
+  r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { prenoms: "Autre Couple" }) }, H);
+  check("mêmes initiales et année : code AC272 attribué, jamais réutilisé", r.json.code === "AC272");
+  r = await call("POST", "/api/forms?action=admin-accueil", {}, H);
+  const ac = r.json.mariages.find(m => m.code === "AC27");
+  check("accueil : jauge à 13 % (1 étape sur 8), liste attendue et clôture affichées", ac && ac.progression === 13 && ac.date_arret === "2027-05-26" && ac.date_remise);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "cheminement", valeur: "1. Cadrage. Texte modifié.\n2. Suite." }, H);
+  check("réglage cheminement modifié et journalisé", r.json.cheminement.indexOf("Texte modifié") > 0);
+  const x = require("../lib/xlsx").build(require("../lib/mariage").CHEMINEMENT_DEFAUT ? [{ name: "Paramètres", table: "Parametres", headers: ["Champ", "Valeur"], rows: [["a", "b"]] }] : []);
+  check("classeur miroir généré (zip valide)", x.slice(0, 2).toString() === "PK" && x.length > 2000);
+  const p = require("../lib/pdf").build({ title: "Fiche du call 1 · test", sections: require("../lib/checklist").fiche(fiche) });
+  check("fiche PDF générée, métadonnées Yes I Do", p.slice(0, 5).toString() === "%PDF-" && p.indexOf("/Author (Yes I Do)") > 0);
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
