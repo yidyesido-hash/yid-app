@@ -204,7 +204,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-etape&w=AC27", { n: 2 }, H);
   check("terminer l'étape 2 avec des lignes rouges ou orange : refusé avec le compte", r.status === 422 && /ligne\(s\) ne sont pas encore vertes/.test(r.json.detail), r.json.detail);
   r = await call("POST", "/api/forms?action=admin-export-liste&w=AC27", {}, H);
-  check("export de la liste propre en classeur (quatre onglets)", r.json.ok && /^Liste Alexander et Clarisse/.test(r.json.nom) && Buffer.from(r.json.b64, "base64").slice(0, 2).toString() === "PK");
+  check("export du collect dans la matrice v4", r.json.ok && /^Collect Alexander et Clarisse/.test(r.json.nom) && Buffer.from(r.json.b64, "base64").slice(0, 2).toString() === "PK");
   /* déduction du côté d'un lot arrivé par email */
   const listeMod = require("../lib/liste");
   const mAC = await require("../lib/store").mariageFresh("AC27");
@@ -229,11 +229,21 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-vider&w=AC27", { confirmation: "faux" }, H);
   check("remise à zéro sans le code du mariage : refusée", r.status === 422);
   r = await call("POST", "/api/forms?action=admin-vider&w=AC27", { confirmation: "AC27" }, H);
-  check("remise à zéro : plus aucune ligne active, les désactivées restent, aucun lot visible", r.json.ok && r.json.contacts.every(c => c.desactive) && r.json.contacts.length > 20 && r.json.lots.length === 0 && r.json.tuiles.a_voir.n === 0);
+  check("remise à zéro : liste vide, rien parmi les désactivées, aucun lot visible", r.json.ok && r.json.contacts.length === 0 && r.json.lots.length === 0 && r.json.tuiles.a_voir.n === 0 && r.json.tuiles.desactives.n === 0);
   r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Export Épouse", cote: "Épouse", fichiers: [corpus("Test_Yid_iPhone.vcf")] }, H);
   check("après remise à zéro, le même export s'importe comme neuf : 13 ajoutés", r.json.ajoutes === 13 && r.json.connus === 0);
   r = await call("POST", "/api/forms?action=admin-journal&w=AC27", {}, H);
-  check("journal : Contacts reçus, Collect v4 repris, Ligne qualifiée, Anomalie tranchée, Ligne désactivée, Fiche nommée, Numéro appliqué, Source corrigée, Liste exportée, Liste remise à zéro", ["Contacts reçus", "Collect v4 repris", "Ligne qualifiée", "Anomalie tranchée", "Ligne désactivée", "Fiche nommée", "Numéro appliqué", "Source corrigée", "Liste exportée", "Liste remise à zéro"].every(o => r.json.journal.some(l => l.operation === o)) && r.json.journal.some(l => l.operation === "Ligne qualifiée" && l.operateur === "Inès"));
+  check("journal : Contacts reçus, Collect v4 repris, Ligne qualifiée, Anomalie tranchée, Ligne désactivée, Fiche nommée, Numéro appliqué, Source corrigée, Liste exportée, Liste remise à zéro", ["Contacts reçus", "Collect v4 repris", "Ligne qualifiée", "Anomalie tranchée", "Ligne désactivée", "Fiche nommée", "Numéro appliqué", "Source corrigée", "Collect exporté", "Liste remise à zéro"].every(o => r.json.journal.some(l => l.operation === o)) && r.json.journal.some(l => l.operation === "Ligne qualifiée" && l.operateur === "Inès"));
+  r = await call("POST", "/api/forms?action=admin-archive&w=AC27", {}, H);
+  check("archive de la remise à zéro consultable par un administrateur, invisible ailleurs", r.json.ok && r.json.archive.length > 20);
+  r = await call("POST", "/api/forms?action=admin-archive&w=AC27", {}, HI);
+  check("archive refusée à l'équipe (403)", r.status === 403);
+  r = await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H);
+  check("lots numérotés et nommés, familles doublon et numéro distinguées", /^Lot \d+ · Épouse · /.test(r.json.lots[0].libelle) && r.json.tuiles.doublons.n === 4 && r.json.tuiles.numeros.n === 2 && r.json.contacts.find(c => c.nom_repertoire === "Cess").famille === "doublon" && r.json.contacts.find(c => c.nom_repertoire === "Crevette").famille === "numéro", JSON.stringify([r.json.lots[0].libelle, r.json.tuiles.doublons, r.json.tuiles.numeros]));
+  const vide = "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;;;;\r\nFN:\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nFN:Zoé\r\nTEL;type=CELL:+33 6 00 00 00 01\r\nEND:VCARD\r\n";
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "", cote: "", fichiers: [{ name: "Contacts épouse.vcf", b64: Buffer.from(vide).toString("base64") }] }, H);
+  check("pare feu : la fiche vide est ignorée et comptée, le côté est lu dans le nom du fichier", r.json.lus === 1 && r.json.vides === 1 && r.json.cote === "Épouse" && /nom du fichier/.test(r.json.deduction), JSON.stringify([r.json.lus, r.json.vides, r.json.cote, r.json.deduction]));
+  check("déduction par l'objet de l'email", listeMod.deduire(mTel, { expediteur: "x@y.z", objet: "Contacts côté époux" }, vcf21).cote === "Époux");
   const p2 = require("../lib/telephone");
   check("normalisation : outre mer, +33 sur un 0693 corrigé, pays déduit sans +, pays incertain, fixe, invalide", p2.normaliser("0690 12 34 56", "FR").numero === "+590690123456" && /remplacé par \+262/.test(p2.normaliser("+33 6 93 20 54 05", "FR").correction) && /Sénégal/.test(p2.normaliser("221771234567", "FR").correction) && p2.normaliser("01 42 00 00 00", "FR").statut === "fixe probable" && p2.normaliser("12", "FR").statut === "invalide");
   r = await call("POST", "/api/forms?action=admin-reglages", {}, H);

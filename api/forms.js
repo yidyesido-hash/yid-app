@@ -43,7 +43,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.3";
+const VERSION = "1.3.1";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -258,7 +258,7 @@ module.exports = async (req, res) => {
       if (m.boite_email && graph.enabled()) { try { releve = await liste.relever(w, u.nom, false, await mariages.reglages()); } catch (e) { releve = { detail: e.message }; } }
       return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
     }
-    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-etape", "admin-sharepoint"].includes(action)) {
+    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
       const refus = (e, k) => send(res, 422, { ok: false, error: k || "liste", detail: e.message });
@@ -280,7 +280,8 @@ module.exports = async (req, res) => {
         if (action === "admin-vider") { if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." }); if (String(b.confirmation || "").toUpperCase() !== m.code) return send(res, 422, { ok: false, error: "confirmation", detail: "Pour confirmer, saisir le code du mariage : " + m.code }); await liste.vider(w, u.nom); }
         if (action === "admin-sharepoint") { await liste.miroirBase(await store.mariageFresh(w)); }
       } catch (e) { return refus(e); }
-      if (action === "admin-export-liste") { const x = await liste.exporter(w); await store.journal(m.id, "Liste exportée", x.nom, null, null, u.nom); return send(res, 200, { ok: true, nom: x.nom, b64: x.buffer.toString("base64") }); }
+      if (action === "admin-export-liste") { const x = await liste.exporter(w); await store.journal(m.id, "Collect exporté", x.nom, null, null, u.nom); return send(res, 200, { ok: true, nom: x.nom, b64: x.buffer.toString("base64") }); }
+      if (action === "admin-archive") { if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role" }); return send(res, 200, { ok: true, archive: await liste.archive(w) }); }
       if (action === "admin-relever") { const r = await liste.relever(w, u.nom, true, await mariages.reglages()); return send(res, 200, Object.assign({ ok: true, releve: r }, await liste.liste(w))); }
       if (action === "admin-etape") {
         const n = Math.max(1, Math.min(7, Number(b.n) || 0)); if (!n) return send(res, 422, { ok: false, error: "etape" });
