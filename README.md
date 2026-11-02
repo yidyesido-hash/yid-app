@@ -3,7 +3,10 @@
 Une seule application porte tout le parcours invité, du premier contact à la suppression des données.
 Les classeurs Excel SharePoint en sont les miroirs de contrôle : rien ne part jamais d'un Excel.
 
-Version 1.1 · l'accueil (mariages, jauges, cheminement vivant, voyants, journal), les réglages, l'étape Cadrage (checklist du call 1, dossier SharePoint, classeurs miroirs, fiche PDF, boîte vérifiée). Version 1.0 : le socle Postgres, la connexion, les trois voyants.
+Version 1.1.1 (régénération du 2 novembre, sept remarques de la recette absorbées) : accès nommés par prénom (Réglages, L'équipe) pour que le journal dise qui a fait quoi ; journal par mariage (bouton Journal du mariage) et journal maître (Réglages) avec la valeur avant et après de chaque champ modifié ; page Guide et ressources (cheminement, étapes, ressources) ; état de la boîte email et bouton Revérifier à l'étape 1 ; onglet Lisez moi en tête des classeurs SharePoint ; fiche PDF sans traits ; vocabulaire : Créer un mariage, étape terminée.
+Version 1.1 · l'accueil (mariages, jauges, voyants, journal), les réglages, l'étape Cadrage (checklist du call 1, dossier SharePoint, classeurs miroirs, fiche PDF, boîte vérifiée). Version 1.0 : le socle Postgres, la connexion, les trois voyants.
+
+Connexion : chaque personne entre avec son prénom et son mot de passe (créés dans Réglages par un administrateur). Sans prénom, le mot de passe d'installation (variable ADMIN_PASSWORD) ouvre l'outil au nom « administrateur » ; il reste la clé de secours.
 
 - `api/forms.js` : l'API (formulaires invités, connexion, vérification, suivi, imports, exports, journal)
 - `lib/db.js` : Postgres Neon en production, PGlite en local ; `lib/migrations/` : le schéma, une version par fichier

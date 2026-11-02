@@ -5,7 +5,7 @@
      ?action=form     GET   formulaire construit pour ce foyer, prérempli
      ?action=submit   POST  enregistrement (nouvelle version), puis écriture Excel
    Côté équipe (connexion) :
-     ?action=admin-login    POST  mot de passe -> jeton de session (12 heures)
+     ?action=admin-login    POST  prénom et mot de passe (ou mot de passe d'installation seul) -> jeton de session (12 heures)
      ?action=admin-check    POST  les trois voyants : base, SharePoint, boîte
      ?action=admin-mariages POST  les mariages connus de l'application
      ?action=admin-list     POST  suivi des foyers d'un mariage
@@ -20,6 +20,8 @@
      ?action=admin-mariage  POST  la fiche d'un mariage (w=CODE)
      ?action=admin-boite    POST  revérifier la boîte email d'un mariage (w=CODE)
      ?action=admin-reglages POST  lire (sans corps) ou enregistrer (cle, valeur) un réglage
+     ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
+     ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
    ===================================================================== */
 const crypto = require("crypto");
 const store = require("../lib/store");
@@ -27,7 +29,8 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.1";
+const VERSION = "1.1.1";
+const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
@@ -58,21 +61,24 @@ function okPassword(given) {
   const a = Buffer.from(String(given)), b = Buffer.from(want);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
-function makeToken(hours) {
+function makeToken(hours, who) {
   const exp = Date.now() + (hours || 12) * 3600 * 1000;
-  const payload = Buffer.from(JSON.stringify({ exp, role: "administrateur" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ exp, nom: who.nom, role: who.role })).toString("base64url");
   const sig = crypto.createHmac("sha256", SECRET()).update(payload).digest("base64url");
   return payload + "." + sig;
 }
-function okToken(tok) {
-  if (!tok || !process.env.ADMIN_PASSWORD) return false;
+/* Lit le jeton : renvoie { nom, role } s'il est signé et encore valable, sinon null. */
+function readToken(tok) {
+  if (!tok || !process.env.ADMIN_PASSWORD) return null;
   const [payload, sig] = String(tok).split(".");
-  if (!payload || !sig) return false;
+  if (!payload || !sig) return null;
   const want = crypto.createHmac("sha256", SECRET()).update(payload).digest("base64url");
-  if (want.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(want), Buffer.from(sig))) return false;
-  try { return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")).exp > Date.now(); } catch (e) { return false; }
+  if (want.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(want), Buffer.from(sig))) return null;
+  try { const t = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")); return t.exp > Date.now() ? { nom: t.nom || "administrateur", role: t.role || "administrateur" } : null; } catch (e) { return null; }
 }
-function authed(req, b) { return okToken(req.headers["x-admin-token"]) || okPassword(req.headers["x-admin-password"] || b.password); }
+const INSTALLATION = { nom: "administrateur", role: "administrateur" };
+/* Qui parle ? Le jeton de session, ou le mot de passe d'installation donné directement. */
+function who(req, b) { return readToken(req.headers["x-admin-token"]) || (okPassword(req.headers["x-admin-password"] || b.password) ? INSTALLATION : null); }
 
 function newKey() {
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -158,12 +164,16 @@ module.exports = async (req, res) => {
     /* ---------- connexion et vérifications : sans mariage ---------- */
     if (action === "admin-login") {
       if (!(await store.rateLimit(ip(req), 10))) return send(res, 429, { ok: false, error: "slow down" });
-      if (!okPassword(b.password)) return send(res, 401, { ok: false, error: "password" });
-      await store.journal(null, "Connexion à l'administration", ip(req), null, null, "administrateur");
-      return send(res, 200, { ok: true, token: makeToken(12), version: VERSION });
+      const prenom = String(b.prenom || "").trim();
+      let u = null;
+      if (prenom) u = await utilisateurs.verify(prenom, b.password);
+      else if (okPassword(b.password)) u = INSTALLATION;
+      if (!u) return send(res, 401, { ok: false, error: "password" });
+      await store.journal(null, "Connexion", u.nom + " · " + ip(req), null, null, u.nom);
+      return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count() });
     }
     if (action === "admin-check") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const out = { ok: true, version: VERSION, base: {}, sharepoint: {}, boite: {} };
       try {
         const v = await store.version();
@@ -173,51 +183,55 @@ module.exports = async (req, res) => {
       const g = await graph.check();
       out.sharepoint = { ok: !!(g.site.ok && g.write.ok), detail: [g.site.detail, g.write.detail].filter(Boolean).join(" "), url: g.site.url };
       out.boite = { ok: !!g.mail.ok, detail: g.mail.detail };
-      await store.journal(null, "Vérification de la connexion", `base ${out.base.ok ? "ok" : "ko"}, SharePoint ${out.sharepoint.ok ? "ok" : "ko"}, boîte ${out.boite.ok ? "ok" : "ko"}`, null, null, "administrateur");
+      await store.journal(null, "Vérification de la connexion", `base ${out.base.ok ? "ok" : "ko"}, SharePoint ${out.sharepoint.ok ? "ok" : "ko"}, boîte ${out.boite.ok ? "ok" : "ko"}`, null, null, u.nom);
       return send(res, 200, out);
     }
     if (action === "admin-mariages") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
       return send(res, 200, { ok: true, mariages: await store.mariages() });
     }
     if (action === "admin-accueil") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
       return send(res, 200, Object.assign({ ok: true, version: VERSION }, await mariages.accueil()));
     }
     if (action === "admin-checklist") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       return send(res, 200, { ok: true, sections: checklist.SECTIONS, etapes: checklist.ETAPES, remise: b.date_mariage ? checklist.dateRemiseProposee(b.date_mariage) : null, arret: b.date_mariage && b.delai_arret_jours ? checklist.dateArret(b.date_mariage, b.delai_arret_jours) : null });
     }
     if (action === "admin-declarer") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
-      const r = await mariages.declarer(b.data || {}, "administrateur", q.w || b.w || null);
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const r = await mariages.declarer(b.data || {}, u.nom, q.w || b.w || null);
       return send(res, r.ok ? 200 : 422, r);
     }
     if (action === "admin-reglages") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
-      if (b.cle) { await mariages.saveReglage(String(b.cle).slice(0, 60), String(b.valeur || ""), "administrateur"); }
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      if (b.cle) { await mariages.saveReglage(String(b.cle).slice(0, 60), String(b.valeur || ""), u.nom); }
       return send(res, 200, Object.assign({ ok: true }, await mariages.reglages()));
     }
     if (action === "admin-journal") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = q.w || b.w ? await store.mariage(q.w || b.w) : null;
-      return send(res, 200, { ok: true, journal: await store.readJournal(m ? m.id : null, 200) });
+      return send(res, 200, { ok: true, journal: await store.readJournal(m ? m.id : null, Math.min(Number(b.limit) || 200, 1000)), libelles: mariages.LIBELLES, mariage: m ? { code: m.code, prenoms: m.prenoms } : null });
+    }
+    if (action === "admin-utilisateurs" || action === "admin-utilisateur") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
+      if (action === "admin-utilisateur") { const r = await utilisateurs.save(b, u.nom); if (!r.ok) return send(res, 422, r); }
+      return send(res, 200, { ok: true, utilisateurs: await utilisateurs.list(), roles: utilisateurs.ROLES, moi: u });
     }
 
     const w = String(q.w || b.w || "").toUpperCase();
     if (action === "admin-mariage" || action === "admin-boite") {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await mariages.fiche(w);
       if (!m) return send(res, 404, { ok: false, error: "wedding" });
       if (action === "admin-boite") {
-        const r = await graph.mailboxCheck(m.boite_email);
-        if (r.ok) await require("../lib/db").query("UPDATE mariage SET boite_verifiee_le = now() WHERE code = $1", [w]);
-        await store.journal(m.id, "Vérification de la boîte du mariage", r.detail, null, null, "administrateur");
-        return send(res, 200, { ok: true, boite: r });
+        const r = await mariages.verifierBoite(w, m.boite_email, u.nom);
+        return send(res, 200, { ok: true, boite: r, mariage: await mariages.fiche(w) });
       }
-      return send(res, 200, { ok: true, mariage: m, formulaires: !!WEDDINGS[w] });
+      return send(res, 200, { ok: true, mariage: m, formulaires: !!WEDDINGS[w], moi: u });
     }
     const cfg = WEDDINGS[w];
     if (!cfg) return send(res, 404, { ok: false, error: "wedding" });
@@ -255,7 +269,7 @@ module.exports = async (req, res) => {
 
     /* ---------- administration d'un mariage ---------- */
     if (action.startsWith("admin-")) {
-      if (!authed(req, b)) return send(res, 401, { ok: false, error: "password" });
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
 
       if (action === "admin-import") {
         const list = householdsFromCSV(b.csv);
@@ -263,7 +277,7 @@ module.exports = async (req, res) => {
         for (const h of list) {
           const prev = (h.key && (await store.household(w, h.key))) || (await store.householdByName(w, h.name));
           h.key = prev ? prev.key : (h.key || newKey());
-          const r = await store.saveHousehold(w, h, "administrateur");
+          const r = await store.saveHousehold(w, h, u.nom);
           if (r.created) created++;
           out.push([h.name, h.key, linkFor(cfg, h), h.inner ? "oui" : "non", h.members.length, r.created ? "créé" : "mis à jour"]);
         }

@@ -16,11 +16,11 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.1, base locale");
+  console.log("Recette yid-app v1.1.1, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
-  check("connexion acceptée, jeton reçu", r.status === 200 && r.json.token, "version " + r.json.version);
+  check("connexion acceptée avec le mot de passe d'installation, au nom administrateur", r.status === 200 && r.json.token && r.json.nom === "administrateur" && r.json.equipe === 0, "version " + r.json.version);
   const H = { "x-admin-token": r.json.token };
 
   r = await call("POST", "/api/forms?action=admin-check", {}, H);
@@ -66,7 +66,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
 
   r = await call("POST", "/api/forms?action=admin-journal", {}, H);
   const ops = (r.json.journal || []).map(j => j.operation);
-  check("journal : connexion, vérification, mariages, foyers", ops.includes("Connexion à l'administration") && ops.includes("Vérification de la connexion") && ops.includes("Foyer créé"), ops.length + " lignes");
+  check("journal : connexion, vérification, mariages, foyers", ops.includes("Connexion") && ops.includes("Vérification de la connexion") && ops.includes("Foyer créé"), ops.length + " lignes");
 
   r = await call("POST", "/api/forms?action=admin-list&w=AK00", {}, { "x-admin-token": "faux.jeton" });
   check("jeton falsifié refusé", r.status === 401);
@@ -95,10 +95,40 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   check("accueil : jauge à 13 % (1 étape sur 8), liste attendue et clôture affichées", ac && ac.progression === 13 && ac.date_arret === "2027-05-26" && ac.date_remise);
   r = await call("POST", "/api/forms?action=admin-reglages", { cle: "cheminement", valeur: "1. Cadrage. Texte modifié.\n2. Suite." }, H);
   check("réglage cheminement modifié et journalisé", r.json.cheminement.indexOf("Texte modifié") > 0);
-  const x = require("../lib/xlsx").build(require("../lib/mariage").CHEMINEMENT_DEFAUT ? [{ name: "Paramètres", table: "Parametres", headers: ["Champ", "Valeur"], rows: [["a", "b"]] }] : []);
-  check("classeur miroir généré (zip valide)", x.slice(0, 2).toString() === "PK" && x.length > 2000);
+  const feuilles = require("../lib/mariage").feuillesPilotage(fiche, "Alexander et Clarisse");
+  const x = require("../lib/xlsx").build(feuilles);
+  check("classeur Pilotage : onglet Lisez moi en tête, puis Paramètres", feuilles[0].name === "Lisez moi" && feuilles[0].rows.length === 7 && feuilles[1].name === "Paramètres" && x.slice(0, 2).toString() === "PK" && x.length > 2000);
   const p = require("../lib/pdf").build({ title: "Fiche du call 1 · test", sections: require("../lib/checklist").fiche(fiche) });
-  check("fiche PDF générée, métadonnées Yes I Do", p.slice(0, 5).toString() === "%PDF-" && p.indexOf("/Author (Yes I Do)") > 0);
+  check("fiche PDF générée, métadonnées Yes I Do, sans trait entre les lignes", p.slice(0, 5).toString() === "%PDF-" && p.indexOf("/Author (Yes I Do)") > 0 && p.toString("latin1").indexOf("0.88 G") < 0);
+
+  /* ---------- v1.1.1 : journal champ par champ, équipe nommée, boîte, réglages ---------- */
+  r = await call("POST", "/api/forms?action=admin-journal&w=AC27", {}, H);
+  const modif = (r.json.journal || []).find(l => l.operation === "Cadrage modifié");
+  check("journal du mariage : la modification du cadrage donne avant 120, après 130, champ nommé", modif && modif.avant.prevu_contrat === "120" && modif.apres.prevu_contrat === "130" && /Prévu au contrat|prevu/i.test(modif.detail) && r.json.libelles.prevu_contrat, modif && modif.detail);
+  check("journal du mariage : seules les lignes d'AC27", (r.json.journal || []).every(l => l.mariage_code === "AC27"));
+  r = await call("POST", "/api/forms?action=admin-journal", { limit: 500 }, H);
+  check("journal maître : tous les mariages, code du mariage sur chaque ligne", r.json.journal.some(l => l.mariage_code === "AC27") && r.json.journal.some(l => l.mariage_code === "AK00") && r.json.journal.some(l => !l.mariage_code));
+  r = await call("POST", "/api/forms?action=admin-utilisateur", { nom: "Cécilia", role: "équipe", password: "court" }, H);
+  check("accès refusé si le mot de passe est trop court", r.status === 422);
+  r = await call("POST", "/api/forms?action=admin-utilisateur", { nom: "Cécilia", role: "équipe", password: "motdepasse-cecilia" }, H);
+  check("accès Cécilia créé", r.status === 200 && r.json.utilisateurs.some(u => u.nom === "Cécilia" && u.role === "équipe"));
+  r = await call("POST", "/api/forms?action=admin-login", { prenom: "cécilia", password: "motdepasse-cecilia" });
+  check("connexion de Cécilia par son prénom", r.status === 200 && r.json.nom === "Cécilia" && r.json.role === "équipe");
+  const HC = { "x-admin-token": r.json.token };
+  r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "faux" });
+  check("mauvais mot de passe de Cécilia refusé", r.status === 401);
+  r = await call("POST", "/api/forms?action=admin-utilisateurs", {}, HC);
+  check("l'équipe ne gère pas les accès (403)", r.status === 403);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "ressources", valeur: "Plan | https://example.org | test" }, HC);
+  check("réglage ressources enregistré par Cécilia", r.json.ressources.indexOf("example.org") > 0);
+  r = await call("POST", "/api/forms?action=admin-journal", {}, H);
+  check("le journal dit qui : Cécilia sur le réglage, administrateur sur la création de l'accès", r.json.journal.some(l => l.operation === "Réglage modifié" && l.operateur === "Cécilia") && r.json.journal.some(l => l.operation === "Accès créé" && l.operateur === "administrateur"));
+  r = await call("POST", "/api/forms?action=admin-utilisateur", { nom: "Cécilia", role: "équipe", desactive: true }, H);
+  check("accès désactivé, jamais supprimé", r.json.utilisateurs.some(u => u.nom === "Cécilia" && u.desactive));
+  r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "motdepasse-cecilia" });
+  check("un accès désactivé ne se connecte plus", r.status === 401);
+  r = await call("POST", "/api/forms?action=admin-boite&w=AC27", {}, H);
+  check("revérifier la boîte : état mémorisé sur le mariage, non bloquant sans Microsoft", r.json.ok && r.json.boite.ok === false && r.json.mariage.boite && r.json.mariage.boite.verifiee_le);
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
