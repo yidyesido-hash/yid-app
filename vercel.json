@@ -1,5 +1,6 @@
 {
   "outputDirectory": "public",
+  "functions": { "api/forms.js": { "maxDuration": 60 } },
   "crons": [{ "path": "/api/forms?action=cron-sync", "schedule": "0 6 * * *" }],
   "headers": [
     { "source": "/yid-forms.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] },

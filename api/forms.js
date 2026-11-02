@@ -20,13 +20,20 @@
      ?action=admin-mariage  POST  la fiche d'un mariage (w=CODE)
      ?action=admin-boite    POST  revérifier la boîte email d'un mariage (w=CODE)
      ?action=admin-reglages POST  lire (sans corps) ou enregistrer (cle, valeur) un réglage
-     ?action=admin-contacts  POST  étape 2 : contacts reçus, lots, anomalies, quotas (w=CODE)
-     ?action=admin-importer  POST  déposer un lot : source, cote, proche, fichiers [{ name, b64 }] (w=CODE)
-     ?action=admin-anomalie  POST  trancher une anomalie : id, decision (w=CODE)
-     ?action=admin-contact   POST  désactiver ou réactiver un contact : id, desactive, motif (w=CODE)
-     ?action=admin-lot       POST  corriger la source d'un lot : id, source, cote, proche (w=CODE)
-     ?action=admin-relever   POST  relever la boîte du mariage maintenant (w=CODE)
-     ?action=admin-etape     POST  terminer une étape : n (w=CODE)
+     ?action=admin-liste     POST  étape 2 Liste d'invités : lignes, lots, anomalies, tuiles, quotas, règles (w=CODE)
+     ?action=admin-importer  POST  déposer un lot : source, cote, proche, fichiers [{ name, b64 }] .vcf .csv ou collect .xlsx (w=CODE)
+     ?action=admin-qualifier POST  qualifier une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periode }
+     ?action=admin-anomalie  POST  trancher une ou plusieurs anomalies : ids, decision
+     ?action=admin-contact   POST  désactiver ou réactiver des lignes : ids, desactive, motif
+     ?action=admin-cote      POST  changer le côté de lignes : ids, cote
+     ?action=admin-nommer    POST  nommer une fiche sans nom : id, nom
+     ?action=admin-numero    POST  appliquer un numéro à une ligne : id, numero
+     ?action=admin-lot       POST  corriger la source d'un lot : id, source, cote, proche
+     ?action=admin-relever   POST  relever la boîte du mariage maintenant
+     ?action=admin-vider     POST  remise à zéro de la liste (administrateur, confirmation = code du mariage)
+     ?action=admin-export-liste POST la liste propre en classeur (base64)
+     ?action=admin-sharepoint POST réécrire l'onglet Base invités du classeur Pilotage
+     ?action=admin-etape     POST  terminer une étape : n (2 exige une liste toute verte)
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
    ===================================================================== */
@@ -36,8 +43,8 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.2";
-const contacts = require("../lib/contacts");
+const VERSION = "1.3";
+const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
@@ -167,7 +174,7 @@ module.exports = async (req, res) => {
       if (!process.env.CRON_SECRET || auth !== "Bearer " + process.env.CRON_SECRET) return send(res, 401, { ok: false });
       const out = {}; for (const id of Object.keys(WEDDINGS)) { await store.ensureMariage(WEDDINGS[id]); out[id] = await pushRows(WEDDINGS[id], []); }
       const boites = {};
-      for (const m of await require("../lib/db").query("SELECT code FROM mariage WHERE NOT desactive AND boite_email IS NOT NULL AND statut <> 'Clos'")) { try { boites[m.code] = await contacts.relever(m.code, "tâche planifiée", true); } catch (e) { boites[m.code] = { erreur: e.message }; } }
+      for (const m of await require("../lib/db").query("SELECT code FROM mariage WHERE NOT desactive AND boite_email IS NOT NULL AND statut <> 'Clos'")) { try { boites[m.code] = await liste.relever(m.code, "tâche planifiée", true, await mariages.reglages()); } catch (e) { boites[m.code] = { erreur: e.message }; } }
       return send(res, 200, { ok: true, out, boites });
     }
 
@@ -213,6 +220,7 @@ module.exports = async (req, res) => {
     }
     if (action === "admin-declarer") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Le cadrage se modifie par un administrateur ; l'équipe le lit." });
       const r = await mariages.declarer(b.data || {}, u.nom, q.w || b.w || null);
       return send(res, r.ok ? 200 : 422, r);
     }
@@ -220,7 +228,7 @@ module.exports = async (req, res) => {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       if (b.cle) {
         const cle = String(b.cle).slice(0, 60);
-        if (u.role !== "administrateur" && (mariages.DIRECTION.includes(cle) || cle === "theme_defaut")) return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
+        if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Les réglages se modifient par un administrateur." });
         await mariages.saveReglage(cle, String(b.valeur || ""), u.nom);
       }
       return send(res, 200, Object.assign({ ok: true, moi: u }, await mariages.reglages(u.role)));
@@ -247,32 +255,49 @@ module.exports = async (req, res) => {
         return send(res, 200, { ok: true, boite: r, mariage: await mariages.fiche(w) });
       }
       let releve = null;
-      if (m.boite_email && graph.enabled()) { try { releve = await contacts.relever(w, u.nom, false); } catch (e) { releve = { detail: e.message }; } }
+      if (m.boite_email && graph.enabled()) { try { releve = await liste.relever(w, u.nom, false, await mariages.reglages()); } catch (e) { releve = { detail: e.message }; } }
       return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
     }
-    if (["admin-contacts", "admin-importer", "admin-anomalie", "admin-contact", "admin-lot", "admin-relever", "admin-etape"].includes(action)) {
+    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-etape", "admin-sharepoint"].includes(action)) {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
+      const refus = (e, k) => send(res, 422, { ok: false, error: k || "liste", detail: e.message });
+      const ids = () => (Array.isArray(b.ids) ? b.ids : [b.id]).map(Number).filter(Boolean);
       if (action === "admin-importer") {
         const fichiers = (b.fichiers || []).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
         if (!fichiers.length) return send(res, 422, { ok: false, error: "fichiers", detail: "Aucun fichier reçu." });
-        try { const accuse = await contacts.importer(w, { source: b.source, cote: b.cote, proche: b.proche, origine: "dépôt" }, fichiers, u.nom); return send(res, 200, Object.assign({ ok: true }, accuse)); }
-        catch (e) { return send(res, 422, { ok: false, error: "import", detail: e.message }); }
+        try { const accuse = await liste.importer(w, { source: b.source, cote: b.cote, proche: b.proche, origine: "dépôt" }, fichiers, u.nom); return send(res, 200, Object.assign({ ok: true }, accuse)); }
+        catch (e) { return refus(e, "import"); }
       }
-      if (action === "admin-anomalie") { try { await contacts.trancher(w, Number(b.id), b.decision, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "anomalie", detail: e.message }); } }
-      if (action === "admin-contact") { try { await contacts.desactiver(w, Number(b.id), !!b.desactive, b.motif, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "contact", detail: e.message }); } }
-      if (action === "admin-lot") { try { await contacts.corrigerLot(w, Number(b.id), b, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "lot", detail: e.message }); } }
-      if (action === "admin-relever") { const r = await contacts.relever(w, u.nom, true); return send(res, 200, Object.assign({ ok: true, releve: r }, await contacts.liste(w))); }
+      try {
+        if (action === "admin-qualifier") await liste.qualifier(w, Number(b.id), b.champs || {}, u.nom);
+        if (action === "admin-anomalie") await liste.trancher(w, ids(), b.decision, u.nom);
+        if (action === "admin-contact") await liste.desactiver(w, ids(), !!b.desactive, b.motif, u.nom);
+        if (action === "admin-cote") await liste.changerCote(w, ids(), b.cote, u.nom);
+        if (action === "admin-nommer") await liste.nommer(w, Number(b.id), b.nom, u.nom);
+        if (action === "admin-numero") await liste.appliquerNumero(w, Number(b.id), b.numero, u.nom);
+        if (action === "admin-lot") await liste.corrigerLot(w, Number(b.id), b, u.nom);
+        if (action === "admin-vider") { if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." }); if (String(b.confirmation || "").toUpperCase() !== m.code) return send(res, 422, { ok: false, error: "confirmation", detail: "Pour confirmer, saisir le code du mariage : " + m.code }); await liste.vider(w, u.nom); }
+        if (action === "admin-sharepoint") { await liste.miroirBase(await store.mariageFresh(w)); }
+      } catch (e) { return refus(e); }
+      if (action === "admin-export-liste") { const x = await liste.exporter(w); await store.journal(m.id, "Liste exportée", x.nom, null, null, u.nom); return send(res, 200, { ok: true, nom: x.nom, b64: x.buffer.toString("base64") }); }
+      if (action === "admin-relever") { const r = await liste.relever(w, u.nom, true, await mariages.reglages()); return send(res, 200, Object.assign({ ok: true, releve: r }, await liste.liste(w))); }
       if (action === "admin-etape") {
-        const n = Math.max(1, Math.min(8, Number(b.n) || 0)); if (!n) return send(res, 422, { ok: false, error: "etape" });
+        const n = Math.max(1, Math.min(7, Number(b.n) || 0)); if (!n) return send(res, 422, { ok: false, error: "etape" });
         const fresh = await store.mariageFresh(w); const etapes = Object.assign({}, fresh.etapes || {});
-        if (n === 2 && !Number((await require("../lib/db").query("SELECT count(*) AS n FROM contact_recu WHERE mariage_id = $1 AND NOT desactive", [fresh.id]))[0].n)) return send(res, 422, { ok: false, error: "etape", detail: "Aucun contact reçu : l'étape ne peut pas être terminée." });
+        if (n === 2) {
+          const j = await liste.liste(w);
+          const restent = j.contacts.filter(c => !c.desactive && c.etat !== "complète");
+          if (!j.contacts.some(c => !c.desactive)) return send(res, 422, { ok: false, error: "etape", detail: "Aucune ligne dans la liste : l'étape ne peut pas être terminée." });
+          if (restent.length) return send(res, 422, { ok: false, error: "etape", detail: `${restent.length} ligne(s) ne sont pas encore vertes (${restent.filter(c => c.etat === "à voir").length} à voir avec YID, ${restent.filter(c => c.etat === "à compléter").length} à compléter avec le couple).` });
+        }
         etapes[n] = new Date().toISOString();
-        await require("../lib/db").query("UPDATE mariage SET etapes = $2, etape = $3, modifie_le = now() WHERE id = $1", [fresh.id, etapes, Math.min(8, Math.max(fresh.etape || 1, n + 1))]);
-        await store.journal(fresh.id, "Étape terminée", n + ". " + (checklist.ETAPES[n - 1] || ""), { etape: fresh.etape }, { etape: Math.min(8, Math.max(fresh.etape || 1, n + 1)) }, u.nom);
+        const suivante = Math.min(7, Math.max(fresh.etape || 1, n + 1));
+        await require("../lib/db").query("UPDATE mariage SET etapes = $2, etape = $3, modifie_le = now() WHERE id = $1", [fresh.id, etapes, suivante]);
+        await store.journal(fresh.id, "Étape terminée", n + ". " + (checklist.ETAPES[n - 1] || ""), { etape: fresh.etape }, { etape: suivante }, u.nom);
         return send(res, 200, { ok: true, mariage: await mariages.fiche(w) });
       }
-      return send(res, 200, Object.assign({ ok: true }, await contacts.liste(w)));
+      return send(res, 200, Object.assign({ ok: true }, await liste.liste(w)));
     }
     const cfg = WEDDINGS[w];
     if (!cfg) return send(res, 404, { ok: false, error: "wedding" });
