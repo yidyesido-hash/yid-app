@@ -237,8 +237,9 @@
       var pane = $("pane");
       if (isJournal) { pane.innerHTML = '<div class="card"><h3>Journal de ' + esc(m.prenoms) + '</h3><p>Tout ce qui a été fait sur ce mariage, le plus récent en premier : quoi, quand, par qui, et pour une modification la valeur avant et la valeur après.</p></div><div id="jm"><p class="muted">Chargement</p></div>'; api("admin-journal", { limit: 500 }, m.code).then(function(r){ LIB = r.libelles || LIB; $("jm").innerHTML = journalHtml(r.journal, false); }).catch(function(e){ $("jm").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }); return; }
       if (cur === 1) { cadrage(m, pane); return; }
+      if (cur === 2) { contactsRecus(m, pane, j.releve); return; }
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
-      var titles = m.etapes_libelles, versions = { 2: "1.2", 3: "1.3", 4: "1.5", 5: "1.6", 6: "1.7", 7: "1.8", 8: "1.8" };
+      var titles = m.etapes_libelles, versions = { 3: "1.3", 4: "1.5", 5: "1.6", 6: "1.7", 7: "1.8", 8: "1.8" };
       pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape arrive avec la version ' + versions[cur] + ' de l\'application. ' + (cur === 2 ? "Les contacts du couple arriveront ici, par email sur la boîte du mariage ou par dépôt ; l'outil construira la liste." : cur === 3 ? "La liste se qualifiera ici, ligne par ligne, et chaque foyer complet recevra sa clé." : cur === 5 ? "Le suivi des foyers, les confirmations et les relances vivront ici." : "") + '</p></div>';
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
@@ -320,6 +321,74 @@
         if (j.created) location.hash = "#/m/" + j.code; else if (m) { m.boite_email = (values().boite_email || "").trim() || null; }
       }).catch(function(e){ $("smsg").textContent = e.message; }).then(function(){ $("save").disabled = false; });
     };
+  }
+
+  /* ---------- étape 2 : contacts reçus ---------- */
+  function lireFichier(file){
+    return new Promise(function(ok, ko){
+      var fr = new FileReader();
+      fr.onerror = function(){ ko(new Error("Lecture impossible : " + file.name)); };
+      fr.onload = function(){
+        /* octets lus tels quels (latin1 = 1 octet par caractère) ; les photos sont retirées avant l'envoi, elles n'ont aucun usage */
+        var u8 = new Uint8Array(fr.result), txt = ""; for (var c = 0; c < u8.length; c += 8192) txt += String.fromCharCode.apply(null, u8.subarray(c, c + 8192));
+        var lines = txt.split(/\r\n|\n|\r/), out = [], skip = false;
+        for (var i = 0; i < lines.length; i++) { var l = lines[i]; if (/^PHOTO[;:]/i.test(l) || /^LOGO[;:]/i.test(l)) { skip = true; continue; } if (skip && (l.charAt(0) === " " || l.charAt(0) === "\t" || (/^[A-Za-z0-9\/+=]+$/.test(l) && l.length > 60))) continue; skip = false; out.push(l); }
+        var clean = out.join("\r\n"), bin = ""; for (var k = 0; k < clean.length; k++) bin += String.fromCharCode(clean.charCodeAt(k) & 255);
+        ok({ name: file.name, b64: btoa(bin) });
+      };
+      fr.readAsArrayBuffer(file);
+    });
+  }
+  function contactsRecus(m, pane, releve){
+    pane.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-contacts", {}, m.code).then(function(j){ renderContacts(m, pane, j, releve); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function renderContacts(m, pane, j, releve){
+    var k = j.kpis, b = j.boite || {};
+    var procheOpts = '<option value="">Aucun : liste du couple</option>' + j.proches.map(function(p){ return '<option>' + esc(p) + '</option>'; }).join("");
+    var quotasHtml = j.quotas.length ? '<div class="row" style="margin-bottom:14px"><span class="muted small">Quotas :</span>' + j.quotas.map(function(q){ return pill(q.proche + " " + q.recus + (q.quota !== null ? " sur " + q.quota : ""), q.depassement ? "bad" : "ok"); }).join(" ") + '</div>' : "";
+    var html = '<div class="card"><h3>2. Contacts reçus</h3><p>Le couple et ses proches désignés envoient les contacts de leur téléphone : par email sur la boîte du mariage, ou déposés ici. La machine lit chaque fichier, met les numéros au format international, retire les doublons et signale ce qu\'une personne doit trancher. Rien n\'est supprimé : un contact se désactive, une anomalie se tranche avec une décision écrite. Tout part ensuite à l\'étape 3, la liste d\'invités.</p>' +
+      '<p class="small">' + (m.boite_email ? 'Boîte <b>' + esc(m.boite_email) + '</b> : ' + (b.relevee_le ? 'relevée le ' + fmt(b.relevee_le) + '.' : 'jamais relevée.') + (releve && releve.detail ? ' <span class="muted">' + esc(releve.detail) + '</span>' : '') + ' Elle est relevée à chaque ouverture de cette page (au plus toutes les cinq minutes) et chaque matin ; un accusé de réception part à l\'expéditeur, sauf pour un mariage en statut Test.' : '<span class="muted">Aucune boîte email renseignée au cadrage (C3) : les fichiers se déposent ici.</span>') + '</p>' +
+      (m.boite_email ? '<div class="row"><button class="ghost" id="relever">Relever la boîte maintenant</button><span class="muted" id="rlmsg"></span></div>' : '') + '</div>' +
+      '<div class="kpis"><div class="kpi"><b>' + k.actifs + '</b><span>contacts reçus' + (k.desactives ? ', ' + k.desactives + ' désactivé(s)' : '') + '</span></div><div class="kpi"><b>' + k.propres + '</b><span>propres</span></div><div class="kpi"><b>' + k.a_voir + '</b><span>à voir avec YID</span></div><div class="kpi"><b>' + k.epouse + ' · ' + k.epoux + '</b><span>côté Épouse · côté Époux' + (k.a_preciser ? ' · ' + k.a_preciser + ' à préciser' : '') + '</span></div></div>' + quotasHtml +
+      '<div class="card"><h3>Déposer un export de contacts</h3><p>Fichier .vcf (iPhone, Android) ou .csv (Google, Outlook). Dans le doute, renvoyez tout : les doublons sont gérés. L\'étiquette de provenance et le côté sont gardés sur chaque contact.</p>' +
+        '<div class="row"><input id="src" placeholder="Provenance, par exemple Export Épouse" style="max-width:280px"><select id="cote" style="max-width:180px"><option value="">Côté</option>' + j.cotes.map(function(c){ return "<option>" + c + "</option>"; }).join("") + '</select><select id="proche" style="max-width:260px">' + procheOpts + '</select><input type="file" id="files" multiple accept=".vcf,.vcard,.csv,.txt" style="max-width:320px"><button id="doImp">Importer</button></div><div class="msg" id="impmsg"></div><div id="accuse"></div></div>' +
+      '<div class="row" style="margin-bottom:12px;justify-content:space-between"><input id="csearch" placeholder="Rechercher un nom ou un numéro" style="max-width:320px"><label class="small muted"><input type="checkbox" id="showoff" style="width:auto;min-height:0;margin-right:6px">Afficher les désactivés</label></div>' +
+      '<div class="wrap"><table><thead><tr><th>Nom dans le téléphone</th><th>Numéro</th><th>Deuxième numéro</th><th>Côté</th><th>Lien · précision</th><th>Source</th><th>Mentions</th><th>État</th><th></th></tr></thead><tbody id="crows"></tbody></table></div>' +
+      '<h2 class="sec" style="margin-top:26px">Anomalies à trancher</h2><p class="lead">La machine détecte, une personne décide. La décision s\'écrit, elle reste au journal et dans le classeur. Pour un doublon, on désactive la ligne au faux numéro ; pour deux personnes sur un même numéro, une ligne porteuse en invitation pour deux si c\'est un couple, sinon un numéro propre est demandé.</p><div class="wrap"><table><thead><tr><th>Détectée</th><th>Motif</th><th>Contact</th><th>Numéro</th><th>Décision</th><th></th></tr></thead><tbody id="arows"></tbody></table></div>' +
+      '<h2 class="sec" style="margin-top:26px">Lots reçus</h2><p class="lead">Un lot par fichier reçu. Un lot arrivé par email n\'a pas de côté : le préciser ici, cela se reporte sur ses contacts.</p><div class="wrap"><table><thead><tr><th>Reçu le</th><th>Provenance</th><th>Côté</th><th>Proche</th><th>Fichier</th><th>Lus · ajoutés · connus</th><th>Origine</th><th></th></tr></thead><tbody id="lrows"></tbody></table></div>' +
+      '<div class="card" style="margin-top:22px"><h3>Terminer l\'étape</h3><p>Quand les exports du couple et des proches sont reçus et les anomalies tranchées, l\'étape 2 se termine et la liste d\'invités (étape 3) s\'ouvre. D\'autres fichiers pourront encore arriver : ils s\'ajouteront, avec une alerte après la date de clôture' + (j.date_arret ? ' (' + fdate(j.date_arret) + ')' : '') + '.</p><div class="row"><button id="finir"' + ((m.etapes || {})[2] ? ' disabled' : '') + '>' + ((m.etapes || {})[2] ? 'Étape terminée' : 'Terminer la réception des contacts') + '</button><span class="muted" id="fmsg"></span></div></div>';
+    pane.innerHTML = html;
+    function etat(c){ if (c.desactive) return pill("désactivé", ""); if (c.motifs) return pill("à voir", "warn"); return pill("propre", "ok"); }
+    function rows(){
+      var s = ($("csearch").value || "").toLowerCase(), off = $("showoff").checked;
+      $("crows").innerHTML = j.contacts.filter(function(c){ return (off || !c.desactive) && (!s || (c.nom_repertoire + " " + (c.numero || "") + " " + (c.numero_2 || "")).toLowerCase().indexOf(s) >= 0); }).map(function(c){
+        return '<tr' + (c.desactive ? ' style="opacity:.5"' : '') + '><td><b>' + esc(c.nom_repertoire) + '</b></td><td>' + esc(c.numero || c.numero_brut || "") + (c.statut_numero !== "ok" ? ' ' + pill(c.statut_numero, "warn") : '') + '</td><td>' + esc(c.numero_2 || "") + '</td><td>' + (c.cote ? esc(c.cote) : '<span class="pill warn">à préciser</span>') + '</td><td>' + esc([c.lien, c.precision].filter(Boolean).join(" · ")) + '</td><td class="small">' + esc(c.source || "") + '</td><td class="small wrapcell">' + esc((c.mentions || []).map(function(x){ return x.texte; }).filter(function(t){ return !(c.motifs && c.motifs.indexOf(t) >= 0); }).join(" ; ")) + (c.motifs ? ((c.mentions || []).some(function(x){ return c.motifs.indexOf(x.texte) < 0; }) ? " ; " : "") + '<span class="err">' + esc(c.motifs) + '</span>' : '') + '</td><td>' + etat(c) + '</td><td><button class="ghost" data-c="' + c.id + '" data-d="' + (c.desactive ? 0 : 1) + '" style="min-height:32px;padding:6px 12px">' + (c.desactive ? "Réactiver" : "Désactiver") + '</button></td></tr>';
+      }).join("") || '<tr><td colspan="9" class="muted">Aucun contact reçu pour l\'instant.</td></tr>';
+      pane.querySelectorAll("[data-c]").forEach(function(btn){ btn.onclick = function(){ var motif = btn.dataset.d === "1" ? window.prompt("Motif de la désactivation (gardé au journal) :", "") : ""; if (btn.dataset.d === "1" && motif === null) return; api("admin-contact", { id: +btn.dataset.c, desactive: btn.dataset.d === "1", motif: motif }, m.code).then(function(r){ renderContacts(m, pane, r, null); }).catch(function(e){ $("impmsg").textContent = e.message; }); }; });
+      $("arows").innerHTML = j.anomalies.filter(function(a){ return a.etat === "ouverte"; }).map(function(a){
+        return '<tr><td>' + fmt(a.detectee_le) + '</td><td><b>' + esc(a.type + (a.detail && a.detail.autre ? " " + a.detail.autre : "")) + '</b></td><td>' + esc(a.nom || "") + '</td><td>' + esc((a.detail && a.detail.numero) || "") + '</td><td><input data-dec="' + a.id + '" placeholder="Décision, en une phrase" style="min-width:260px;min-height:36px"></td><td><button class="ghost" data-a="' + a.id + '" style="min-height:32px;padding:6px 12px">Trancher</button></td></tr>';
+      }).join("") || '<tr><td colspan="6" class="muted">Aucune anomalie ouverte.</td></tr>';
+      pane.querySelectorAll("[data-a]").forEach(function(btn){ btn.onclick = function(){ var d = pane.querySelector('[data-dec="' + btn.dataset.a + '"]').value; api("admin-anomalie", { id: +btn.dataset.a, decision: d }, m.code).then(function(r){ if (!r.ok) { $("impmsg").textContent = r.detail; return; } renderContacts(m, pane, r, null); }).catch(function(e){ $("impmsg").textContent = e.message; }); }; });
+      $("lrows").innerHTML = j.lots.map(function(l){
+        return '<tr><td>' + fmt(l.recu_le) + '</td><td><input data-ls="' + l.id + '" value="' + esc(l.source) + '" style="min-height:36px;min-width:180px"></td><td><select data-lc="' + l.id + '" style="min-height:36px"><option value="">à préciser</option>' + j.cotes.map(function(c){ return '<option' + (l.cote === c ? " selected" : "") + '>' + c + '</option>'; }).join("") + '</select></td><td><select data-lp="' + l.id + '" style="min-height:36px"><option value="">Aucun</option>' + j.proches.map(function(p){ return '<option' + (l.proche === p ? " selected" : "") + '>' + esc(p) + '</option>'; }).join("") + '</select></td><td class="small wrapcell">' + esc(l.fichier || "") + (l.archive ? '<br><span class="muted">archivé sur SharePoint</span>' : '') + '</td><td>' + l.lus + ' · ' + l.ajoutes + ' · ' + l.connus + '</td><td>' + esc(l.origine) + (l.expediteur ? '<br><span class="small muted">' + esc(l.expediteur) + '</span>' : '') + '</td><td><button class="ghost" data-l="' + l.id + '" style="min-height:32px;padding:6px 12px">Corriger la source</button></td></tr>';
+      }).join("") || '<tr><td colspan="8" class="muted">Aucun lot.</td></tr>';
+      pane.querySelectorAll("[data-l]").forEach(function(btn){ btn.onclick = function(){ var id = btn.dataset.l; api("admin-lot", { id: +id, source: pane.querySelector('[data-ls="' + id + '"]').value, cote: pane.querySelector('[data-lc="' + id + '"]').value, proche: pane.querySelector('[data-lp="' + id + '"]').value }, m.code).then(function(r){ renderContacts(m, pane, r, null); }).catch(function(e){ $("impmsg").textContent = e.message; }); }; });
+    }
+    rows(); $("csearch").oninput = rows; $("showoff").onchange = rows;
+    $("doImp").onclick = function(){
+      var files = Array.prototype.slice.call($("files").files); if (!files.length) { $("impmsg").textContent = "Choisissez un fichier."; return; }
+      if (!$("src").value.trim()) { $("impmsg").textContent = "Indiquez la provenance (par exemple Export Épouse)."; return; }
+      $("impmsg").textContent = "Lecture et import"; $("doImp").disabled = true; $("accuse").innerHTML = "";
+      Promise.all(files.map(lireFichier)).then(function(fs){ return api("admin-importer", { source: $("src").value, cote: $("cote").value, proche: $("proche").value, fichiers: fs }, m.code); }).then(function(r){
+        if (!r.ok) { $("impmsg").textContent = r.detail || "Import refusé."; return; }
+        $("impmsg").textContent = "";
+        $("accuse").innerHTML = '<div class="card" style="margin-top:12px;background:var(--cream)"><h3>Accusé de réception</h3><p>' + r.lus + ' contact(s) lu(s), <b>' + r.ajoutes + ' ajouté(s)</b>, ' + r.connus + ' déjà connu(s), ' + r.a_voir + ' ligne(s) à voir avec YID.' + (r.quota && r.quota.quota !== null ? ' Quota ' + esc(r.quota.proche) + ' : ' + r.quota.recus + ' sur ' + r.quota.quota + '.' : '') + '</p>' + ((r.avertissements || []).length ? '<ul>' + r.avertissements.map(function(a){ return "<li>" + esc(a) + "</li>"; }).join("") + '</ul>' : '') + ((r.sharepoint && r.sharepoint.erreurs || []).length ? '<p class="err">' + esc(r.sharepoint.erreurs.join(" ; ")) + '</p>' : '') + '</div>';
+        api("admin-contacts", {}, m.code).then(function(jj){ var acc = $("accuse").innerHTML; renderContacts(m, pane, jj, null); $("accuse").innerHTML = acc; });
+      }).catch(function(e){ $("impmsg").textContent = e.message; }).then(function(){ var bt = $("doImp"); if (bt) bt.disabled = false; });
+    };
+    if ($("relever")) $("relever").onclick = function(){ $("rlmsg").textContent = "Relève en cours"; $("relever").disabled = true; api("admin-relever", {}, m.code).then(function(r){ renderContacts(m, pane, r, r.releve); var msg = $("rlmsg"); if (msg) msg.textContent = r.releve.releve ? r.releve.messages + " message(s), " + r.releve.lots.length + " lot(s) importé(s). " + (r.releve.detail || "") : (r.releve.detail || ""); }).catch(function(e){ $("rlmsg").textContent = e.message; $("relever").disabled = false; }); };
+    $("finir").onclick = function(){ $("fmsg").textContent = "Enregistrement"; api("admin-etape", { n: 2 }, m.code).then(function(r){ if (!r.ok) { $("fmsg").textContent = r.detail || "Refusé."; return; } location.hash = "#/m/" + m.code + "/3"; }).catch(function(e){ $("fmsg").textContent = e.message; }); };
   }
 
   /* ---------- étape 5 provisoire : les écrans de la v1.0 (formulaires existants) ---------- */

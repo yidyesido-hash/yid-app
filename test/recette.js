@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.1.2, base locale");
+  console.log("Recette yid-app v1.2, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -135,6 +135,53 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   check("un accès désactivé ne se connecte plus", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-boite&w=AC27", {}, H);
   check("revérifier la boîte : état mémorisé sur le mariage, non bloquant sans Microsoft", r.json.ok && r.json.boite.ok === false && r.json.mariage.boite && r.json.mariage.boite.verifiee_le);
+
+  /* ---------- v1.2 : contacts reçus sur le corpus reconstitué ---------- */
+  const corpus = (f) => ({ name: f, b64: fs.readFileSync(require("path").join(__dirname, "corpus", f)).toString("base64") });
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Export Épouse", cote: "Épouse", fichiers: [corpus("Test_Yid_iPhone.vcf")] }, H);
+  check("test 1 iPhone : 13 lus, 13 ajoutés, 0 connu, 6 à voir", r.status === 200 && r.json.lus === 13 && r.json.ajoutes === 13 && r.json.connus === 0 && r.json.a_voir === 6, JSON.stringify([r.json.lus, r.json.ajoutes, r.json.connus, r.json.a_voir, r.json.detail]));
+  r = await call("POST", "/api/forms?action=admin-contacts&w=AC27", {}, H);
+  const byNom = (n) => r.json.contacts.filter(c => c.nom_repertoire === n);
+  check("Miezi-Lisa : numéro préféré en principal, 2e numéro trouvé, propre", byNom("Miezi-Lisa")[0].numero === "+33644556677" && byNom("Miezi-Lisa")[0].numero_2 === "+33750212558" && !byNom("Miezi-Lisa")[0].motifs);
+  check("les six à voir : Bernard sans numéro, Crevette invalide, Cess x2 doublon probable, Regis 1 et Monsieur mon Mari même numéro", /sans numéro/.test(byNom("Bernard")[0].motifs) && /invalide/.test(byNom("Crevette")[0].motifs) && byNom("Cess").every(c => /doublon probable avec Cess/.test(c.motifs)) && /même numéro que Monsieur mon Mari/.test(byNom("Regis 1")[0].motifs) && /même numéro que Regis 1/.test(byNom("Monsieur mon Mari")[0].motifs), r.json.contacts.filter(c => c.motifs).map(c => c.nom_repertoire + ": " + c.motifs).join(" | "));
+  check("tri : propres par côté puis alphabétique, anomalies en bas", r.json.contacts[0].nom_repertoire === "Amy Djitte" && !r.json.contacts[6].motifs && !!r.json.contacts[7].motifs);
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Export Époux", cote: "Époux", fichiers: [corpus("Samsung_Regis.vcf")] }, H);
+  check("test 2 Samsung : 6 lus, 5 ajoutés, 1 connu, 7 à voir", r.json.lus === 6 && r.json.ajoutes === 5 && r.json.connus === 1 && r.json.a_voir === 7, JSON.stringify([r.json.lus, r.json.ajoutes, r.json.connus, r.json.a_voir]));
+  r = await call("POST", "/api/forms?action=admin-contacts&w=AC27", {}, H);
+  const djo = r.json.contacts.find(c => c.nom_repertoire === "Djoco Mabiala");
+  check("Djo : mention « aussi proposé par Export Époux » et motif présent dans les deux répertoires", djo.mentions.some(x => x.texte === "aussi proposé par Export Époux") && /deux répertoires/.test(djo.motifs));
+  check("Raquel à émojis sur une seule ligne, Patrick fixe secondaire signalé, numéros Samsung dupliqués fusionnés", r.json.contacts.filter(c => /^Raquel/.test(c.nom_repertoire)).length === 1 && r.json.contacts.find(c => c.nom_repertoire === "Patrick").numero === "+41791234567" && r.json.contacts.find(c => c.nom_repertoire === "Donna C").numero_2 === null);
+  check("kpis : 18 actifs, 11 propres, 7 à voir, côté Épouse 13, Époux 5", r.json.kpis.actifs === 18 && r.json.kpis.propres === 11 && r.json.kpis.a_voir === 7 && r.json.kpis.epouse === 13 && r.json.kpis.epoux === 5, JSON.stringify(r.json.kpis));
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Export Époux", cote: "Époux", fichiers: [corpus("Samsung_Regis.vcf")] }, H);
+  check("test 3 idempotence : 6 lus, 0 ajouté, 6 connus, toujours 7 à voir", r.json.lus === 6 && r.json.ajoutes === 0 && r.json.connus === 6 && r.json.a_voir === 7, JSON.stringify([r.json.lus, r.json.ajoutes, r.json.connus, r.json.a_voir]));
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Liste Tante Awa", cote: "Épouse", proche: "Tante Awa", fichiers: [corpus("Google_export.csv")] }, H);
+  check("liste d'un proche (CSV Google) : 2 lus, 1 ajouté, 1 connu, quota 1 sur 12, préremplissage", r.json.lus === 2 && r.json.ajoutes === 1 && r.json.connus === 1 && r.json.quota && r.json.quota.quota === 12 && r.json.quota.recus === 1 && !r.json.quota.depassement, JSON.stringify(r.json.quota) + " " + (r.json.avertissements || []).join(" "));
+  r = await call("POST", "/api/forms?action=admin-contacts&w=AC27", {}, H);
+  const lina = r.json.contacts.find(c => c.nom_repertoire === "Lina Planner");
+  check("Lina : Lien « Invité(e) d'un proche », Précision Tante Awa, fixe en 2e numéro", lina.lien === "Invité(e) d'un proche" && lina.precision === "Tante Awa" && lina.numero_2 === "+33142001122");
+  r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Liste Kevin", cote: "Époux", proche: "Kevin", fichiers: [corpus("Google_export.csv")] }, H);
+  check("proche non déclaré : avertissement et ajout aux contributeurs", r.status === 200 && (r.json.avertissements || []).some(a => /Kevin/.test(a) && /ajouté/.test(a)), JSON.stringify(r.json).slice(0, 300));
+  r = await call("POST", "/api/forms?action=admin-contacts&w=AC27", {}, H);
+  const bernard = r.json.anomalies.find(a => a.type === "sans numéro" && a.etat === "ouverte");
+  r = await call("POST", "/api/forms?action=admin-anomalie&w=AC27", { id: bernard.id, decision: "" }, H);
+  check("trancher sans décision écrite : refusé", r.status === 422);
+  r = await call("POST", "/api/forms?action=admin-anomalie&w=AC27", { id: bernard.id, decision: "Numéro demandé au couple" }, H);
+  const b2 = r.json.contacts.find(c => c.nom_repertoire === "Bernard");
+  check("anomalie tranchée : Bernard redevient propre, décision gardée (8 à voir : Lina et Tamara aussi proposées côté Époux)", r.json.ok && !b2.motifs && r.json.anomalies.find(a => a.id === bernard.id).etat === "tranchée" && r.json.kpis.a_voir === 8, JSON.stringify([b2 && b2.motifs, r.json.kpis]));
+  const cess2 = r.json.contacts.filter(c => c.nom_repertoire === "Cess")[1];
+  r = await call("POST", "/api/forms?action=admin-contact&w=AC27", { id: cess2.id, desactive: true, motif: "même personne, faux numéro" }, H);
+  check("contact désactivé, jamais supprimé", r.json.kpis.desactives === 1 && r.json.contacts.some(c => c.id === cess2.id && c.desactive));
+  const lotEmail = r.json.lots.find(l => l.source === "Liste Kevin");
+  r = await call("POST", "/api/forms?action=admin-lot&w=AC27", { id: lotEmail.id, cote: "Épouse", source: "Liste Kevin (corrigée)" }, H);
+  check("source corrigée sur le lot et ses contacts", r.json.lots.find(l => l.id === lotEmail.id).cote === "Épouse" && r.json.contacts.filter(c => c.lot_id === lotEmail.id).every(c => c.cote === "Épouse" && c.source === "Liste Kevin (corrigée)"));
+  r = await call("POST", "/api/forms?action=admin-etape&w=AC272", { n: 2 }, H);
+  check("terminer l'étape 2 sans contact : refusé", r.status === 422);
+  r = await call("POST", "/api/forms?action=admin-etape&w=AC27", { n: 2 }, H);
+  check("étape 2 terminée sur AC27 : étape 3 en cours, jauge 25 %", r.json.ok && r.json.mariage.etape === 3 && r.json.mariage.etapes["2"] && r.json.mariage.terminees === 2);
+  r = await call("POST", "/api/forms?action=admin-journal&w=AC27", {}, H);
+  check("journal : Contacts reçus, Anomalie tranchée, Contact désactivé, Source corrigée, Étape terminée", ["Contacts reçus", "Anomalie tranchée", "Contact désactivé", "Source corrigée", "Étape terminée", "Proche contributeur ajouté"].every(o => r.json.journal.some(l => l.operation === o)));
+  const p2 = require("../lib/telephone");
+  check("normalisation : DOM 0690 vers +590, +33 (0)6, 00 33, numéro nu local, fixe signalé", p2.normaliser("0690 12 34 56", "FR").numero === "+590690123456" && p2.normaliser("+33 (0)6 12 34 56 78", "FR").numero === "+33612345678" && p2.normaliser("0033612345678", "FR").numero === "+33612345678" && p2.normaliser("612345678", "FR").numero === "+33612345678" && p2.normaliser("01 42 00 00 00", "FR").statut === "fixe probable" && p2.normaliser("12", "FR").statut === "invalide");
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);

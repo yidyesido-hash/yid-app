@@ -20,6 +20,13 @@
      ?action=admin-mariage  POST  la fiche d'un mariage (w=CODE)
      ?action=admin-boite    POST  revérifier la boîte email d'un mariage (w=CODE)
      ?action=admin-reglages POST  lire (sans corps) ou enregistrer (cle, valeur) un réglage
+     ?action=admin-contacts  POST  étape 2 : contacts reçus, lots, anomalies, quotas (w=CODE)
+     ?action=admin-importer  POST  déposer un lot : source, cote, proche, fichiers [{ name, b64 }] (w=CODE)
+     ?action=admin-anomalie  POST  trancher une anomalie : id, decision (w=CODE)
+     ?action=admin-contact   POST  désactiver ou réactiver un contact : id, desactive, motif (w=CODE)
+     ?action=admin-lot       POST  corriger la source d'un lot : id, source, cote, proche (w=CODE)
+     ?action=admin-relever   POST  relever la boîte du mariage maintenant (w=CODE)
+     ?action=admin-etape     POST  terminer une étape : n (w=CODE)
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
    ===================================================================== */
@@ -29,7 +36,8 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.1.2";
+const VERSION = "1.2";
+const contacts = require("../lib/contacts");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
@@ -158,7 +166,9 @@ module.exports = async (req, res) => {
       const auth = req.headers.authorization || "";
       if (!process.env.CRON_SECRET || auth !== "Bearer " + process.env.CRON_SECRET) return send(res, 401, { ok: false });
       const out = {}; for (const id of Object.keys(WEDDINGS)) { await store.ensureMariage(WEDDINGS[id]); out[id] = await pushRows(WEDDINGS[id], []); }
-      return send(res, 200, { ok: true, out });
+      const boites = {};
+      for (const m of await require("../lib/db").query("SELECT code FROM mariage WHERE NOT desactive AND boite_email IS NOT NULL AND statut <> 'Clos'")) { try { boites[m.code] = await contacts.relever(m.code, "tâche planifiée", true); } catch (e) { boites[m.code] = { erreur: e.message }; } }
+      return send(res, 200, { ok: true, out, boites });
     }
 
     /* ---------- connexion et vérifications : sans mariage ---------- */
@@ -236,7 +246,33 @@ module.exports = async (req, res) => {
         const r = await mariages.verifierBoite(w, m.boite_email, u.nom);
         return send(res, 200, { ok: true, boite: r, mariage: await mariages.fiche(w) });
       }
-      return send(res, 200, { ok: true, mariage: m, formulaires: !!WEDDINGS[w], moi: u });
+      let releve = null;
+      if (m.boite_email && graph.enabled()) { try { releve = await contacts.relever(w, u.nom, false); } catch (e) { releve = { detail: e.message }; } }
+      return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
+    }
+    if (["admin-contacts", "admin-importer", "admin-anomalie", "admin-contact", "admin-lot", "admin-relever", "admin-etape"].includes(action)) {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
+      if (action === "admin-importer") {
+        const fichiers = (b.fichiers || []).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
+        if (!fichiers.length) return send(res, 422, { ok: false, error: "fichiers", detail: "Aucun fichier reçu." });
+        try { const accuse = await contacts.importer(w, { source: b.source, cote: b.cote, proche: b.proche, origine: "dépôt" }, fichiers, u.nom); return send(res, 200, Object.assign({ ok: true }, accuse)); }
+        catch (e) { return send(res, 422, { ok: false, error: "import", detail: e.message }); }
+      }
+      if (action === "admin-anomalie") { try { await contacts.trancher(w, Number(b.id), b.decision, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "anomalie", detail: e.message }); } }
+      if (action === "admin-contact") { try { await contacts.desactiver(w, Number(b.id), !!b.desactive, b.motif, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "contact", detail: e.message }); } }
+      if (action === "admin-lot") { try { await contacts.corrigerLot(w, Number(b.id), b, u.nom); } catch (e) { return send(res, 422, { ok: false, error: "lot", detail: e.message }); } }
+      if (action === "admin-relever") { const r = await contacts.relever(w, u.nom, true); return send(res, 200, Object.assign({ ok: true, releve: r }, await contacts.liste(w))); }
+      if (action === "admin-etape") {
+        const n = Math.max(1, Math.min(8, Number(b.n) || 0)); if (!n) return send(res, 422, { ok: false, error: "etape" });
+        const fresh = await store.mariageFresh(w); const etapes = Object.assign({}, fresh.etapes || {});
+        if (n === 2 && !Number((await require("../lib/db").query("SELECT count(*) AS n FROM contact_recu WHERE mariage_id = $1 AND NOT desactive", [fresh.id]))[0].n)) return send(res, 422, { ok: false, error: "etape", detail: "Aucun contact reçu : l'étape ne peut pas être terminée." });
+        etapes[n] = new Date().toISOString();
+        await require("../lib/db").query("UPDATE mariage SET etapes = $2, etape = $3, modifie_le = now() WHERE id = $1", [fresh.id, etapes, Math.min(8, Math.max(fresh.etape || 1, n + 1))]);
+        await store.journal(fresh.id, "Étape terminée", n + ". " + (checklist.ETAPES[n - 1] || ""), { etape: fresh.etape }, { etape: Math.min(8, Math.max(fresh.etape || 1, n + 1)) }, u.nom);
+        return send(res, 200, { ok: true, mariage: await mariages.fiche(w) });
+      }
+      return send(res, 200, Object.assign({ ok: true }, await contacts.liste(w)));
     }
     const cfg = WEDDINGS[w];
     if (!cfg) return send(res, 404, { ok: false, error: "wedding" });
