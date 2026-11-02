@@ -8,23 +8,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#141210; --muted:#6B655E; --line:#E6E1DA; --cream:#FAF7F2; --gold:#B8956A; --ok:#3F6B4E; --warn:#9B6A2E; --bad:#9B3B2E;
+  :root{ --ink:#141210; --muted:#6B655E; --line:#E6E1DA; --cream:#FAF7F2; --gold:#B8956A; --ok:#3F6B4E; --warn:#9B6A2E; --bad:#9B3B2E; --bg:#fff; --btn:#141210; --btnink:#fff;
+         --pill-ok:#E6EFE8; --pill-warn:#F5ECDD; --pill-bad:#F3E3E0; --pill-gold:#F3EADF; --pill-goldink:#7d5f3b;
          --h:"Cormorant Garamond",Georgia,serif; --b:"Inter",system-ui,sans-serif; }
-  *{ box-sizing:border-box } body{ margin:0; background:#fff; color:var(--ink); font:400 15px/1.55 var(--b); }
+  :root[data-theme="sombre"]{ --ink:#F2EEE8; --muted:#A39B91; --line:#2E2A26; --cream:#1E1B18; --gold:#C9A878; --ok:#8FBF9B; --warn:#D9A866; --bad:#E08A7E; --bg:#141210; --btn:#F2EEE8; --btnink:#141210;
+         --pill-ok:#1F3326; --pill-warn:#3A2B17; --pill-bad:#3A1F1B; --pill-gold:#332A1F; --pill-goldink:#D9C2A0; color-scheme:dark; }
+  *{ box-sizing:border-box } body{ margin:0; background:var(--bg); color:var(--ink); font:400 15px/1.55 var(--b); }
   header{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:18px 28px; border-bottom:1px solid var(--line); }
   header h1{ margin:0; font:500 24px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
   header small{ display:block; font:500 11px/1 var(--b); letter-spacing:.2em; color:var(--gold); text-transform:uppercase; margin-bottom:6px; }
   header img{ height:44px; width:auto; }
   nav a{ font:500 11px/1 var(--b); letter-spacing:.14em; text-transform:uppercase; color:var(--ink); text-decoration:none; padding:10px 16px; border:1px solid var(--line); border-radius:999px; margin-left:6px; }
-  nav a.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  nav a.on{ background:var(--btn); color:var(--btnink); border-color:var(--btn); }
   main{ max-width:1180px; margin:0 auto; padding:26px 28px 60px; }
   .login{ max-width:420px; margin:60px auto; display:grid; gap:14px; text-align:center; }
   .login h2{ margin:0; font:500 30px/1.1 var(--h); letter-spacing:.08em; text-transform:uppercase; }
-  input, select, textarea{ width:100%; min-height:46px; padding:11px 14px; border:1px solid var(--line); border-radius:12px; font:400 15px/1.4 var(--b); color:var(--ink); background:#fff; }
+  input, select, textarea{ width:100%; min-height:46px; padding:11px 14px; border:1px solid var(--line); border-radius:12px; font:400 15px/1.4 var(--b); color:var(--ink); background:var(--bg); }
   textarea{ min-height:120px; }
   textarea.mono{ min-height:180px; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
-  button{ min-height:44px; padding:10px 20px; border-radius:999px; border:1px solid var(--ink); background:var(--ink); color:#fff; font:500 12px/1 var(--b); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
-  button.ghost{ background:#fff; color:var(--ink); border-color:var(--line); } button.ghost:hover{ border-color:var(--ink); }
+  button{ min-height:44px; padding:10px 20px; border-radius:999px; border:1px solid var(--btn); background:var(--btn); color:var(--btnink); font:500 12px/1 var(--b); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+  button.ghost{ background:var(--bg); color:var(--ink); border-color:var(--line); } button.ghost:hover{ border-color:var(--ink); }
   button[disabled]{ opacity:.5; cursor:default; }
   h2.sec{ margin:0 0 6px; font:500 22px/1.2 var(--h); letter-spacing:.06em; text-transform:uppercase; }
   .lead{ color:var(--muted); margin:0 0 16px; }
@@ -33,7 +36,7 @@
   .msg{ margin-top:12px; font-size:14px; } .muted{ color:var(--muted); } .small{ font-size:12.5px; }
   a{ color:var(--ink); }
   [hidden]{ display:none!important; }
-  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; background:var(--cream); } .pill.ok{ background:#E6EFE8; color:var(--ok);} .pill.warn{ background:#F5ECDD; color:var(--warn);} .pill.bad{ background:#F3E3E0; color:var(--bad);} .pill.gold{ background:#F3EADF; color:#7d5f3b; }
+  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; background:var(--cream); } .pill.ok{ background:var(--pill-ok); color:var(--ok);} .pill.warn{ background:var(--pill-warn); color:var(--warn);} .pill.bad{ background:var(--pill-bad); color:var(--bad);} .pill.gold{ background:var(--pill-gold); color:var(--pill-goldink); }
   .wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:16px; }
   table{ border-collapse:collapse; width:100%; font-size:13.5px; } th,td{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; vertical-align:top; } th{ font:500 11px/1.2 var(--b); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:var(--cream); position:sticky; top:0; }
   td.wrapcell{ white-space:normal; min-width:240px; }
@@ -46,18 +49,19 @@
   .chem p{ margin:0 0 10px; }
   .lights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
   .light{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; display:grid; grid-template-columns:18px 1fr; gap:12px; align-items:start; }
-  .dot{ width:12px; height:12px; border-radius:50%; margin-top:5px; background:var(--line); box-shadow:0 0 0 4px var(--cream); } .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
+  .dot{ width:12px; height:12px; border-radius:50%; margin-top:5px; background:var(--line); box-shadow:0 0 0 4px var(--cream); }
+  :root[data-theme="sombre"] header img, :root[data-theme="sombre"] .login img{ filter:invert(1) hue-rotate(180deg); } .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
   .light b{ display:block; font:600 18px/1.2 var(--h); margin-bottom:2px; } .light span{ font-size:13px; color:var(--muted); word-break:break-word; }
   /* mariage : étapes */
   .layout{ display:grid; grid-template-columns:300px 1fr; gap:24px; } @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   .steps{ border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .step{ display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
   .step:last-child{ border-bottom:0; } .step.on{ background:var(--cream); } .step.off{ color:var(--muted); }
-  .step .n{ width:28px; height:28px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font:600 13px/1 var(--h); } .step.done .n{ background:var(--ok); color:#fff; border-color:var(--ok);} .step.on .n{ border-color:var(--gold); color:var(--gold); }
+  .step .n{ width:28px; height:28px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font:600 13px/1 var(--h); } .step.done .n{ background:var(--ok); color:var(--bg); border-color:var(--ok);} .step.on .n{ border-color:var(--gold); color:var(--gold); }
   .step .t{ font-size:14px; }
   .field{ margin-bottom:18px; } .field label{ display:block; font:600 15px/1.35 var(--b); margin-bottom:4px; } .field .q{ font:600 16px/1.4 var(--b); margin-bottom:6px; } .field .h{ font:400 12.5px/1.45 var(--b); font-style:italic; color:var(--muted); margin-top:6px; }
   .field .num{ font:500 11px/1 var(--b); letter-spacing:.14em; color:var(--gold); margin-bottom:4px; }
-  .radios{ display:flex; gap:8px; flex-wrap:wrap; } .radios label{ font:400 14px/1 var(--b); padding:10px 16px; border:1px solid var(--line); border-radius:999px; cursor:pointer; } .radios input{ display:none; } .radios input:checked + span{ font-weight:600; } .radios label.sel{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .radios{ display:flex; gap:8px; flex-wrap:wrap; } .radios label{ font:400 14px/1 var(--b); padding:10px 16px; border:1px solid var(--line); border-radius:999px; cursor:pointer; } .radios input{ display:none; } .radios input:checked + span{ font-weight:600; } .radios label.sel{ background:var(--btn); color:var(--btnink); border-color:var(--btn); }
   .err{ color:var(--bad); font-size:13px; }
   .version{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
   .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:22px; }
@@ -88,6 +92,10 @@
 <script>
 (function(){
   var TOKEN = "", MOI = {}; try { TOKEN = sessionStorage.getItem("yid_token") || ""; MOI = JSON.parse(sessionStorage.getItem("yid_moi") || "{}"); } catch(e){}
+  /* thème : le choix de la personne (navigateur) prime, sinon le thème par défaut de l'outil, sinon clair */
+  function monTheme(){ try { return localStorage.getItem("yid_theme") || ""; } catch(e){ return ""; } }
+  function applyTheme(){ var t = monTheme() || MOI.theme || "clair"; document.documentElement.setAttribute("data-theme", t === "sombre" ? "sombre" : "clair"); }
+  applyTheme();
   var $ = function(id){ return document.getElementById(id); };
   var V = $("view");
   function api(action, payload, w){
@@ -100,14 +108,14 @@
   function pill(t, c){ return t ? '<span class="pill ' + (c || "") + '">' + esc(t) + '</span>' : ""; }
   function statutClass(s){ return s === "En préparation" || s === "Signé" ? "ok" : s === "Prospect" ? "warn" : s === "Test" ? "gold" : ""; }
   function download(name, csv){ var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
-  function gauge(p){ var r = 40, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, p)) / 100); return '<div class="gauge"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="' + r + '" fill="none" stroke="#E6E1DA" stroke-width="7"/><circle cx="48" cy="48" r="' + r + '" fill="none" stroke="#B8956A" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg><b>' + p + '%</b></div>'; }
+  function gauge(p){ var r = 40, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, p)) / 100); return '<div class="gauge"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="' + r + '" fill="none" style="stroke:var(--line)" stroke-width="7"/><circle cx="48" cy="48" r="' + r + '" fill="none" style="stroke:var(--gold)" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg><b>' + p + '%</b></div>'; }
 
   /* ---------- connexion ---------- */
   function enter(){
     var pw = $("pw").value, prenom = $("prenom").value.trim(); $("lmsg").textContent = "";
     fetch("/api/forms?action=admin-login", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: pw, prenom: prenom }) })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? (prenom ? "Prénom ou mot de passe refusé" : "Mot de passe refusé") : (j.detail || "Connexion impossible")); TOKEN = j.token; MOI = { nom: j.nom, role: j.role, version: j.version, equipe: j.equipe }; try{ sessionStorage.setItem("yid_token", TOKEN); sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} opened(); })
+      .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? (prenom ? "Prénom ou mot de passe refusé" : "Mot de passe refusé") : (j.detail || "Connexion impossible")); TOKEN = j.token; MOI = { nom: j.nom, role: j.role, version: j.version, equipe: j.equipe, theme: j.theme }; applyTheme(); try{ sessionStorage.setItem("yid_token", TOKEN); sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} opened(); })
       .catch(function(e){ $("lmsg").textContent = e.message; });
   }
   function opened(){ $("login").hidden = true; V.hidden = false; $("nav").hidden = false; $("who").textContent = MOI.nom ? "Connecté : " + MOI.nom : ""; if (MOI.version) $("ver").textContent = "Version " + MOI.version; route(); }
@@ -180,7 +188,8 @@
       V.innerHTML = '<h2 class="sec">Guide et ressources</h2><p class="lead">Comment un mariage traverse l\'outil, et où trouver les documents de référence. Ces textes se modifient dans <a href="#/reglages">Réglages</a>.</p>' +
         '<div class="card"><h3>Le cheminement d\'un mariage</h3><p>Les huit étapes, dans l\'ordre où un mariage les traverse. Chaque page de mariage suit ce même fil.</p><div class="chem">' + j.cheminement.split("\n").map(function(l){ return "<p>" + esc(l) + "</p>"; }).join("") + '</div></div>' +
         '<div class="card"><h3>Les huit étapes en un coup d\'œil</h3><ol>' + j.etapes.map(function(e){ return "<li>" + esc(e) + "</li>"; }).join("") + '</ol></div>' +
-        '<div class="card"><h3>Ressources</h3><p>Plan, documents de phase, espace SharePoint et tout ce qui aide l\'équipe.</p>' + ressourcesHtml(j.ressources) + '</div>' +
+        '<div class="card"><h3>Ressources de l\'équipe</h3><p>Ce qui aide au quotidien du métier : espace SharePoint, modes opératoires, modèles.</p>' + ressourcesHtml(j.ressources_equipe) + '</div>' +
+        (j.ressources_direction !== undefined ? '<div class="card"><h3>Ressources de direction</h3><p>Plan de construction, documents de phase, décisions. Visibles des administrateurs seulement.</p>' + ressourcesHtml(j.ressources_direction) + '</div>' : "") +
         '<div class="card"><h3>Trois règles de l\'outil</h3><p>Le foyer est l\'unité d\'invitation et sa clé ne change jamais. Rien n\'est supprimé : on désactive, et le journal garde la trace de tout, avec le nom de la personne qui a agi. Les classeurs SharePoint sont des miroirs : l\'application les écrit, l\'équipe les lit ; la saisie se fait ici.</p></div>';
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
@@ -192,13 +201,19 @@
     api("admin-reglages").then(function(j){
       V.innerHTML = '<h2 class="sec">Réglages</h2><p class="lead">Les textes vivants de l\'outil, l\'équipe et le journal maître. Ce qui est écrit ici s\'affiche tel quel à toute l\'équipe.</p>' +
         '<div class="card"><h3>Le cheminement d\'un mariage</h3><p>Affiché dans Guide et ressources. Une ligne par étape, dans l\'ordre ; ajoutez ou retirez librement au fil de l\'avancement de l\'outil.</p><textarea id="chem" class="mono" style="min-height:300px">' + esc(j.cheminement) + '</textarea><div class="row" style="margin-top:12px"><button id="savechem">Enregistrer</button><span class="muted" id="rmsg"></span></div></div>' +
-        '<div class="card"><h3>Ressources</h3><p>Une ressource par ligne, au format <b>Titre | adresse | une phrase</b>. Elles s\'affichent dans Guide et ressources.</p><textarea id="ress" class="mono" style="min-height:140px">' + esc(j.ressources) + '</textarea><div class="row" style="margin-top:12px"><button id="saveress">Enregistrer</button><span class="muted" id="rmsg2"></span></div></div>' +
+        '<div class="card"><h3>Mon affichage</h3><p>Clair ou sombre, pour vous seulement, mémorisé sur ce navigateur.</p><div class="radios" id="themes">' + [["", "Comme le réglage de l\'outil"], ["clair", "Clair"], ["sombre", "Sombre"]].map(function(t){ return '<label class="' + (monTheme() === t[0] ? "sel" : "") + '" data-t="' + t[0] + '"><span>' + t[1] + '</span></label>'; }).join("") + '</div>' +
+          (admin ? '<p style="margin-top:14px">Thème par défaut de l\'outil, pour toute l\'équipe (chacun peut le surcharger ci dessus).</p><div class="radios" id="themedef">' + [["clair", "Clair"], ["sombre", "Sombre"]].map(function(t){ return '<label class="' + ((j.theme_defaut || "clair") === t[0] ? "sel" : "") + '" data-t="' + t[0] + '"><span>' + t[1] + '</span></label>'; }).join("") + '</div><div class="msg muted" id="tmsg"></div>' : "") + '</div>' +
+        '<div class="card"><h3>Ressources de l\'équipe</h3><p>Une ressource par ligne, au format <b>Titre | adresse | une phrase</b>. Visibles de toute l\'équipe dans Guide et ressources : ce qui aide au métier.</p><textarea id="ress" class="mono" style="min-height:120px">' + esc(j.ressources_equipe) + '</textarea><div class="row" style="margin-top:12px"><button id="saveress">Enregistrer</button><span class="muted" id="rmsg2"></span></div></div>' +
+        (admin ? '<div class="card"><h3>Ressources de direction</h3><p>Même format. Visibles des administrateurs seulement : plan, documents de phase, décisions.</p><textarea id="ressd" class="mono" style="min-height:120px">' + esc(j.ressources_direction || "") + '</textarea><div class="row" style="margin-top:12px"><button id="saveressd">Enregistrer</button><span class="muted" id="rmsg3"></span></div></div>' : "") +
         '<div class="card" id="equipe"><h3>L\'équipe</h3><p>Un accès par personne, avec son prénom et son mot de passe : le journal retient ainsi qui a fait quoi. Un accès ne se supprime pas, il se désactive.</p><div id="ulist" class="muted">Chargement</div>' +
           (admin ? '<div class="row" style="margin-top:14px"><input id="unom" placeholder="Prénom" style="max-width:200px"><select id="urole" style="max-width:200px"><option value="équipe">équipe</option><option value="administrateur">administrateur</option></select><input id="upw" type="password" placeholder="Mot de passe (8 caractères au moins)" style="max-width:300px" autocomplete="new-password"><button id="uadd">Ajouter ou mettre à jour</button></div><div class="msg" id="umsg"></div><p class="small muted" style="margin-top:8px">Pour changer le mot de passe ou le rôle d\'une personne, saisissez son prénom avec les nouvelles valeurs. Le mot de passe d\'installation reste la clé de secours, au nom « administrateur ».</p>' : '<p class="small muted">Seul un administrateur peut créer ou modifier des accès.</p>') + '</div>' +
         '<div class="card"><h3>Les huit étapes</h3><p>Les intitulés des étapes d\'un mariage, identiques à la feuille de route remise au couple.</p><ol>' + j.etapes.map(function(e){ return "<li>" + esc(e) + "</li>"; }).join("") + '</ol></div>' +
         '<h2 class="sec" style="margin-top:26px">Journal maître</h2><p class="lead">Toutes les opérations, tous mariages confondus, les plus récentes en premier. Chaque mariage a aussi son propre journal, dans sa page.</p><div class="row" style="margin-bottom:12px"><input id="jsearch" placeholder="Filtrer (mariage, opération, qui)" style="max-width:360px"><span class="muted small" id="jcount"></span></div><div id="jmaster"><p class="muted">Chargement</p></div>';
       $("savechem").onclick = function(){ $("rmsg").textContent = "Enregistrement"; api("admin-reglages", { cle: "cheminement", valeur: $("chem").value }).then(function(){ $("rmsg").textContent = "Enregistré."; }).catch(function(e){ $("rmsg").textContent = e.message; }); };
-      $("saveress").onclick = function(){ $("rmsg2").textContent = "Enregistrement"; api("admin-reglages", { cle: "ressources", valeur: $("ress").value }).then(function(){ $("rmsg2").textContent = "Enregistré."; }).catch(function(e){ $("rmsg2").textContent = e.message; }); };
+      $("saveress").onclick = function(){ $("rmsg2").textContent = "Enregistrement"; api("admin-reglages", { cle: "ressources_equipe", valeur: $("ress").value }).then(function(){ $("rmsg2").textContent = "Enregistré."; }).catch(function(e){ $("rmsg2").textContent = e.message; }); };
+      if (admin) $("saveressd").onclick = function(){ $("rmsg3").textContent = "Enregistrement"; api("admin-reglages", { cle: "ressources_direction", valeur: $("ressd").value }).then(function(){ $("rmsg3").textContent = "Enregistré."; }).catch(function(e){ $("rmsg3").textContent = e.message; }); };
+      $("themes").querySelectorAll("label").forEach(function(l){ l.onclick = function(){ try { if (l.dataset.t) localStorage.setItem("yid_theme", l.dataset.t); else localStorage.removeItem("yid_theme"); } catch(e){} $("themes").querySelectorAll("label").forEach(function(x){ x.classList.toggle("sel", x === l); }); applyTheme(); }; });
+      if (admin) $("themedef").querySelectorAll("label").forEach(function(l){ l.onclick = function(){ api("admin-reglages", { cle: "theme_defaut", valeur: l.dataset.t }).then(function(){ MOI.theme = l.dataset.t; try{ sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} $("themedef").querySelectorAll("label").forEach(function(x){ x.classList.toggle("sel", x === l); }); applyTheme(); $("tmsg").textContent = "Thème par défaut : " + l.dataset.t + "."; }).catch(function(e){ $("tmsg").textContent = e.message; }); }; });
       function users(){ if (!admin) { $("ulist").innerHTML = '<p class="muted small">Connecté en tant que ' + esc(MOI.nom) + ' (' + esc(MOI.role) + ').</p>'; return; }
         api("admin-utilisateurs").then(function(r){ $("ulist").innerHTML = r.utilisateurs.length ? '<div class="wrap"><table><thead><tr><th>Prénom</th><th>Rôle</th><th>Dernière connexion</th><th>État</th><th></th></tr></thead><tbody>' + r.utilisateurs.map(function(u){ return "<tr><td><b>" + esc(u.nom) + "</b></td><td>" + esc(u.role) + "</td><td>" + (u.derniere_connexion ? fmt(u.derniere_connexion) : '<span class="muted">jamais</span>') + "</td><td>" + (u.desactive ? pill("désactivé", "bad") : pill("actif", "ok")) + '</td><td><button class="ghost" data-u="' + esc(u.nom) + '" data-d="' + (u.desactive ? 0 : 1) + '" data-r="' + esc(u.role) + '">' + (u.desactive ? "Réactiver" : "Désactiver") + '</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="muted">Aucun accès nommé pour l\'instant : tout le monde entre encore avec le mot de passe d\'installation, et le journal dit « administrateur ». Créez un accès par personne ci dessous.</p>';
           $("ulist").querySelectorAll("[data-u]").forEach(function(b){ b.onclick = function(){ api("admin-utilisateur", { nom: b.dataset.u, role: b.dataset.r, desactive: b.dataset.d === "1" }).then(users).catch(function(e){ $("umsg").textContent = e.message; }); }; });

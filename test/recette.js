@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.1.1, base locale");
+  console.log("Recette yid-app v1.1.2, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -119,13 +119,19 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   check("mauvais mot de passe de Cécilia refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-utilisateurs", {}, HC);
   check("l'équipe ne gère pas les accès (403)", r.status === 403);
-  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "ressources", valeur: "Plan | https://example.org | test" }, HC);
-  check("réglage ressources enregistré par Cécilia", r.json.ressources.indexOf("example.org") > 0);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "ressources_equipe", valeur: "Plan | https://example.org | test" }, HC);
+  check("réglage ressources de l'équipe enregistré par Cécilia, ressources de direction invisibles pour elle", r.json.ressources_equipe.indexOf("example.org") > 0 && r.json.ressources_direction === undefined);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "ressources_direction", valeur: "x" }, HC);
+  check("l'équipe ne modifie pas les ressources de direction (403)", r.status === 403);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "theme_defaut", valeur: "sombre" }, H);
+  check("thème par défaut sombre enregistré par l'administrateur, ressources de direction lues", r.json.theme_defaut === "sombre" && r.json.ressources_direction.indexOf("Plan de construction") === 0);
+  r = await call("POST", "/api/forms?action=admin-login", { password: "test" }, { "x-forwarded-for": "10.0.0.2" });
+  check("la connexion annonce le thème par défaut", r.json.theme === "sombre");
   r = await call("POST", "/api/forms?action=admin-journal", {}, H);
   check("le journal dit qui : Cécilia sur le réglage, administrateur sur la création de l'accès", r.json.journal.some(l => l.operation === "Réglage modifié" && l.operateur === "Cécilia") && r.json.journal.some(l => l.operation === "Accès créé" && l.operateur === "administrateur"));
   r = await call("POST", "/api/forms?action=admin-utilisateur", { nom: "Cécilia", role: "équipe", desactive: true }, H);
   check("accès désactivé, jamais supprimé", r.json.utilisateurs.some(u => u.nom === "Cécilia" && u.desactive));
-  r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "motdepasse-cecilia" });
+  r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "motdepasse-cecilia" }, { "x-forwarded-for": "10.0.0.3" });
   check("un accès désactivé ne se connecte plus", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-boite&w=AC27", {}, H);
   check("revérifier la boîte : état mémorisé sur le mariage, non bloquant sans Microsoft", r.json.ok && r.json.boite.ok === false && r.json.mariage.boite && r.json.mariage.boite.verifiee_le);

@@ -29,7 +29,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.1.1";
+const VERSION = "1.1.2";
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
@@ -170,7 +170,7 @@ module.exports = async (req, res) => {
       else if (okPassword(b.password)) u = INSTALLATION;
       if (!u) return send(res, 401, { ok: false, error: "password" });
       await store.journal(null, "Connexion", u.nom + " · " + ip(req), null, null, u.nom);
-      return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count() });
+      return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count(), theme: (await mariages.reglages(u.role)).theme_defaut });
     }
     if (action === "admin-check") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
@@ -194,7 +194,8 @@ module.exports = async (req, res) => {
     if (action === "admin-accueil") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
-      return send(res, 200, Object.assign({ ok: true, version: VERSION }, await mariages.accueil()));
+      const acc = await mariages.accueil(); acc.reglages = await mariages.reglages(u.role);
+      return send(res, 200, Object.assign({ ok: true, version: VERSION }, acc));
     }
     if (action === "admin-checklist") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
@@ -207,8 +208,12 @@ module.exports = async (req, res) => {
     }
     if (action === "admin-reglages") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
-      if (b.cle) { await mariages.saveReglage(String(b.cle).slice(0, 60), String(b.valeur || ""), u.nom); }
-      return send(res, 200, Object.assign({ ok: true }, await mariages.reglages()));
+      if (b.cle) {
+        const cle = String(b.cle).slice(0, 60);
+        if (u.role !== "administrateur" && (mariages.DIRECTION.includes(cle) || cle === "theme_defaut")) return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
+        await mariages.saveReglage(cle, String(b.valeur || ""), u.nom);
+      }
+      return send(res, 200, Object.assign({ ok: true, moi: u }, await mariages.reglages(u.role)));
     }
     if (action === "admin-journal") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

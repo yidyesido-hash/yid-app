@@ -3,6 +3,7 @@
 Une seule application porte tout le parcours invité, du premier contact à la suppression des données.
 Les classeurs Excel SharePoint en sont les miroirs de contrôle : rien ne part jamais d'un Excel.
 
+Version 1.1.2 (2 novembre) : ressources en deux listes, équipe (visible de tous) et direction (administrateurs seulement) ; thème clair ou sombre, choix par personne dans Réglages, thème par défaut de l'outil fixé par un administrateur.
 Version 1.1.1 (régénération du 2 novembre, sept remarques de la recette absorbées) : accès nommés par prénom (Réglages, L'équipe) pour que le journal dise qui a fait quoi ; journal par mariage (bouton Journal du mariage) et journal maître (Réglages) avec la valeur avant et après de chaque champ modifié ; page Guide et ressources (cheminement, étapes, ressources) ; état de la boîte email et bouton Revérifier à l'étape 1 ; onglet Lisez moi en tête des classeurs SharePoint ; fiche PDF sans traits ; vocabulaire : Créer un mariage, étape terminée.
 Version 1.1 · l'accueil (mariages, jauges, voyants, journal), les réglages, l'étape Cadrage (checklist du call 1, dossier SharePoint, classeurs miroirs, fiche PDF, boîte vérifiée). Version 1.0 : le socle Postgres, la connexion, les trois voyants.
 
