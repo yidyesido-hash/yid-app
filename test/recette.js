@@ -73,7 +73,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
 
   /* ---------- v1.1 : accueil, cadrage, réglages ---------- */
   r = await call("POST", "/api/forms?action=admin-accueil", {}, H);
-  check("accueil : mariages, cheminement, journal", r.json.ok && r.json.mariages.length === 2 && r.json.reglages.cheminement.indexOf("1. Cadrage") === 0 && r.json.journal.length > 0);
+  check("accueil : mariages, cheminement, journal", r.json.ok && r.json.mariages.length === 2 && r.json.reglages.cheminement.indexOf("1. Fiche du mariage") === 0 && r.json.journal.length > 0);
   r = await call("POST", "/api/forms?action=admin-checklist", { date_mariage: "2027-07-10", delai_arret_jours: 45 }, H);
   check("checklist : 3 sections, remise proposée, clôture calculée", r.json.sections.length === 3 && r.json.remise && r.json.arret === "2027-05-26", r.json.remise + " / " + r.json.arret);
   const fiche = { pack: "Signature", prevu_contrat: 120, seuil: 130, date_mariage: "2027-07-10", delai_arret_jours: 45, conciergerie: "Oui", hebergement: "Une partie des invités", lieux_hebergement: "Domaine de la Muette", volume_estime: 110, multi_periodes: "Non", regie: "Oui",
@@ -93,7 +93,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-accueil", {}, H);
   const ac = r.json.mariages.find(m => m.code === "AC27");
   check("accueil : jauge à 14 % (1 étape sur 7), liste attendue et clôture affichées", ac && ac.progression === 14 && ac.date_arret === "2027-05-26" && ac.date_remise);
-  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "cheminement", valeur: "1. Cadrage. Texte modifié.\n2. Suite." }, H);
+  r = await call("POST", "/api/forms?action=admin-reglages", { cle: "cheminement", valeur: "1. Fiche du mariage. Texte modifié.\n2. Suite." }, H);
   check("réglage cheminement modifié et journalisé", r.json.cheminement.indexOf("Texte modifié") > 0);
   const feuilles = require("../lib/mariage").feuillesPilotage(fiche, "Alexander et Clarisse");
   const x = require("../lib/xlsx").build(feuilles);
@@ -103,7 +103,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
 
   /* ---------- v1.1.1 : journal champ par champ, équipe nommée, boîte, réglages ---------- */
   r = await call("POST", "/api/forms?action=admin-journal&w=AC27", {}, H);
-  const modif = (r.json.journal || []).find(l => l.operation === "Cadrage modifié");
+  const modif = (r.json.journal || []).find(l => l.operation === "Fiche du mariage modifiée");
   check("journal du mariage : la modification du cadrage donne avant 120, après 130, champ nommé", modif && modif.avant.prevu_contrat === "120" && modif.apres.prevu_contrat === "130" && /Prévu au contrat|prevu/i.test(modif.detail) && r.json.libelles.prevu_contrat, modif && modif.detail);
   check("journal du mariage : seules les lignes d'AC27", (r.json.journal || []).every(l => l.mariage_code === "AC27"));
   r = await call("POST", "/api/forms?action=admin-journal", { limit: 500 }, H);
@@ -166,6 +166,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Collect v4", fichiers: [corpus("Collect_Fictif.xlsx")] }, H);
   check("collect v4 : 9 lus, 4 ajoutés, 5 déjà connus complétés par le collect", r.json.lus === 9 && r.json.ajoutes === 4 && r.json.connus === 5 && /5 ligne\(s\) déjà connue/.test(r.json.avertissements.join(" ")), JSON.stringify([r.json.lus, r.json.ajoutes, r.json.connus, r.json.avertissements]));
   r = await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H);
+  { const lc = r.json.lots.find(l => l.collect); check("lot collect : nommé « les deux côtés », répartition par côté", lc && / · les deux côtés · /.test(lc.libelle) && lc.repartition && (lc.repartition.epouse + lc.repartition.epoux + lc.repartition.sans) > 0, JSON.stringify(lc && [lc.libelle, lc.repartition])); }
   const fab = r.json.contacts.find(c => c.nom_repertoire === "Fabrice Lauret"), papa = r.json.contacts.find(c => c.nom_repertoire === "Papa"), celine = r.json.contacts.find(c => /Tata Celine/.test(c.nom_repertoire)), kev = r.json.contacts.find(c => c.nom_repertoire === "Kevin Frère");
   check("Fabrice : +262 gardé, côté et qualification du collect, note de cellule conservée, complet avec clé AC…", fab.numero === "+262693205405" && fab.cote === "Épouse" && fab.invitation === "Invitation pour deux" && fab.nb_enfants === 2 && /Indicatif corrigé/.test(fab.note) && fab.etat === "complète" && /^AC\d{3}$/.test(fab.cle), JSON.stringify([fab.etat, fab.cle, fab.manque]));
   check("Papa : désactivé dans le collect, désactivé ici, sans clé", papa.desactive && !papa.cle);
@@ -240,6 +241,16 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   check("archive refusée à l'équipe (403)", r.status === 403);
   r = await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H);
   check("lots numérotés et nommés, familles doublon et numéro distinguées", /^Lot \d+ · Épouse · /.test(r.json.lots[0].libelle) && r.json.tuiles.doublons.n === 4 && r.json.tuiles.numeros.n === 2 && r.json.contacts.find(c => c.nom_repertoire === "Cess").famille === "doublon" && r.json.contacts.find(c => c.nom_repertoire === "Crevette").famille === "numéro", JSON.stringify([r.json.lots[0].libelle, r.json.tuiles.doublons, r.json.tuiles.numeros]));
+  {
+    const ids3 = r.json.contacts.filter(c => !c.desactive).slice(0, 3).map(c => c.id);
+    let g = await call("POST", "/api/forms?action=admin-qualifier-groupe&w=AC27", { ids: ids3, champs: { invitation: "Invitation pour deux" } }, H);
+    check("qualification groupée : la même invitation sur 3 lignes cochées", g.json.ok && ids3.every(id => g.json.contacts.find(c => c.id === id).invitation === "Invitation pour deux"));
+    g = await call("POST", "/api/forms?action=admin-qualifier-groupe&w=AC27", { ids: ids3, champs: { cote: "Époux" } }, H);
+    check("qualification groupée : un champ hors liste est refusé", g.status === 422);
+    const L = require("../lib/liste"), rg = { periodes: ["Mairie", "Vin d'honneur", "Soirée"], enfants: "sans", hebergement: "aucun", lieux: [] }, base = { cote: "Épouse", invitation: "Invitation unique", lien: "Ami(e)" };
+    check("présence à plusieurs moments : une liste suffit, l'ancienne présence unique reste lue, aucune présence = il manque",
+      !L.manque(Object.assign({ qualification: { periodes: ["Mairie", "Soirée"] } }, base), rg).includes("présence") && !L.manque(Object.assign({ qualification: { periode: "Soirée" } }, base), rg).includes("présence") && L.manque(Object.assign({ qualification: {} }, base), rg).includes("présence"));
+  }
   const vide = "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;;;;\r\nFN:\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nFN:Zoé\r\nTEL;type=CELL:+33 6 00 00 00 01\r\nEND:VCARD\r\n";
   r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "", cote: "", fichiers: [{ name: "Contacts épouse.vcf", b64: Buffer.from(vide).toString("base64") }] }, H);
   check("pare feu : la fiche vide est ignorée et comptée, le côté est lu dans le nom du fichier", r.json.lus === 1 && r.json.vides === 1 && r.json.cote === "Épouse" && /nom du fichier/.test(r.json.deduction), JSON.stringify([r.json.lus, r.json.vides, r.json.cote, r.json.deduction]));

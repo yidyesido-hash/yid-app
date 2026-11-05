@@ -1,6 +1,6 @@
 {
   "name": "yid-app",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "private": true,
   "description": "Yes I Do · l'application : parcours invité de bout en bout (API Vercel, Postgres Neon, Excel SharePoint, Microsoft 365)",
   "type": "commonjs",

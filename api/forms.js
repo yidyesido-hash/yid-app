@@ -22,7 +22,8 @@
      ?action=admin-reglages POST  lire (sans corps) ou enregistrer (cle, valeur) un réglage
      ?action=admin-liste     POST  étape 2 Liste d'invités : lignes, lots, anomalies, tuiles, quotas, règles (w=CODE)
      ?action=admin-importer  POST  déposer un lot : source, cote, proche, fichiers [{ name, b64 }] .vcf .csv ou collect .xlsx (w=CODE)
-     ?action=admin-qualifier POST  qualifier une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periode }
+     ?action=admin-qualifier POST  qualifier une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periodes [liste, ou "tous"] }
+     ?action=admin-qualifier-groupe POST  le même champ sur plusieurs lignes cochées : ids, champs { invitation | lien | precision | nb_enfants | hebergement | assistance | periodes }
      ?action=admin-anomalie  POST  trancher une ou plusieurs anomalies : ids, decision
      ?action=admin-contact   POST  désactiver ou réactiver des lignes : ids, desactive, motif
      ?action=admin-cote      POST  changer le côté de lignes : ids, cote
@@ -43,7 +44,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.3.2";
+const VERSION = "1.3.3";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -220,7 +221,7 @@ module.exports = async (req, res) => {
     }
     if (action === "admin-declarer") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
-      if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Le cadrage se modifie par un administrateur ; l'équipe le lit." });
+      if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "La fiche du mariage se modifie par un administrateur ; l'équipe la lit." });
       const r = await mariages.declarer(b.data || {}, u.nom, q.w || b.w || null);
       return send(res, r.ok ? 200 : 422, r);
     }
@@ -258,7 +259,7 @@ module.exports = async (req, res) => {
       if (m.boite_email && graph.enabled()) { try { releve = await liste.relever(w, u.nom, false, await mariages.reglages()); } catch (e) { releve = { detail: e.message }; } }
       return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
     }
-    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
+    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-qualifier-groupe", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
       const refus = (e, k) => send(res, 422, { ok: false, error: k || "liste", detail: e.message });
@@ -271,6 +272,7 @@ module.exports = async (req, res) => {
       }
       try {
         if (action === "admin-qualifier") await liste.qualifier(w, Number(b.id), b.champs || {}, u.nom);
+        if (action === "admin-qualifier-groupe") await liste.qualifierGroupe(w, ids(), b.champs || {}, u.nom);
         if (action === "admin-anomalie") await liste.trancher(w, ids(), b.decision, u.nom);
         if (action === "admin-contact") await liste.desactiver(w, ids(), !!b.desactive, b.motif, u.nom);
         if (action === "admin-cote") await liste.changerCote(w, ids(), b.cote, u.nom);
