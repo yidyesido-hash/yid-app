@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Votre espace · Yes I Do</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#141210; --muted:#6B655E; --line:#E9E4DC; --cream:#FAF7F2; --gold:#B8956A; --goldink:#7d5f3b;
+         --ok:#3F6B4E; --okbg:#E9F1EB; --bad:#9B3B2E; --badbg:#F6E7E4; --warn:#9B6A2E; --warnbg:#F7EEDF; --grey:#9A938A; --greybg:#F1EFEC;
+         --h:"Cormorant Garamond",Georgia,serif; --b:"Inter",system-ui,sans-serif; --bg:#fff; }
+  *{ box-sizing:border-box }
+  html,body{ margin:0; background:var(--bg); color:var(--ink); font:400 15px/1.6 var(--b); -webkit-font-smoothing:antialiased; }
+  body.transparent{ --bg:transparent; }
+  body.transparent .surface{ background:rgba(255,255,255,.94); }
+  .page{ max-width:980px; margin:0 auto; padding:40px 20px 80px; }
+  header.top{ text-align:center; padding:10px 0 28px; }
+  header.top img{ height:64px; width:auto; }
+  .eyebrow{ font:500 11px/1 var(--b); letter-spacing:.28em; text-transform:uppercase; color:var(--gold); margin:22px 0 12px; }
+  h1{ margin:0; font:500 clamp(30px,6vw,44px)/1.1 var(--h); letter-spacing:.14em; text-transform:uppercase; }
+  .sub{ margin-top:12px; color:var(--muted); font-size:14px; letter-spacing:.04em; }
+  nav.tabs{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin:30px 0 34px; }
+  nav.tabs button{ min-height:42px; padding:10px 20px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); font:500 11px/1 var(--b); letter-spacing:.16em; text-transform:uppercase; cursor:pointer; }
+  nav.tabs button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  h2{ margin:0 0 6px; font:500 26px/1.15 var(--h); letter-spacing:.1em; text-transform:uppercase; text-align:center; }
+  .intro{ text-align:center; color:var(--muted); max-width:620px; margin:0 auto 28px; }
+  .surface{ background:var(--bg); border:1px solid var(--line); border-radius:22px; padding:26px; margin-bottom:18px; }
+  .muted{ color:var(--muted); } .small{ font-size:13px; }
+  [hidden]{ display:none!important; }
+  button.pill, a.pill{ display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 22px; border-radius:999px; border:1px solid var(--ink); background:var(--ink); color:#fff; font:500 11px/1 var(--b); letter-spacing:.16em; text-transform:uppercase; cursor:pointer; text-decoration:none; }
+  button.pill.light{ background:transparent; color:var(--ink); border-color:var(--line); }
+  button.pill.light:hover{ border-color:var(--ink); }
+  button[disabled]{ opacity:.5; cursor:default; }
+  /* parcours */
+  .frise{ position:relative; display:grid; gap:0; }
+  .etape{ display:grid; grid-template-columns:52px 1fr; gap:16px; padding:0 0 22px; position:relative; cursor:pointer; }
+  .etape:not(:last-child)::before{ content:""; position:absolute; left:25px; top:48px; bottom:0; width:1px; background:var(--line); }
+  .etape .rond{ width:50px; height:50px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font:500 20px/1 var(--h); background:var(--bg); position:relative; z-index:1; }
+  .etape.faite .rond{ background:var(--ok); border-color:var(--ok); color:#fff; }
+  .etape.encours .rond{ border-color:var(--gold); color:var(--goldink); box-shadow:0 0 0 6px var(--cream); }
+  .etape .t{ font:600 21px/1.2 var(--h); padding-top:6px; }
+  .etape.avenir .t{ color:var(--muted); }
+  .etape .s{ font:500 10.5px/1 var(--b); letter-spacing:.18em; text-transform:uppercase; margin-top:6px; color:var(--muted); }
+  .etape.faite .s{ color:var(--ok); } .etape.encours .s{ color:var(--gold); }
+  .etape .d{ color:var(--muted); margin-top:10px; font-size:14px; max-width:520px; }
+  .faits{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .fait{ border:1px solid var(--line); border-radius:18px; padding:16px 18px; }
+  .fait span{ display:block; font:500 10.5px/1.3 var(--b); letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .fait b{ font:500 22px/1.2 var(--h); }
+  /* liste */
+  .synthese{ display:grid; grid-template-columns:200px 1fr; gap:26px; align-items:center; }
+  @media (max-width:720px){ .synthese{ grid-template-columns:1fr; justify-items:center; } }
+  .anneau{ position:relative; width:180px; height:180px; }
+  .anneau svg{ transform:rotate(-90deg); }
+  .anneau .c{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
+  .anneau .c b{ display:block; font:500 40px/1 var(--h); }
+  .anneau .c span{ font:500 10.5px/1.4 var(--b); letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .chiffres{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:100%; }
+  .chiffre{ border:1px solid var(--line); border-radius:18px; padding:14px 16px; cursor:pointer; background:var(--bg); text-align:left; font:inherit; color:inherit; }
+  .chiffre:hover{ border-color:var(--gold); }
+  .chiffre b{ display:block; font:500 30px/1.1 var(--h); }
+  .chiffre span{ font:500 10.5px/1.4 var(--b); letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .chiffre em{ display:block; font-style:normal; font-size:12.5px; color:var(--muted); margin-top:4px; }
+  .barre{ height:6px; border-radius:999px; background:var(--greybg); overflow:hidden; margin-top:10px; }
+  .barre i{ display:block; height:100%; background:var(--gold); border-radius:999px; }
+  .barre i.trop{ background:var(--bad); }
+  .cotes{ display:flex; height:10px; border-radius:999px; overflow:hidden; background:var(--greybg); margin:10px 0 6px; }
+  .cotes i{ display:block; height:100%; }
+  .legende{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; font-size:12.5px; color:var(--muted); margin:6px 0 18px; }
+  .legende span::before{ content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; background:var(--c); }
+  details.regles{ border:1px solid var(--line); border-radius:18px; padding:16px 20px; margin-bottom:18px; background:var(--cream); }
+  details.regles summary{ cursor:pointer; list-style:none; font:500 11px/1 var(--b); letter-spacing:.22em; text-transform:uppercase; color:var(--goldink); text-align:center; }
+  details.regles summary::-webkit-details-marker{ display:none; }
+  details.regles ol{ margin:16px 0 0; padding-left:22px; } details.regles li{ margin-bottom:8px; }
+  .filtres{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px; }
+  .filtres button{ min-height:36px; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--bg); font:500 12px/1 var(--b); color:var(--ink); cursor:pointer; }
+  .filtres button.on{ border-color:var(--ink); background:var(--ink); color:#fff; }
+  .recherche{ display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:16px; }
+  input, select{ width:100%; min-height:46px; padding:11px 14px; border:1px solid var(--line); border-radius:14px; font:400 15px/1.4 var(--b); color:var(--ink); background:#fff; }
+  .bandeau{ text-align:center; font-size:13.5px; color:var(--goldink); background:var(--cream); border-radius:14px; padding:12px 16px; margin-bottom:16px; }
+  .invites{ display:grid; gap:12px; }
+  .inv{ border:1px solid var(--line); border-left:4px solid var(--c); border-radius:18px; padding:16px 18px; background:var(--bg); }
+  .inv.rouge{ --c:var(--bad); } .inv.vert{ --c:var(--ok); } .inv.orange{ --c:var(--gold); } .inv.gris{ --c:#CFC9C1; opacity:.75; }
+  .inv .tete{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 14px; cursor:pointer; }
+  .inv .nom{ font:600 20px/1.2 var(--h); }
+  .inv .num{ font-size:13px; color:var(--muted); letter-spacing:.02em; }
+  .etat{ display:inline-block; padding:4px 11px; border-radius:999px; font:500 11px/1.2 var(--b); letter-spacing:.06em; }
+  .etat.rouge{ background:var(--badbg); color:var(--bad); } .etat.vert{ background:var(--okbg); color:var(--ok); } .etat.orange{ background:var(--warnbg); color:var(--warn); } .etat.gris{ background:var(--greybg); color:var(--grey); }
+  .inv .resume{ font-size:13.5px; color:var(--muted); margin-top:6px; }
+  .inv .manque{ font-size:13px; color:var(--bad); margin-top:6px; }
+  .form{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 14px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  @media (max-width:560px){ .form{ grid-template-columns:1fr; } }
+  .form label{ display:block; font:500 10.5px/1.3 var(--b); letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .form .large{ grid-column:1/-1; }
+  .coches{ display:flex; flex-wrap:wrap; gap:8px; }
+  .coche{ display:inline-flex; align-items:center; gap:8px; padding:8px 13px; border:1px solid var(--line); border-radius:999px; font-size:13.5px; cursor:pointer; }
+  .coche input{ width:16px; height:16px; min-height:0; margin:0; }
+  .form label.coche{ display:inline-flex; margin:0; font:400 13.5px/1.2 var(--b); letter-spacing:0; text-transform:none; color:var(--ink); }
+  .coche:has(input:checked){ border-color:var(--gold); background:var(--cream); }
+  .actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+  .lienretirer{ background:none; border:0; padding:0; color:var(--muted); font-size:13px; text-decoration:underline; cursor:pointer; }
+  .msg{ font-size:13px; color:var(--muted); }
+  .msg.err{ color:var(--bad); }
+  /* contacts */
+  .depot{ display:grid; gap:14px; max-width:560px; margin:0 auto; }
+  .choix{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .choix label{ display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border:1px solid var(--line); border-radius:999px; cursor:pointer; }
+  .choix label:has(input:checked){ border-color:var(--ink); }
+  .choix input{ width:16px; height:16px; min-height:0; margin:0; }
+  .recu{ text-align:center; }
+  .recu b{ font:500 26px/1.2 var(--h); }
+  footer{ text-align:center; color:var(--muted); font-size:12px; letter-spacing:.08em; margin-top:40px; }
+  .vide{ text-align:center; color:var(--muted); padding:30px 10px; }
+  .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <img src="/logo.png" alt="Yes I Do">
+    <div class="eyebrow">Votre espace</div>
+    <h1 id="prenoms">&nbsp;</h1>
+    <div class="sub" id="sous"></div>
+  </header>
+  <div id="erreur" class="surface vide" hidden></div>
+  <div id="app" hidden>
+    <nav class="tabs" id="tabs">
+      <button data-t="parcours" class="on">Votre parcours</button>
+      <button data-t="liste">Votre liste</button>
+      <button data-t="contacts">Envoyer des contacts</button>
+    </nav>
+    <section id="t-parcours"></section>
+    <section id="t-liste" hidden></section>
+    <section id="t-contacts" hidden></section>
+  </div>
+  <footer>Yes I Do · <span class="direct">mis à jour en direct</span></footer>
+</div>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var J = (location.hash.match(/[#&]?([A-Za-z0-9_-]{24,64})/) || [])[1] || new URLSearchParams(location.search).get("j") || "";
+  if (new URLSearchParams(location.search).get("fond") === "transparent") document.body.classList.add("transparent");
+  var D = null, ONGLET = "parcours", FILTRE = "tous", COTE = "", OUVERT = {}, OCCUPE = false;
+  var MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+  function dateLongue(d){ if (!d) return ""; var p = String(d).slice(0,10).split("-"); return p.length === 3 ? (+p[2]) + " " + MOIS[+p[1] - 1] + " " + p[0] : d; }
+  function api(action, payload){
+    return fetch("/api/forms?action=" + action, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ j: J }, payload || {})) })
+      .then(function(r){ return r.text().then(function(t){ var j; try { j = JSON.parse(t); } catch(e){ throw new Error("Le service a mis trop de temps à répondre. Réessayez dans un instant."); } if (!j.ok) throw new Error(j.detail || "Une erreur est survenue."); return j; }); });
+  }
+  function couleur(e){ return e === "complet" ? "vert" : e === "à compléter" ? "rouge" : e === "avec Yes I Do" ? "orange" : "gris"; }
+  function libelleEtat(e){ return e === "complet" ? "Complet" : e === "à compléter" ? "À compléter" : e === "avec Yes I Do" ? "À voir avec Yes I Do" : "Retiré"; }
+
+  /* ---------- parcours ---------- */
+  function parcours(){
+    var m = D.mariage, ouverte = null;
+    var html = '<h2>Votre parcours</h2><p class="intro">Les grandes étapes de votre mariage avec Yes I Do. L\'étape en cours est ouverte, touchez les autres pour les lire.</p><div class="surface"><div class="frise">' +
+      D.parcours.map(function(e, i){
+        var faite = !!m.etapes[e.n], encours = !faite && (m.etape === e.n || (m.etape === 5 && e.n === 6)), cls = faite ? "faite" : encours ? "encours" : "avenir";
+        var ouvert = OUVERT["e" + e.n] !== undefined ? OUVERT["e" + e.n] : encours;
+        return '<div class="etape ' + cls + '" data-e="' + e.n + '"><div class="rond">' + (faite ? "✓" : (i + 1)) + '</div><div><div class="t">' + esc(e.t) + '</div><div class="s">' + (faite ? "Terminée" : encours ? "En cours" : "À venir") + '</div>' + (ouvert ? '<div class="d">' + esc(e.d) + '</div>' : '') + '</div></div>';
+      }).join("") + '</div></div>';
+    var faits = [["Date", dateLongue(m.date)], ["Lieu", m.lieu], ["Invités prévus", m.prevu], ["Au plus", m.plafond], ["Liste à remettre le", dateLongue(m.remise)], ["Liste close le", dateLongue(m.arret)]];
+    if (m.periodes && m.periodes.length) faits.push(["Les moments", m.periodes.join(" · ")]);
+    faits.push(["Enfants", m.enfants === "sans" ? "Mariage sans enfants" : m.enfants === "mixte" ? (m.consigne_enfants || "Selon les familles") : "Bienvenus"]);
+    if (m.hebergement !== "aucun") faits.push(["Hébergement", (m.lieux || []).filter(function(x){ return x !== "Par leurs propres moyens"; }).join(" · ") + (m.hebergement === "partie" ? " (une partie des invités)" : "")]);
+    html += '<h2 style="margin-top:34px">Le cadre de votre mariage</h2><p class="intro">Ce que nous avons posé ensemble lors de notre premier échange.</p><div class="faits">' + faits.filter(function(f){ return f[1]; }).map(function(f){ return '<div class="fait"><span>' + esc(f[0]) + '</span><b>' + esc(f[1]) + '</b></div>'; }).join("") + '</div>';
+    $("t-parcours").innerHTML = html;
+    $("t-parcours").querySelectorAll("[data-e]").forEach(function(el){ el.onclick = function(){ var k = "e" + el.dataset.e; OUVERT[k] = !(el.querySelector(".d")); parcours(); }; });
+  }
+
+  /* ---------- liste ---------- */
+  function anneau(p){ var r = 78, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, p))); return '<svg width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="' + r + '" fill="none" stroke="#F1EFEC" stroke-width="10"/><circle cx="90" cy="90" r="' + r + '" fill="none" stroke="' + (p >= 1 ? "#3F6B4E" : "#B8956A") + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg>'; }
+  function barre(n, sur){ if (!sur) return ""; var p = Math.min(100, Math.round(n / sur * 100)); return '<div class="barre"><i class="' + (n > sur ? "trop" : "") + '" style="width:' + p + '%"></i></div>'; }
+  var FILTRES = {
+    "tous": { l: "Tous", f: function(c){ return c.etat !== "retiré"; } },
+    "à compléter": { l: "À compléter", f: function(c){ return c.etat === "à compléter"; } },
+    "complet": { l: "Complets", f: function(c){ return c.etat === "complet"; } },
+    "avec Yes I Do": { l: "Avec Yes I Do", f: function(c){ return c.etat === "avec Yes I Do"; } },
+    "retiré": { l: "Retirés", f: function(c){ return c.etat === "retiré"; } },
+    "attendus": { l: "Invités attendus", cache: true, f: function(c){ return c.etat !== "retiré" && (c.invitation === "Invitation unique" || c.invitation === "Invitation pour deux"); } },
+    "à confirmer": { l: "Invitations à confirmer", cache: true, f: function(c){ return c.etat !== "retiré" && c.invitation === "Ne sait pas encore"; } },
+    "enfants": { l: "Foyers avec enfants", cache: true, f: function(c){ return c.etat !== "retiré" && c.nb_enfants > 0; } }
+  };
+  function listeVue(){
+    var t = D.tuiles, m = D.mariage, total = t.completees.sur || 0, p = total ? t.completees.n / total : 0;
+    var ep = (t.attendus.cotes || {}).epouse || 0, ex = (t.attendus.cotes || {}).epoux || 0, tot = Math.max(1, ep + ex);
+    var html = '<h2>Votre liste d\'invités</h2><p class="intro">' + (m.modifiable ? "Complétez chaque invité en rouge. Tout ce que vous saisissez arrive chez nous à l'instant, et ce que nous complétons avec vous s'affiche ici." : "Nous complétons votre liste avec vous, au fil de nos échanges. Vous la suivez ici en direct.") + '</p>' +
+      '<div class="surface"><div class="synthese"><div class="anneau">' + anneau(p) + '<div class="c"><div><b>' + t.completees.n + '</b><span>sur ' + total + '<br>invités complets</span></div></div></div>' +
+      '<div class="chiffres">' +
+        '<button class="chiffre" data-f="attendus"><b>' + t.attendus.n + '</b><span>Invités attendus</span>' + (m.prevu ? '<em>pour ' + m.prevu + ' prévus</em>' + barre(t.attendus.n, m.prevu) : '') + '</button>' +
+        '<button class="chiffre" data-f="à confirmer"><b>' + t.a_confirmer.n + '</b><span>À confirmer</span><em>estimation haute ' + t.estimation_haute.n + '</em></button>' +
+        (m.enfants !== "sans" ? '<button class="chiffre" data-f="enfants"><b>' + t.enfants.n + '</b><span>Enfants attendus</span></button>' : '') +
+        '<button class="chiffre" data-f="tous"><b>' + t.convives.n + '</b><span>Convives au total</span>' + (m.plafond ? '<em>au plus ' + m.plafond + '</em>' + barre(t.convives.n, m.plafond) : '') + '</button>' +
+      '</div></div>' +
+      '<div style="margin-top:22px"><div class="small muted" style="display:flex;justify-content:space-between"><span>Côté épouse · ' + ep + ' attendus</span><span>Côté époux · ' + ex + ' attendus</span></div><div class="cotes"><i style="width:' + (ep / tot * 100) + '%;background:#C9B08A"></i><i style="width:' + (ex / tot * 100) + '%;background:#8C8378"></i></div></div></div>' +
+      '<details class="regles"><summary>Les règles d\'or</summary><ol>' + D.regles_or.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("") + '</ol></details>' +
+      '<div class="legende"><span style="--c:var(--bad)">À compléter</span><span style="--c:var(--ok)">Complet</span><span style="--c:var(--gold)">À voir avec Yes I Do</span><span style="--c:#CFC9C1">Retiré</span></div>' +
+      '<div class="filtres" id="filtres"></div>' +
+      '<div class="recherche"><input id="cherche" placeholder="Rechercher un invité" autocomplete="off"><select id="cote" style="width:auto"><option value="">Les deux côtés</option>' + D.cotes.map(function(c){ return '<option' + (c === COTE ? " selected" : "") + '>' + esc(c) + '</option>'; }).join("") + '</select></div>' +
+      (m.modifiable ? '' : '<div class="bandeau">Votre liste est tenue par Yes I Do. Une correction ? Écrivez nous, elle sera faite dans l\'instant.</div>') +
+      '<div class="invites" id="invites"></div>';
+    $("t-liste").innerHTML = html;
+    $("t-liste").querySelectorAll("[data-f]").forEach(function(b){ b.onclick = function(){ FILTRE = b.dataset.f; filtres(); invites(); $("filtres").scrollIntoView({ behavior: "smooth", block: "start" }); }; });
+    $("cherche").oninput = invites; $("cote").onchange = function(){ COTE = $("cote").value; invites(); };
+    filtres(); invites();
+  }
+  function filtres(){
+    var n = function(k){ return D.contacts.filter(FILTRES[k].f).length; };
+    var keys = ["tous", "à compléter", "complet", "avec Yes I Do", "retiré"]; if (FILTRES[FILTRE].cache) keys.push(FILTRE);
+    $("filtres").innerHTML = keys.map(function(k){ return '<button data-k="' + esc(k) + '" class="' + (k === FILTRE ? "on" : "") + '">' + esc(FILTRES[k].l) + ' · ' + n(k) + '</button>'; }).join("");
+    $("filtres").querySelectorAll("[data-k]").forEach(function(b){ b.onclick = function(){ FILTRE = b.dataset.k; filtres(); invites(); }; });
+  }
+  function opts(list, v, vide){ return (vide !== null ? '<option value="">' + esc(vide || "Choisir") + '</option>' : '') + list.map(function(o){ var val = Array.isArray(o) ? o[0] : o, lab = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(val) + '"' + (String(val) === String(v == null ? "" : v) ? " selected" : "") + '>' + esc(lab) + '</option>'; }).join(""); }
+  function resume(c){ var p = []; if (c.cote) p.push(c.cote); if (c.invitation) p.push(c.invitation); if (c.lien) p.push(c.lien + (c.precision ? " (" + c.precision + ")" : "")); if (c.nb_enfants > 0) p.push(c.nb_enfants + " enfant" + (c.nb_enfants > 1 ? "s" : "")); if (c.hebergement) p.push("logé"); if (c.periodes.length && D.mariage.periodes.length) p.push(c.periodes.length === D.mariage.periodes.length ? "tous les moments" : c.periodes.join(", ")); return p.join(" · "); }
+  function formulaire(c){
+    var m = D.mariage, dis = m.modifiable && c.etat !== "retiré" ? "" : " disabled";
+    var h = '<div class="form" data-form="' + c.id + '">' +
+      '<div><label>Côté</label><select data-c="cote"' + dis + '>' + opts(D.cotes, c.cote) + '</select></div>' +
+      '<div><label>Invitation</label><select data-c="invitation"' + dis + '>' + opts(D.invitations, c.invitation) + '</select></div>' +
+      '<div><label>Lien avec vous</label><select data-c="lien"' + dis + '>' + opts(D.liens, c.lien) + '</select></div>' +
+      '<div><label>Précision' + (D.precision_obligatoire.indexOf(c.lien) >= 0 ? " (à remplir)" : "") + '</label><input data-c="precision" value="' + esc(c.precision) + '" placeholder="Invité de qui, par exemple"' + dis + '></div>';
+    if (m.enfants !== "sans") h += '<div><label>Nombre d\'enfants</label><select data-c="nb_enfants"' + dis + '>' + opts([0,1,2,3,4,5,6,7].map(function(n){ return [String(n), n === 0 ? "Aucun" : String(n)]; }), c.nb_enfants == null ? "" : String(c.nb_enfants)) + '</select></div>';
+    if (m.hebergement === "tous") h += '<div><label>Hébergement</label><select data-c="hebergement"' + dis + '>' + opts(m.lieux, c.hebergement) + '</select></div>';
+    else if (m.hebergement === "partie") h += '<div><label>Hébergement</label><select data-c="hebergement"' + dis + '>' + opts([["", "Non logé"]].concat(m.lieux.map(function(l){ return [l, l]; })), c.hebergement, null) + '</select></div>';
+    h += '<div><label>Besoin d\'assistance</label><select data-c="assistance"' + dis + '>' + opts([["", "Non"], ["Oui", "Oui, nous l'appellerons"]], c.assistance, null) + '</select></div>';
+    if (m.periodes.length) h += '<div class="large"><label>Présent à</label><div class="coches"><label class="coche"><input type="checkbox" data-p="tous"' + (c.periodes.length === m.periodes.length ? " checked" : "") + dis + '>Tous les moments</label>' + m.periodes.map(function(p){ return '<label class="coche"><input type="checkbox" data-p="' + esc(p) + '"' + (c.periodes.indexOf(p) >= 0 ? " checked" : "") + dis + '>' + esc(p) + '</label>'; }).join("") + '</div></div>';
+    h += '<div><label>Prénom (facultatif)</label><input data-c="prenom" value="' + esc(c.prenom) + '"' + dis + '></div><div><label>Nom (facultatif)</label><input data-c="nom" value="' + esc(c.nom_famille) + '"' + dis + '></div>';
+    h += '<div class="large actions"><span class="msg" data-msg="' + c.id + '"></span>' + (m.modifiable ? (c.etat === "retiré" ? (c.retire_par_vous ? '<button class="lienretirer" data-retire="0">Remettre cet invité dans la liste</button>' : '<span class="small muted">Retiré avec Yes I Do</span>') : '<button class="lienretirer" data-retire="1">Retirer cet invité</button>') : '') + '</div></div>';
+    return h;
+  }
+  function invites(){
+    var s = ($("cherche").value || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    var list = D.contacts.filter(FILTRES[FILTRE].f).filter(function(c){ return (!COTE || c.cote === COTE) && (!s || (c.nom + " " + c.prenom + " " + c.nom_famille + " " + c.numero).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").indexOf(s) >= 0); });
+    var ordre = { "à compléter": 0, "avec Yes I Do": 1, "complet": 2, "retiré": 3 };
+    list.sort(function(a, b){ return (ordre[a.etat] - ordre[b.etat]) || a.nom.localeCompare(b.nom, "fr"); });
+    $("invites").innerHTML = list.length ? list.map(function(c){
+      var col = couleur(c.etat), ouvert = !!OUVERT[c.id];
+      return '<div class="inv ' + col + '" data-id="' + c.id + '"><div class="tete" data-ouvre="' + c.id + '"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' +
+        (resume(c) ? '<div class="resume">' + esc(resume(c)) + '</div>' : '') +
+        (c.manque.length ? '<div class="manque">Il manque : ' + esc(c.manque.join(", ")) + '</div>' : '') +
+        (c.etat === "avec Yes I Do" ? '<div class="resume">Nous vérifions cette fiche avec vous lors de notre prochain échange.</div>' : '') +
+        (ouvert ? formulaire(c) : '') + '</div>';
+    }).join("") : '<div class="vide">Aucun invité ici.</div>';
+    $("invites").querySelectorAll("[data-ouvre]").forEach(function(el){ el.onclick = function(){ var id = el.dataset.ouvre; OUVERT[id] = !OUVERT[id]; invites(); }; });
+    $("invites").querySelectorAll("[data-form]").forEach(function(f){
+      var id = +f.dataset.form, msg = f.querySelector("[data-msg]");
+      var envoyer = function(champs){ OCCUPE = true; msg.className = "msg"; msg.textContent = "Enregistrement"; api("espace-qualifier", { id: id, champs: champs }).then(function(r){ D = r; OCCUPE = false; rafraichir(); var m2 = document.querySelector('[data-msg="' + id + '"]'); if (m2) m2.textContent = "Enregistré"; }).catch(function(e){ OCCUPE = false; msg.className = "msg err"; msg.textContent = e.message; }); };
+      f.querySelectorAll("[data-c]").forEach(function(el){ el.onchange = function(){ var ch = {}; ch[el.dataset.c] = el.value === "" && el.dataset.c === "nb_enfants" ? null : el.value; envoyer(ch); }; el.onfocus = function(){ OCCUPE = true; }; el.onblur = function(){ setTimeout(function(){ OCCUPE = false; }, 400); }; });
+      var cases = f.querySelectorAll("[data-p]");
+      cases.forEach(function(x){ x.onchange = function(){ if (x.dataset.p === "tous") cases.forEach(function(y){ y.checked = x.checked; }); var vals = Array.prototype.filter.call(cases, function(y){ return y.checked && y.dataset.p !== "tous"; }).map(function(y){ return y.dataset.p; }); envoyer({ periodes: vals }); }; });
+      var r = f.querySelector("[data-retire]"); if (r) r.onclick = function(){ var retire = r.dataset.retire === "1"; OCCUPE = true; msg.textContent = "Enregistrement"; api("espace-retirer", { id: id, retire: retire }).then(function(rr){ D = rr; OCCUPE = false; rafraichir(); }).catch(function(e){ OCCUPE = false; msg.className = "msg err"; msg.textContent = e.message; }); };
+    });
+  }
+
+  /* ---------- envoyer des contacts ---------- */
+  function contacts(){
+    var m = D.mariage;
+    $("t-contacts").innerHTML = '<h2>Envoyer des contacts</h2><p class="intro">Un oubli, un ajout, un doute ? Envoyez nous les contacts tels qu\'ils sont dans votre téléphone. Notre outil reconnaît les doublons, vous ne risquez rien.</p>' +
+      '<div class="surface"><div class="depot"><div class="choix"><label><input type="radio" name="cote" value="Épouse">Côté épouse</label><label><input type="radio" name="cote" value="Époux">Côté époux</label></div>' +
+      '<input type="file" id="fichiers" multiple accept=".vcf,.csv,.xlsx,text/vcard,text/x-vcard">' +
+      '<div style="text-align:center"><button class="pill" id="envoyer">Envoyer</button></div><div class="msg" id="dmsg" style="text-align:center"></div><div id="recu"></div>' +
+      '<p class="small muted" style="text-align:center;margin:6px 0 0">Fichiers acceptés : contacts exportés du téléphone (.vcf), export Google ou Outlook (.csv).' + (m.boite ? ' Vous pouvez aussi les envoyer par email à ' + esc(m.boite) + ', en indiquant Époux ou Épouse dans l\'objet.' : '') + '</p></div></div>';
+    $("envoyer").onclick = function(){
+      var files = Array.prototype.slice.call($("fichiers").files || []), cote = (document.querySelector('input[name=cote]:checked') || {}).value || "";
+      if (!files.length) { $("dmsg").textContent = "Choisissez un ou plusieurs fichiers."; return; }
+      if (!cote && files.some(function(f){ return !/\.xlsx$/i.test(f.name); })) { $("dmsg").textContent = "Indiquez de quel côté viennent ces contacts."; return; }
+      $("envoyer").disabled = true; $("dmsg").className = "msg"; $("dmsg").textContent = "Envoi en cours";
+      Promise.all(files.map(function(f){ return new Promise(function(ok, ko){ var r = new FileReader(); r.onload = function(){ var b = new Uint8Array(r.result), s = ""; for (var i = 0; i < b.length; i += 32768) s += String.fromCharCode.apply(null, b.subarray(i, i + 32768)); ok({ name: f.name, b64: btoa(s) }); }; r.onerror = ko; r.readAsArrayBuffer(f); }); }))
+        .then(function(fichiers){ return api("espace-deposer", { fichiers: fichiers, cote: cote }); })
+        .then(function(r){ D = r; var x = r.recu; $("dmsg").textContent = ""; $("recu").innerHTML = '<div class="recu"><b>Merci, c\'est bien reçu.</b><p class="muted">' + x.lus + ' contact(s) lu(s) · ' + x.ajoutes + ' nouveau(x) dans votre liste · ' + x.connus + ' déjà connu(s)</p><button class="pill light" id="voirliste">Voir ma liste</button></div>'; $("voirliste").onclick = function(){ onglet("liste"); }; $("fichiers").value = ""; $("envoyer").disabled = false; })
+        .catch(function(e){ $("dmsg").className = "msg err"; $("dmsg").textContent = e.message; $("envoyer").disabled = false; });
+    };
+  }
+
+  /* ---------- navigation et direct ---------- */
+  function onglet(t){ ONGLET = t; document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.t === t); }); ["parcours", "liste", "contacts"].forEach(function(k){ $("t-" + k).hidden = k !== t; }); rafraichir(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function rafraichir(tout){
+    var m = D.mariage;
+    $("prenoms").textContent = m.prenoms; $("sous").textContent = [dateLongue(m.date), m.lieu].filter(Boolean).join(" · ");
+    document.title = m.prenoms + " · Votre espace";
+    if (ONGLET === "parcours") parcours();
+    if (ONGLET === "liste") { if (tout || !$("invites")) listeVue(); else { var y = window.scrollY, s = $("cherche").value; listeVue(); $("cherche").value = s; invites(); window.scrollTo(0, y); } }
+    if (ONGLET === "contacts" && tout) contacts();
+  }
+  document.querySelectorAll("#tabs button").forEach(function(b){ b.onclick = function(){ onglet(b.dataset.t); }; });
+  function charger(){ return api("espace-voir").then(function(r){ var change = !D || r.signature !== D.signature || JSON.stringify(r.mariage) !== JSON.stringify(D.mariage); D = r; return change; }); }
+  if (!J) { $("erreur").hidden = false; $("erreur").textContent = "Ce lien est incomplet. Utilisez le lien personnel que nous vous avons adressé."; return; }
+  charger().then(function(){ $("app").hidden = false; rafraichir(true); }).catch(function(e){ $("erreur").hidden = false; $("erreur").textContent = e.message; });
+  setInterval(function(){
+    if (document.hidden || OCCUPE || !D) return;
+    var a = document.activeElement; if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+    charger().then(function(change){ if (change && ONGLET !== "contacts") rafraichir(false); }).catch(function(){});
+  }, 15000);
+})();
+</script>
+</body>
+</html>

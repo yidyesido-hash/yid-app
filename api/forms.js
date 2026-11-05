@@ -37,6 +37,12 @@
      ?action=admin-etape     POST  terminer une étape : n (2 exige une liste toute verte)
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
+     ?action=admin-espace    POST  le lien de l'espace mariés : op lire | creer | renouveler | couper | modifiable (valeur) (w=CODE)
+   Côté mariés (lien personnel, clé j, sans compte) :
+     ?action=espace-voir      POST  leur mariage, leur parcours, leur liste (champs du couple seulement), les règles d'or
+     ?action=espace-qualifier POST  compléter une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periodes }
+     ?action=espace-retirer   POST  retirer ou remettre un invité : id, retire
+     ?action=espace-deposer   POST  envoyer d'autres contacts : fichiers [{ name, b64 }], cote
    ===================================================================== */
 const crypto = require("crypto");
 const store = require("../lib/store");
@@ -44,11 +50,12 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.3.3";
+const VERSION = "1.4.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
+const espace = require("../lib/espace");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -246,7 +253,34 @@ module.exports = async (req, res) => {
       return send(res, 200, { ok: true, utilisateurs: await utilisateurs.list(), roles: utilisateurs.ROLES, moi: u });
     }
 
+    /* ---------- espace mariés : le couple entre par son lien personnel (clé j), sans compte ---------- */
+    if (action.indexOf("espace-") === 0) {
+      if (!(await store.rateLimit(ip(req), action === "espace-voir" ? 240 : 120))) return send(res, 429, { ok: false, error: "slow down", detail: "Un instant, puis réessayez." });
+      const m = await espace.parJeton(b.j || q.j);
+      if (!m) return send(res, 404, { ok: false, error: "lien", detail: "Ce lien n'est plus valable. Écrivez nous, nous vous en adressons un nouveau." });
+      try {
+        if (action === "espace-qualifier") await espace.qualifier(m, b.id, b.champs || {});
+        else if (action === "espace-retirer") await espace.retirer(m, b.id, !!b.retire);
+        else if (action === "espace-deposer") {
+          const fichiers = (b.fichiers || []).slice(0, 10).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
+          const recu = await espace.deposer(m, fichiers, b.cote);
+          return send(res, 200, Object.assign({ ok: true, recu }, await espace.voir(await store.mariageFresh(m.code))));
+        }
+        else if (action !== "espace-voir") return send(res, 400, { ok: false, error: "action" });
+      } catch (e) { return send(res, 422, { ok: false, error: "espace", detail: e.message }); }
+      return send(res, 200, Object.assign({ ok: true }, await espace.voir(await store.mariageFresh(m.code))));
+    }
+
     const w = String(q.w || b.w || "").toUpperCase();
+    if (action === "admin-espace") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const op = String(b.op || "lire");
+      if (op !== "lire" && u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Le lien et le parcours de l'espace mariés se règlent par un administrateur." });
+      try {
+        if (op === "lire") { const f = await store.mariageFresh(w); if (!f) return send(res, 404, { ok: false, error: "wedding" }); return send(res, 200, { ok: true, espace: { jeton: f.espace_jeton || null, modifiable: f.espace_modifiable !== false, le: f.espace_le || null } }); }
+        return send(res, 200, { ok: true, espace: await espace.gerer(w, op, b.valeur, u.nom) });
+      } catch (e) { return send(res, 422, { ok: false, error: "espace", detail: e.message }); }
+    }
     if (action === "admin-mariage" || action === "admin-boite") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await mariages.fiche(w);

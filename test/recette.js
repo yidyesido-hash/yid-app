@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.3, base locale");
+  console.log("Recette yid-app v1.4, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -250,6 +250,40 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     const L = require("../lib/liste"), rg = { periodes: ["Mairie", "Vin d'honneur", "Soirée"], enfants: "sans", hebergement: "aucun", lieux: [] }, base = { cote: "Épouse", invitation: "Invitation unique", lien: "Ami(e)" };
     check("présence à plusieurs moments : une liste suffit, l'ancienne présence unique reste lue, aucune présence = il manque",
       !L.manque(Object.assign({ qualification: { periodes: ["Mairie", "Soirée"] } }, base), rg).includes("présence") && !L.manque(Object.assign({ qualification: { periode: "Soirée" } }, base), rg).includes("présence") && L.manque(Object.assign({ qualification: {} }, base), rg).includes("présence"));
+  }
+  {
+    /* espace mariés : lien personnel, vue du couple sans la cuisine, modifications au journal « Le couple » */
+    let e = await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "creer" }, HI);
+    check("espace mariés : l'équipe ne peut pas ouvrir le lien (403)", e.status === 403);
+    e = await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "creer" }, H);
+    const J = e.json.espace && e.json.espace.jeton;
+    check("espace mariés : lien personnel créé par un administrateur", e.json.ok && /^[A-Za-z0-9_-]{30,}$/.test(J || ""));
+    let v = await call("POST", "/api/forms?action=espace-voir", { j: J }, {});
+    const txt = JSON.stringify(v.json);
+    check("espace mariés : le couple voit son parcours (sans Séjour et logistique), ses règles d'or et sa liste", v.json.ok && v.json.parcours.length === 6 && !v.json.parcours.some(p => /Séjour/.test(p.t)) && v.json.regles_or.length === 4 && v.json.contacts.length > 5);
+    check("espace mariés : jamais les lots, anomalies, motifs, sources, notes ni le journal", !/"lots"|"anomalies"|"motifs"|"source"|"note"|"journal"|"cle"|"lot_id"/.test(txt));
+    const rouge = v.json.contacts.find(c => c.etat === "à compléter");
+    let q = await call("POST", "/api/forms?action=espace-qualifier", { j: J, id: rouge.id, champs: { lien: "Ami(e)", motif_desactivation: "x" } }, {});
+    check("espace mariés : le couple complète une ligne", q.json.ok && q.json.contacts.find(c => c.id === rouge.id).lien === "Ami(e)");
+    q = await call("POST", "/api/forms?action=espace-retirer", { j: J, id: rouge.id, retire: true }, {});
+    check("espace mariés : retirer un invité le laisse en gris, remettable par le couple", q.json.ok && q.json.contacts.find(c => c.id === rouge.id).etat === "retiré" && q.json.contacts.find(c => c.id === rouge.id).retire_par_vous);
+    q = await call("POST", "/api/forms?action=espace-retirer", { j: J, id: rouge.id, retire: false }, {});
+    check("espace mariés : remis dans la liste", q.json.ok && q.json.contacts.find(c => c.id === rouge.id).etat !== "retiré");
+    const autre = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.desactive);
+    if (autre) { q = await call("POST", "/api/forms?action=espace-retirer", { j: J, id: autre.id, retire: false }, {}); check("espace mariés : une ligne retirée par Yes I Do ne se remet pas depuis l'espace", q.status === 422); }
+    const jr = await call("POST", "/api/forms?action=admin-journal&w=AC27", {}, H);
+    check("espace mariés : modifications au journal sous « Le couple · Prénoms »", jr.json.journal.some(l => /^Le couple · /.test(l.operateur || "") && l.operation === "Ligne qualifiée"));
+    await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "modifiable", valeur: false }, H);
+    q = await call("POST", "/api/forms?action=espace-qualifier", { j: J, id: rouge.id, champs: { lien: "Collègue" } }, {});
+    check("espace mariés en consultation seule : modification refusée", q.status === 422);
+    const dep = await call("POST", "/api/forms?action=espace-deposer", { j: J, cote: "Épouse", fichiers: [{ name: "oubli.vcf", b64: Buffer.from("BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Oubli Espace\r\nTEL;type=CELL:+33 6 12 34 56 99\r\nEND:VCARD\r\n").toString("base64") }] }, {});
+    check("espace mariés : dépôt de contacts par le couple, même en consultation", dep.json.ok && dep.json.recu.ajoutes === 1 && dep.json.contacts.some(c => c.nom === "Oubli Espace" && c.cote === "Épouse"));
+    await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "modifiable", valeur: true }, H);
+    e = await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "renouveler" }, H);
+    v = await call("POST", "/api/forms?action=espace-voir", { j: J }, {});
+    check("espace mariés : un nouveau lien rend l'ancien inutilisable (404)", v.status === 404 && e.json.espace.jeton !== J);
+    v = await call("POST", "/api/forms?action=espace-voir", { j: "court" }, {});
+    check("espace mariés : clé invalide refusée", v.status === 404);
   }
   const vide = "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;;;;\r\nFN:\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nFN:Zoé\r\nTEL;type=CELL:+33 6 00 00 00 01\r\nEND:VCARD\r\n";
   r = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "", cote: "", fichiers: [{ name: "Contacts épouse.vcf", b64: Buffer.from(vide).toString("base64") }] }, H);

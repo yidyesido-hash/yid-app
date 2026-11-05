@@ -156,8 +156,8 @@
     if (!TOKEN) return;
     var h = location.hash || "#/";
     document.querySelectorAll("#nav a[data-v]").forEach(function(a){ a.classList.toggle("on", (h === "#/" && a.dataset.v === "accueil") || h.indexOf("#/" + a.dataset.v) === 0); });
-    var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal))?/);
-    if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" ? "journal" : (m[2] ? +m[2] : null));
+    var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal|espace))?/);
+    if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
     if (h.indexOf("#/guide") === 0) return guide();
     if (h.indexOf("#/reglages") === 0) return MOI.role === "administrateur" ? reglages() : accueil();
@@ -264,16 +264,38 @@
     api("admin-mariage", {}, code).then(function(j){
       var m = j.mariage, cur = etape || m.etape || 1, done = m.etapes || {}, isJournal = cur === "journal";
       var steps = m.etapes_libelles.map(function(t, i){ var n = i + 1, cls = done[n] ? "done" : (n === m.etape ? "" : "off"); return '<div class="step ' + cls + (n === cur ? " on" : "") + '" onclick="location.hash=\'#/m/' + m.code + '/' + n + '\'"><div class="n">' + n + '</div><div class="t">' + esc(t) + '</div><div>' + (done[n] ? pill("terminée", "ok") : n === m.etape ? pill("en cours", "gold") : "") + '</div></div>'; }).join("");
-      V.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h2 class="sec">' + esc(m.prenoms) + '</h2><div class="muted">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + ' · code ' + esc(m.code) + ' &nbsp;' + boitePill(m) + '</div><div class="row" style="margin-top:10px"><button class="ghost" onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal du mariage</button>' + (m.sharepoint && m.sharepoint.dossier ? '<span class="muted small">Dossier SharePoint : ' + esc(m.sharepoint.dossier) + '</span>' : '') + '</div></div>' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '</div>' +
+      V.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h2 class="sec">' + esc(m.prenoms) + '</h2><div class="muted">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + ' · code ' + esc(m.code) + ' &nbsp;' + boitePill(m) + '</div><div class="row" style="margin-top:10px"><button class="ghost" onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal du mariage</button><button class="ghost" onclick="location.hash=\'#/m/' + m.code + '/espace\'">Espace mariés</button>' + (m.sharepoint && m.sharepoint.dossier ? '<span class="muted small">Dossier SharePoint : ' + esc(m.sharepoint.dossier) + '</span>' : '') + '</div></div>' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '</div>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       var pane = $("pane");
       if (isJournal) { pane.innerHTML = '<div class="card"><h3>Journal de ' + esc(m.prenoms) + '</h3><p>Tout ce qui a été fait sur ce mariage, le plus récent en premier : quoi, quand, par qui, et pour une modification la valeur avant et la valeur après.</p></div><div id="jm"><p class="muted">Chargement</p></div>'; api("admin-journal", { limit: 500 }, m.code).then(function(r){ LIB = r.libelles || LIB; $("jm").innerHTML = journalHtml(r.journal, false); }).catch(function(e){ $("jm").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }); return; }
+      if (cur === "espace") { espaceMaries(m, pane); return; }
       if (cur === 1) { cadrage(m, pane); return; }
       if (cur === 2) { listeInvites(m, pane, j.releve); return; }
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
       var titles = m.etapes_libelles, versions = { 3: "1.4", 4: "1.5", 5: "1.6", 6: "1.7", 7: "1.7" };
       pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape arrive avec la version ' + versions[cur] + ' de l\'application. ' + (cur === 2 ? "Les contacts du couple arriveront ici, par email sur la boîte du mariage ou par dépôt ; l'outil construira la liste." : cur === 3 ? "La liste se qualifiera ici, ligne par ligne, et chaque foyer complet recevra sa clé." : cur === 5 ? "Le suivi des foyers, les confirmations et les relances vivront ici." : "") + '</p></div>';
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+
+  /* ---------- espace mariés : le lien personnel du couple et son parcours ---------- */
+  function espaceMaries(m, pane){
+    var admin = MOI.role === "administrateur";
+    var dessiner = function(e){
+      var lien = e.jeton ? location.origin + "/espace.html#" + e.jeton : "";
+      pane.innerHTML = '<div class="card"><h3>L\'espace de ' + esc(m.prenoms) + '</h3><p>La face visible de l\'application pour le couple : leur parcours, le cadre de leur mariage et leur liste d\'invités en direct, avec les quatre couleurs, les chiffres et les règles d\'or. Ils n\'y voient jamais les lots, les anomalies et leurs motifs, les sources, le journal ni Séjour et logistique. Chaque modification du couple arrive dans la liste de l\'équipe et au journal sous le nom « Le couple · ' + esc(m.prenoms) + ' ».</p>' +
+        (lien ? '<label class="small muted">Lien personnel du couple</label><div class="row" style="margin:6px 0 14px"><input id="elien" readonly value="' + esc(lien) + '" style="flex:1;min-width:0"><button class="ghost" id="ecopier">Copier</button><a href="' + esc(lien) + '" target="_blank" rel="noopener"><button class="ghost" type="button">Ouvrir</button></a></div><p class="small">Ouvert le ' + fmt(e.le) + '. Ce lien suffit pour entrer : ne l\'adressez qu\'au couple. Pour la page Votre espace de leur plateforme Squarespace, ajoutez à la fin du lien <b>?fond=transparent</b> avant le #, la photo du couple reste visible derrière.</p>' : '<p><b>Aucun lien ouvert pour l\'instant.</b></p>') +
+        '<div class="row" style="margin:6px 0 4px">' + (admin ? (lien ? '<button class="ghost" id="erenouv">Nouveau lien</button><button class="ghost" id="ecouper">Fermer l\'espace</button>' : '<button id="ecreer">Ouvrir l\'espace du couple</button>') : '<span class="muted small">Le lien s\'ouvre et se ferme par un administrateur.</span>') + '<span class="muted small" id="emsg"></span></div></div>' +
+        '<div class="card"><h3>Le parcours du couple</h3><p>' + (e.modifiable ? '<b>Le couple complète sa liste.</b> Il choisit côté, invitation, lien, enfants, hébergement, présence, assistance, et peut retirer un invité (il reste en gris, il peut le remettre). Pendant le call, vous remplissez de votre côté, il suit et corrige du sien.' : '<b>Yes I Do complète, le couple consulte.</b> Il voit sa liste en direct, sans pouvoir la modifier ; il peut toujours vous envoyer des contacts.') + '</p>' +
+        (admin ? '<div class="row"><button class="ghost" id="emode">' + (e.modifiable ? "Passer en consultation seule" : "Laisser le couple compléter") + '</button></div>' : '') + '</div>';
+      var act = function(op, valeur, confirmer){ if (confirmer && !confirm(confirmer)) return; $("emsg").textContent = "Enregistrement"; api("admin-espace", { op: op, valeur: valeur }, m.code).then(function(r){ dessiner(r.espace); }).catch(function(x){ $("emsg").textContent = x.message; }); };
+      if ($("ecopier")) $("ecopier").onclick = function(){ var i = $("elien"); i.select(); try { navigator.clipboard.writeText(i.value); } catch(x){ document.execCommand("copy"); } $("emsg").textContent = "Lien copié"; };
+      if ($("ecreer")) $("ecreer").onclick = function(){ act("creer"); };
+      if ($("erenouv")) $("erenouv").onclick = function(){ act("renouveler", null, "Créer un nouveau lien ? L'ancien cessera de fonctionner aussitôt."); };
+      if ($("ecouper")) $("ecouper").onclick = function(){ act("couper", null, "Fermer l'espace ? Le lien cessera de fonctionner, la liste reste intacte."); };
+      if ($("emode")) $("emode").onclick = function(){ act("modifiable", !e.modifiable); };
+    };
+    pane.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-espace", { op: "lire" }, m.code).then(function(r){ dessiner(r.espace); }).catch(function(x){ pane.innerHTML = '<p class="err">' + esc(x.message) + '</p>'; });
   }
 
   function boitePill(m){
@@ -373,9 +395,20 @@
       fr.readAsArrayBuffer(file);
     });
   }
+  var DIRECT = null;
+  function empreinte(j){ return (j.contacts || []).map(function(c){ return c.id + ":" + (c.modifie_le || "") + ":" + (c.desactive ? 1 : 0); }).join(",") + "|" + (j.lots || []).length; }
   function listeInvites(m, pane, releve){
     pane.innerHTML = '<p class="muted">Chargement</p>';
-    api("admin-liste", {}, m.code).then(function(j){ renderListe(m, pane, j, releve); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+    api("admin-liste", {}, m.code).then(function(j){ renderListe(m, pane, j, releve); pane.dataset.empreinte = empreinte(j); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+    /* en direct : ce que le couple complète dans son espace apparaît ici sans recharger, sauf pendant une saisie ou une sélection */
+    if (DIRECT) clearInterval(DIRECT);
+    DIRECT = setInterval(function(){
+      if (!document.body.contains(pane) || !$("fiches")) { clearInterval(DIRECT); DIRECT = null; return; }
+      if (document.hidden) return;
+      var a = document.activeElement; if (a && pane.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+      if (pane.querySelector("[data-sel]:checked, [data-an]:checked") || ($("files") && $("files").files && $("files").files.length)) return;
+      api("admin-liste", {}, m.code).then(function(j){ var e = empreinte(j); if (e === pane.dataset.empreinte) return; pane.dataset.empreinte = e; var y = window.scrollY; renderListe(m, pane, j, null); window.scrollTo(0, y); }).catch(function(){});
+    }, 15000);
   }
   /* relève par paquets : trois emails par appel, reprise tant qu'il en reste */
   function relever(m, pane, lots, tours){
