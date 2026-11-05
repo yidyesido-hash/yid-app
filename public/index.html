@@ -123,7 +123,7 @@
   var V = $("view");
   function api(action, payload, w){
     return fetch("/api/forms?action=" + action + (w ? "&w=" + encodeURIComponent(w) : ""), { method:"POST", headers:{ "Content-Type":"application/json", "X-Admin-Token": TOKEN }, body: JSON.stringify(payload || {}) })
-      .then(function(r){ return r.json().then(function(j){ if (r.status === 401) { logout("Session expirée, reconnectez vous."); throw new Error("Session expirée"); } if (!j.ok && r.status !== 422) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
+      .then(function(r){ return r.text().then(function(t){ var j; try { j = JSON.parse(t); } catch (e) { throw new Error(r.status === 504 || /timed out|An error o/i.test(t) ? "Le serveur n'a pas répondu à temps. Ce qui a déjà été enregistré l'est bien : rechargez la page pour vérifier, puis réessayez si besoin." : "Réponse inattendue du serveur (" + r.status + "). Rechargez la page."); } return j; }).then(function(j){ if (r.status === 401) { logout("Session expirée, reconnectez vous."); throw new Error("Session expirée"); } if (!j.ok && r.status !== 422) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
   }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]; }); }
   function fmt(iso){ if (!iso) return ""; var d = new Date(String(iso).replace(" ", "T")); if (isNaN(d)) return String(iso).slice(0,16); return d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" }); }
