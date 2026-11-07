@@ -192,7 +192,7 @@
       '<div class="surface"><div class="synthese"><div class="anneau">' + anneau(p) + '<div class="c"><div><b>' + t.completees.n + '</b><span>sur ' + total + '<br>invités complets</span></div></div></div>' +
       '<div class="chiffres">' +
         '<button class="chiffre" data-f="attendus"><b>' + t.attendus.n + '</b><span>Invités attendus</span>' + (m.prevu ? '<em>pour ' + m.prevu + ' prévus</em>' + barre(t.attendus.n, m.prevu) : '') + '</button>' +
-        '<button class="chiffre" data-f="à confirmer"><b>' + t.a_confirmer.n + '</b><span>À confirmer</span><em>estimation haute ' + t.estimation_haute.n + '</em></button>' +
+        '<button class="chiffre" data-f="à confirmer"><b>' + t.a_confirmer.n + '</b><span>À confirmer</span><em>' + t.estimation_haute.n + ' places réservées</em></button>' +
         (m.enfants !== "sans" ? '<button class="chiffre" data-f="enfants"><b>' + t.enfants.n + '</b><span>Enfants attendus</span></button>' : '') +
         '<button class="chiffre" data-f="tous"><b>' + t.convives.n + '</b><span>Convives au total</span>' + (m.plafond ? '<em>au plus ' + m.plafond + '</em>' + barre(t.convives.n, m.plafond) : '') + '</button>' +
       '</div></div>' +
@@ -202,7 +202,8 @@
       '<div class="filtres" id="filtres"></div>' +
       '<div class="recherche"><input id="cherche" placeholder="Rechercher un invité" autocomplete="off"><select id="cote" style="width:auto"><option value="">Les deux côtés</option>' + D.cotes.map(function(c){ return '<option' + (c === COTE ? " selected" : "") + '>' + esc(c) + '</option>'; }).join("") + '</select></div>' +
       (m.modifiable ? '' : '<div class="bandeau">Votre liste est tenue par Yes I Do. Une correction ? Écrivez nous, elle sera faite dans l\'instant.</div>') +
-      '<div class="invites" id="invites"></div>';
+      '<div class="invites" id="invites"></div>' +
+      (D.attente && D.attente.length ? '<h2 style="margin-top:40px">Votre liste d\'attente</h2><p class="intro">Ils rejoindront votre liste, dans cet ordre, si des places se libèrent. Nous vous le proposerons à chaque fois.</p><div class="surface"><ol style="margin:0;padding-left:22px">' + D.attente.map(function(a){ return '<li style="margin-bottom:8px"><b style="font:600 18px/1.3 var(--h)">' + esc(a.nom) + '</b>' + (a.cote ? ' <span class="small muted">· ' + esc(a.cote) + '</span>' : '') + '</li>'; }).join("") + '</ol></div>' : '');
     $("t-liste").innerHTML = html;
     $("t-liste").querySelectorAll("[data-f]").forEach(function(b){ b.onclick = function(){ FILTRE = b.dataset.f; filtres(); invites(); $("filtres").scrollIntoView({ behavior: "smooth", block: "start" }); }; });
     $("cherche").oninput = invites; $("cote").onchange = function(){ COTE = $("cote").value; invites(); };
@@ -242,6 +243,7 @@
       return '<div class="inv ' + col + '" data-id="' + c.id + '"><div class="tete" data-ouvre="' + c.id + '"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' +
         (resume(c) ? '<div class="resume">' + esc(resume(c)) + '</div>' : '') +
         (c.manque.length ? '<div class="manque">Il manque : ' + esc(c.manque.join(", ")) + '</div>' : '') +
+        (c.a_demander && c.a_demander.length ? '<div class="resume" style="color:var(--goldink)">Nous le demanderons à l\'invité : ' + esc(c.a_demander.join(", ")) + '</div>' : '') +
         (c.etat === "avec Yes I Do" ? '<div class="resume">Nous vérifions cette fiche avec vous lors de notre prochain échange.</div>' : '') +
         (ouvert ? formulaire(c) : '') + '</div>';
     }).join("") : '<div class="vide">Aucun invité ici.</div>';
@@ -260,7 +262,7 @@
   function contacts(){
     var m = D.mariage;
     $("t-contacts").innerHTML = '<h2>Envoyer des contacts</h2><p class="intro">Un oubli, un ajout, un doute ? Envoyez nous les contacts tels qu\'ils sont dans votre téléphone. Notre outil reconnaît les doublons, vous ne risquez rien.</p>' +
-      '<div class="surface"><div class="depot"><div class="choix"><label><input type="radio" name="cote" value="Épouse">Côté épouse</label><label><input type="radio" name="cote" value="Époux">Côté époux</label></div>' +
+      '<div class="surface"><div class="depot"><div class="choix"><label><input type="radio" name="cote" value="Épouse">Côté épouse</label><label><input type="radio" name="cote" value="Époux">Côté époux</label></div><div class="choix"><label><input type="radio" name="dest" value="liste" checked>Pour votre liste</label><label><input type="radio" name="dest" value="attente">Pour votre liste d\'attente</label></div>' +
       '<input type="file" id="fichiers" multiple accept=".vcf,.csv,.xlsx,text/vcard,text/x-vcard">' +
       '<div style="text-align:center"><button class="pill" id="envoyer">Envoyer</button></div><div class="msg" id="dmsg" style="text-align:center"></div><div id="recu"></div>' +
       '<p class="small muted" style="text-align:center;margin:6px 0 0">Fichiers acceptés : contacts exportés du téléphone (.vcf), export Google ou Outlook (.csv).' + (m.boite ? ' Vous pouvez aussi les envoyer par email à ' + esc(m.boite) + ', en indiquant Époux ou Épouse dans l\'objet.' : '') + '</p></div></div>';
@@ -270,8 +272,8 @@
       if (!cote && files.some(function(f){ return !/\.xlsx$/i.test(f.name); })) { $("dmsg").textContent = "Indiquez de quel côté viennent ces contacts."; return; }
       $("envoyer").disabled = true; $("dmsg").className = "msg"; $("dmsg").textContent = "Envoi en cours";
       Promise.all(files.map(function(f){ return new Promise(function(ok, ko){ var r = new FileReader(); r.onload = function(){ var b = new Uint8Array(r.result), s = ""; for (var i = 0; i < b.length; i += 32768) s += String.fromCharCode.apply(null, b.subarray(i, i + 32768)); ok({ name: f.name, b64: btoa(s) }); }; r.onerror = ko; r.readAsArrayBuffer(f); }); }))
-        .then(function(fichiers){ return api("espace-deposer", { fichiers: fichiers, cote: cote }); })
-        .then(function(r){ D = r; var x = r.recu; $("dmsg").textContent = ""; $("recu").innerHTML = '<div class="recu"><b>Merci, c\'est bien reçu.</b><p class="muted">' + x.lus + ' contact(s) lu(s) · ' + x.ajoutes + ' nouveau(x) dans votre liste · ' + x.connus + ' déjà connu(s)</p><button class="pill light" id="voirliste">Voir ma liste</button></div>'; $("voirliste").onclick = function(){ onglet("liste"); }; $("fichiers").value = ""; $("envoyer").disabled = false; })
+        .then(function(fichiers){ return api("espace-deposer", { fichiers: fichiers, cote: cote, attente: ((document.querySelector('input[name=dest]:checked') || {}).value === "attente") }); })
+        .then(function(r){ D = r; var x = r.recu; $("dmsg").textContent = ""; $("recu").innerHTML = '<div class="recu"><b>Merci, c\'est bien reçu.</b><p class="muted">' + x.lus + ' contact(s) lu(s) · ' + x.ajoutes + (x.attente ? ' ajouté(s) à votre liste d\'attente · ' : ' nouveau(x) dans votre liste · ') + x.connus + ' déjà connu(s)</p><button class="pill light" id="voirliste">Voir ma liste</button></div>'; $("voirliste").onclick = function(){ onglet("liste"); }; $("fichiers").value = ""; $("envoyer").disabled = false; })
         .catch(function(e){ $("dmsg").className = "msg err"; $("dmsg").textContent = e.message; $("envoyer").disabled = false; });
     };
   }

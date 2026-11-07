@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.4, base locale");
+  console.log("Recette yid-app v1.4.1, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -248,8 +248,29 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     g = await call("POST", "/api/forms?action=admin-qualifier-groupe&w=AC27", { ids: ids3, champs: { cote: "Époux" } }, H);
     check("qualification groupée : un champ hors liste est refusé", g.status === 422);
     const L = require("../lib/liste"), rg = { periodes: ["Mairie", "Vin d'honneur", "Soirée"], enfants: "sans", hebergement: "aucun", lieux: [] }, base = { cote: "Épouse", invitation: "Invitation unique", lien: "Ami(e)" };
-    check("présence à plusieurs moments : une liste suffit, l'ancienne présence unique reste lue, aucune présence = il manque",
-      !L.manque(Object.assign({ qualification: { periodes: ["Mairie", "Soirée"] } }, base), rg).includes("présence") && !L.manque(Object.assign({ qualification: { periode: "Soirée" } }, base), rg).includes("présence") && L.manque(Object.assign({ qualification: {} }, base), rg).includes("présence"));
+    check("présence facultative : elle ne rend jamais une fiche rouge, la liste de moments reste lue",
+      !L.manque(Object.assign({ qualification: {} }, base), rg).includes("présence") && L.presences({ qualification: { periode: "Soirée" } }).join() === "Soirée" && L.presences({ qualification: { periodes: ["Mairie", "Soirée"] } }).length === 2);
+    const ns = Object.assign({}, base, { invitation: "Ne sait pas encore", qualification: {} });
+    check("seul ou accompagné : « Ne sait pas encore » est vert, deux places réservées, la question part à l'invité", !L.manque(ns, rg).length && L.aDemander(ns).includes("seul ou accompagné"));
+    const lj = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json;
+    const rougeLien = lj.contacts.find(c => c.etat === "à compléter" && !c.manque.includes("côté") && !c.manque.includes("lien"));
+    const rougeCote = lj.contacts.find(c => c.etat === "à compléter" && (c.manque.includes("côté") || c.manque.includes("lien")));
+    if (rougeLien || rougeCote) {
+      const dm = await call("POST", "/api/forms?action=admin-demander&w=AC27", { ids: [rougeLien, rougeCote].filter(Boolean).map(c => c.id) }, H);
+      const apres = dm.json.contacts.find(c => rougeLien && c.id === rougeLien.id);
+      check("à demander à l'invité : la fiche passe au vert, sauf si le côté ou le lien manque (affaire du couple)", dm.json.ok && (!rougeLien || (apres.etat === "complète" && apres.a_demander.length > 0)) && (!rougeCote || dm.json.demande.restent.length === 1), JSON.stringify(dm.json.demande));
+    }
+    const att = await call("POST", "/api/forms?action=admin-importer&w=AC27", { source: "Attente Clarisse", cote: "Épouse", attente: true, fichiers: [{ name: "attente.vcf", b64: Buffer.from("BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Attente Une\r\nTEL;type=CELL:+33 6 11 22 33 01\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nFN:Attente Deux\r\nTEL;type=CELL:+33 6 11 22 33 02\r\nEND:VCARD\r\n").toString("base64") }] }, H);
+    let la = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json;
+    check("liste d'attente : les contacts déposés restent hors de la liste, dans l'ordre d'arrivée", att.json.ok && la.attente.length === 2 && la.attente[0].nom_repertoire === "Attente Une" && !la.contacts.some(c => /^Attente /.test(c.nom_repertoire)) && la.tuiles.attente.n === 2);
+    await call("POST", "/api/forms?action=admin-attente&w=AC27", { ids: [la.attente[1].id], op: "monter" }, H);
+    la = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json;
+    check("liste d'attente : l'ordre de priorité se change", la.attente[0].nom_repertoire === "Attente Deux");
+    const ent = await call("POST", "/api/forms?action=admin-attente&w=AC27", { ids: [la.attente[0].id], op: "entrer" }, H);
+    check("liste d'attente : un invité entre dans la liste quand une place se libère", ent.json.ok && ent.json.contacts.some(c => c.nom_repertoire === "Attente Deux") && ent.json.attente.length === 1);
+    const o3 = await call("POST", "/api/forms?action=admin-etape&w=AC27", { n: 3, ouvrir: true }, H);
+    const vert = ent.json.contacts.some(c => !c.desactive && c.etat === "complète");
+    check("premier contact : s'ouvre sans clore la liste dès qu'un invité est vert, refusé tant qu'aucun ne l'est", vert ? (o3.json.ok && o3.json.mariage.etape >= 3) : (o3.status === 422 && /Aucun invité vert/.test(o3.json.detail)), JSON.stringify(o3.json).slice(0, 200));
   }
   {
     /* espace mariés : lien personnel, vue du couple sans la cuisine, modifications au journal « Le couple » */

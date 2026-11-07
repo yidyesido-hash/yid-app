@@ -34,7 +34,9 @@
      ?action=admin-vider     POST  remise à zéro de la liste (administrateur, confirmation = code du mariage)
      ?action=admin-export-liste POST la liste propre en classeur (base64)
      ?action=admin-sharepoint POST réécrire l'onglet Base invités du classeur Pilotage
-     ?action=admin-etape     POST  terminer une étape : n (2 exige une liste toute verte)
+     ?action=admin-etape     POST  terminer une étape : n (2 exige une liste sans rouge ni orange) ; ouvrir : true ouvre l'étape n sans terminer la précédente
+     ?action=admin-demander  POST  ce qui manque sera demandé à l'invité : ids, retirer
+     ?action=admin-attente   POST  liste d'attente : ids, op entrer | monter | descendre | retirer
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
      ?action=admin-espace    POST  le lien de l'espace mariés : op lire | creer | renouveler | couper | modifiable (valeur) (w=CODE)
@@ -50,7 +52,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.4.0";
+const VERSION = "1.4.1";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -263,7 +265,7 @@ module.exports = async (req, res) => {
         else if (action === "espace-retirer") await espace.retirer(m, b.id, !!b.retire);
         else if (action === "espace-deposer") {
           const fichiers = (b.fichiers || []).slice(0, 10).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
-          const recu = await espace.deposer(m, fichiers, b.cote);
+          const recu = await espace.deposer(m, fichiers, b.cote, !!b.attente);
           return send(res, 200, Object.assign({ ok: true, recu }, await espace.voir(await store.mariageFresh(m.code))));
         }
         else if (action !== "espace-voir") return send(res, 400, { ok: false, error: "action" });
@@ -293,7 +295,7 @@ module.exports = async (req, res) => {
       if (m.boite_email && graph.enabled()) { try { releve = await liste.relever(w, u.nom, false, await mariages.reglages()); } catch (e) { releve = { detail: e.message }; } }
       return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
     }
-    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-qualifier-groupe", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
+    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-qualifier-groupe", "admin-demander", "admin-attente", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
       const refus = (e, k) => send(res, 422, { ok: false, error: k || "liste", detail: e.message });
@@ -301,12 +303,14 @@ module.exports = async (req, res) => {
       if (action === "admin-importer") {
         const fichiers = (b.fichiers || []).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
         if (!fichiers.length) return send(res, 422, { ok: false, error: "fichiers", detail: "Aucun fichier reçu." });
-        try { const accuse = await liste.importer(w, { source: b.source, cote: b.cote, proche: b.proche, origine: "dépôt" }, fichiers, u.nom); return send(res, 200, Object.assign({ ok: true }, accuse)); }
+        try { const accuse = await liste.importer(w, { source: b.source, cote: b.cote, proche: b.proche, origine: "dépôt", attente: !!b.attente }, fichiers, u.nom); return send(res, 200, Object.assign({ ok: true }, accuse)); }
         catch (e) { return refus(e, "import"); }
       }
       try {
         if (action === "admin-qualifier") await liste.qualifier(w, Number(b.id), b.champs || {}, u.nom);
         if (action === "admin-qualifier-groupe") await liste.qualifierGroupe(w, ids(), b.champs || {}, u.nom);
+        if (action === "admin-demander") { const d = await liste.demander(w, ids(), !!b.retirer, u.nom); return send(res, 200, Object.assign({ ok: true, demande: d }, await liste.liste(w))); }
+        if (action === "admin-attente") await liste.attente(w, ids(), String(b.op || ""), u.nom);
         if (action === "admin-anomalie") await liste.trancher(w, ids(), b.decision, u.nom);
         if (action === "admin-contact") await liste.desactiver(w, ids(), !!b.desactive, b.motif, u.nom);
         if (action === "admin-cote") await liste.changerCote(w, ids(), b.cote, u.nom);
@@ -322,6 +326,14 @@ module.exports = async (req, res) => {
       if (action === "admin-etape") {
         const n = Math.max(1, Math.min(7, Number(b.n) || 0)); if (!n) return send(res, 422, { ok: false, error: "etape" });
         const fresh = await store.mariageFresh(w); const etapes = Object.assign({}, fresh.etapes || {});
+        if (b.ouvrir) {
+          /* ouvrir une étape sans terminer la précédente : le premier contact commence pour les invités verts pendant que la liste se termine */
+          if (n === 3) { const j = await liste.liste(w); if (!j.contacts.some(c => !c.desactive && c.etat === "complète")) return send(res, 422, { ok: false, error: "etape", detail: "Aucun invité vert pour l'instant : le premier contact s'ouvrira dès qu'une fiche sera complète." }); }
+          const ouverte = Math.min(7, Math.max(fresh.etape || 1, n));
+          await require("../lib/db").query("UPDATE mariage SET etape = $2, modifie_le = now() WHERE id = $1", [fresh.id, ouverte]);
+          await store.journal(fresh.id, "Étape ouverte", n + ". " + (checklist.ETAPES[n - 1] || "") + " (la précédente reste ouverte)", { etape: fresh.etape }, { etape: ouverte }, u.nom);
+          return send(res, 200, { ok: true, mariage: await mariages.fiche(w) });
+        }
         if (n === 2) {
           const j = await liste.liste(w);
           const restent = j.contacts.filter(c => !c.desactive && c.etat !== "complète");
