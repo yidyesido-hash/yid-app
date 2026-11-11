@@ -98,24 +98,33 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
+<link rel="stylesheet" href="/habillage.css">
 </head>
 <body>
 <header>
-  <div class="row" style="gap:18px"><img src="/logo.png" alt="Yes I Do"><div><small>Yes I Do</small><h1>L'application</h1></div></div>
-  <nav id="nav" hidden><a href="#/" data-v="accueil">Accueil</a><a href="#/nouveau" data-v="nouveau">Créer un mariage</a><a href="#/guide" data-v="guide">Guide et ressources</a><a href="#/reglages" data-v="reglages">Réglages</a><a href="#" id="logout">Se déconnecter</a> <span class="who" id="who"></span> <span class="version" id="ver"></span></nav>
+  <div class="marque"><img class="logo logo-noir" src="/img/logo-noir.png" alt="Yes I Do"><img class="logo logo-blanc" src="/img/logo-blanc.png" alt="Yes I Do"></div>
+  <div class="moi" id="moi" hidden><span id="avatar"></span><div class="salut"><small id="ladate"></small><b id="who"></b></div></div>
+  <nav id="nav" hidden><a href="#/" data-v="accueil" title="Accueil" aria-label="Accueil"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7v9H4z"/></svg></a><a href="#/nouveau" data-v="nouveau" title="Créer un mariage" aria-label="Créer un mariage"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a><a href="#/guide" data-v="guide" title="Guide et ressources" aria-label="Guide et ressources"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></svg></a><a href="#/reglages" data-v="reglages" title="Réglages" aria-label="Réglages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></a><a href="#" id="bascule" title="Clair ou sombre" aria-label="Clair ou sombre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z"/></svg></a><a href="#" id="logout" title="Se déconnecter" aria-label="Se déconnecter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/></svg></a><span class="version" id="ver" hidden></span></nav>
 </header>
 <main>
-  <div class="login" id="login">
-    <img src="/logo.png" alt="Yes I Do" style="height:64px;width:auto;margin:0 auto 6px">
-    <h2>Connexion</h2>
-    <p class="muted" style="margin:0">Accès réservé à l'équipe Yes I Do.</p>
-    <input type="text" id="prenom" placeholder="Prénom" autocomplete="username">
-    <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
-    <button id="go">Entrer</button>
-    <p class="muted small" style="margin:0">Chaque membre de l'équipe entre avec son prénom : le journal retient qui a fait quoi. Sans prénom, le mot de passe d'installation ouvre l'outil au nom « administrateur ».</p>
-    <div class="msg" id="lmsg"></div>
+  <div class="login ecran" id="login">
+    <img class="photo" id="lphoto" src="/img/regis-grand.jpg" alt="">
+    <div class="voilage"></div>
+    <div class="bulle"><img src="/img/logo-blanc.png" alt="Yes I Do"></div>
+    <div class="bas">
+      <h2 id="lnom">Régis</h2>
+      <p style="margin:0">Accès réservé à l'équipe Yes I Do.</p>
+      <div class="profils"><button type="button" data-prof="Régis" class="on"><img src="/img/regis.jpg" alt="">Régis</button><button type="button" data-prof="Cécilia"><img src="/img/cess.jpg" alt="">Cécilia</button><button type="button" data-prof="">Autre</button></div>
+      <input type="text" id="prenom" placeholder="Prénom" autocomplete="username" value="Régis" hidden>
+      <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
+      <button id="go">Entrer</button>
+      <p class="small" style="margin:0">La connexion par empreinte ou Face ID arrive avec la prochaine version.</p>
+      <div class="msg" id="lmsg"></div>
+    </div>
   </div>
   <div id="view" hidden></div>
+  <p class="pied" id="pied" hidden>Un souci sur cet écran ? <a data-souci href="#">Dites le nous</a></p>
+  <div class="voile" id="souci" hidden><div class="feuille"><div class="grip"></div><h3>Un souci sur cet écran ?</h3><p class="muted" style="margin:6px 0 14px;font-size:13px">Une phrase suffit. Nous joignons nous mêmes l'écran, la version et votre appareil.</p><textarea id="souci-txt" placeholder="Par exemple : le bouton Valider ne réagit pas sur la fiche de Hélène"></textarea><div class="row" style="margin-top:14px"><button class="ghost" data-fermer type="button" style="flex:1">Annuler</button><button id="souci-go" type="button" style="flex:2">Envoyer</button></div><div class="msg" id="souci-msg"></div></div></div>
 </main>
 <script>
 (function(){
@@ -146,10 +155,20 @@
       .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? (prenom ? "Prénom ou mot de passe refusé" : "Mot de passe refusé") : (j.detail || "Connexion impossible")); TOKEN = j.token; MOI = { nom: j.nom, role: j.role, version: j.version, equipe: j.equipe, theme: j.theme }; applyTheme(); try{ sessionStorage.setItem("yid_token", TOKEN); sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} opened(); })
       .catch(function(e){ $("lmsg").textContent = e.message; });
   }
-  function opened(){ $("login").hidden = true; V.hidden = false; $("nav").hidden = false; document.querySelectorAll('#nav a[data-v="reglages"], #nav a[data-v="nouveau"]').forEach(function(a){ a.hidden = MOI.role !== "administrateur"; }); $("who").textContent = MOI.nom ? "Connecté : " + MOI.nom : ""; if (MOI.version) $("ver").textContent = "Version " + MOI.version; route(); }
-  function logout(msg){ try{ sessionStorage.removeItem("yid_token"); sessionStorage.removeItem("yid_moi"); }catch(e){} TOKEN = ""; MOI = {}; $("login").hidden = false; V.hidden = true; $("nav").hidden = true; if (msg) $("lmsg").textContent = msg; }
+  function photoDe(nom){ return /r[ée]gis/i.test(nom || "") ? "/img/regis.jpg" : /c[ée]cilia|cess/i.test(nom || "") ? "/img/cess.jpg" : ""; }
+  function avatarHtml(nom, taille){ var p = photoDe(nom), t = taille || 42; return p ? '<img class="avatar" src="' + p + '" alt="' + esc(nom) + '" style="width:' + t + 'px;height:' + t + 'px">' : '<span class="avatar" style="width:' + t + 'px;height:' + t + 'px">' + esc(String(nom || "?").charAt(0).toUpperCase()) + '</span>'; }
+  function opened(){ $("login").hidden = true; V.hidden = false; $("nav").hidden = false; $("moi").hidden = false; $("pied").hidden = false; document.querySelectorAll('#nav a[data-v="reglages"], #nav a[data-v="nouveau"]').forEach(function(a){ a.hidden = MOI.role !== "administrateur"; }); var h = new Date().getHours(), prenom = String(MOI.nom || "").split(" ")[0]; $("who").textContent = (h >= 18 || h < 5 ? "Bonsoir " : "Bonjour ") + (prenom === "administrateur" ? "" : prenom); $("ladate").textContent = new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" }); $("avatar").innerHTML = avatarHtml(MOI.nom); if (MOI.version) $("ver").textContent = "Version " + MOI.version; route(); }
+  function logout(msg){ try{ sessionStorage.removeItem("yid_token"); sessionStorage.removeItem("yid_moi"); }catch(e){} TOKEN = ""; MOI = {}; $("login").hidden = false; V.hidden = true; $("nav").hidden = true; $("moi").hidden = true; $("pied").hidden = true; if (msg) $("lmsg").textContent = msg; }
   $("go").onclick = enter; $("pw").onkeydown = function(e){ if (e.key === "Enter") enter(); }; $("prenom").onkeydown = function(e){ if (e.key === "Enter") $("pw").focus(); };
   $("logout").onclick = function(e){ e.preventDefault(); logout(""); location.hash = "#/"; };
+  document.querySelectorAll("[data-prof]").forEach(function(b){ b.onclick = function(){ document.querySelectorAll("[data-prof]").forEach(function(x){ x.classList.toggle("on", x === b); }); var n = b.dataset.prof; $("prenom").value = n; $("prenom").hidden = !!n; $("lnom").textContent = n || "Bienvenue"; var g = /C[ée]cilia/.test(n) ? "/img/cess-grand.jpg" : /R[ée]gis/.test(n) ? "/img/regis-grand.jpg" : "/img/p1959.jpg"; $("lphoto").src = g; if (!n) $("prenom").focus(); else $("pw").focus(); }; });
+  $("bascule").onclick = function(e){ e.preventDefault(); var t = document.documentElement.getAttribute("data-theme") === "sombre" ? "clair" : "sombre"; try { localStorage.setItem("yid_theme", t); } catch(x){} applyTheme(); };
+  /* signaler un souci : une note discrète en bas de chaque écran, l'écran, la version et l'appareil sont joints */
+  document.addEventListener("click", function(e){
+    if (e.target.closest("[data-souci]")) { e.preventDefault(); $("souci").hidden = false; $("souci-txt").value = ""; $("souci-msg").textContent = ""; $("souci-txt").focus(); return; }
+    if (e.target.id === "souci" || e.target.closest("[data-fermer]")) { $("souci").hidden = true; return; }
+    if (e.target.closest("#souci-go")) { var t = $("souci-txt").value.trim(); if (!t) { $("souci-msg").textContent = "Une phrase suffit."; return; } $("souci-go").disabled = true; api("admin-signaler", { texte: t, ecran: location.hash || "#/", version: MOI.version || "", appareil: navigator.userAgent }).then(function(){ $("souci-msg").textContent = "Merci, c'est transmis. La correction vous sera proposée en test avant toute mise en ligne."; setTimeout(function(){ $("souci").hidden = true; }, 2200); }).catch(function(x){ $("souci-msg").textContent = x.message; }).then(function(){ $("souci-go").disabled = false; }); }
+  });
 
   /* ---------- routeur ---------- */
   function route(){
@@ -195,9 +214,14 @@
     V.innerHTML = '<p class="muted">Chargement</p>';
     api("admin-accueil").then(function(j){
       var encours = j.mariages.filter(function(m){ return m.statut !== "Clos" && m.statut !== "Test"; }), autres = j.mariages.filter(function(m){ return m.statut === "Clos" || m.statut === "Test"; });
-      var card = function(m){ return '<div class="wcard" onclick="location.hash=\'#/m/' + m.code + '\'">' + gauge(m.progression) + '<div><h3>' + esc(m.prenoms) + '</h3><div class="meta">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "date à fixer") + (m.lieu ? " · " + esc(m.lieu) : "") + '<br>Étape ' + m.etape + ' sur 7 : ' + esc(j.reglages.etapes[m.etape - 1] || "") + '<br>' + (m.date_remise ? "Liste attendue le " + fdate(m.date_remise) + " · " : "") + (m.date_arret ? "Clôture le " + fdate(m.date_arret) : "") + '<br>' + m.foyers + ' foyer(s)' + (m.anomalies ? ' · <span class="pill warn">' + m.anomalies + ' anomalie(s)</span>' : "") + '</div></div></div>'; };
+      var PH = ["/img/mg290.jpg", "/img/p2186.jpg", "/img/mg3.jpg", "/img/p1959.jpg"];
+      var photo = function(m){ var h = 0; String(m.code).split("").forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 997; }); return PH[h % PH.length]; };
+      var jours = function(d){ if (!d) return ""; var n = Math.round((new Date(String(d).slice(0,10) + "T12:00:00") - new Date()) / 864e5); return n >= 0 ? "J − " + n : "Passé"; };
+      var card = function(m){ return '<div class="wcard photo" onclick="location.hash=\'#/m/' + m.code + '\'"><img src="' + photo(m) + '" alt=""><div class="ombre"></div>' + (m.date_mariage ? '<span class="j">' + jours(m.date_mariage) + '</span>' : '') + '<div class="anneau">' + gauge(m.progression) + '</div><div class="txt"><h3>' + esc(m.prenoms) + '</h3><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "date à fixer") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div><div class="meta" style="display:flex;align-items:center;gap:8px;margin-top:10px"><span style="display:flex"><img src="/img/regis.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8)"><img src="/img/cess.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8);margin-left:-8px"></span>Étape ' + m.etape + ' · ' + esc(j.reglages.etapes[m.etape - 1] || "") + '</div><div class="meta" style="margin-top:8px">' + pill(m.statut, statutClass(m.statut)) + ' ' + pill(m.foyers + " foyer(s)", "") + (m.anomalies ? ' ' + pill(m.anomalies + " à traiter", "warn") : "") + '</div></div></div>'; };
+      var nbF = encours.reduce(function(t, m){ return t + (m.foyers || 0); }, 0), nbA = encours.reduce(function(t, m){ return t + (m.anomalies || 0); }, 0);
+      var chiffres = '<div class="chiffres"><div class="solide"><b>' + encours.length + '</b><span>mariages en cours</span></div><div class="verre"><b>' + nbF + '</b><span>foyers suivis</span></div><div class="or"><b>' + nbA + '</b><span>à traiter</span></div></div>';
       V.innerHTML =
-        '<h2 class="sec">Mariages en cours</h2><p class="lead">Une carte par mariage, la jauge indique les étapes terminées sur sept. Cliquer pour ouvrir. Le cheminement complet est dans <a href="#/guide">Guide et ressources</a>.</p>' +
+        chiffres + '<h2 class="sec">Vos mariages</h2><p class="lead">La jauge indique les étapes terminées sur sept. Toucher une carte pour l\'ouvrir.</p>' +
         '<div class="grid">' + (encours.map(card).join("") || '<div class="card"><p>Aucun mariage en cours. <a href="#/nouveau">Créer un mariage</a> ouvre l\'étape Fiche du mariage.</p></div>') + '</div>' +
         (autres.length ? '<h2 class="sec">Tests et mariages clos</h2><div class="grid">' + autres.map(card).join("") + '</div>' : "") +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
@@ -264,7 +288,10 @@
     api("admin-mariage", {}, code).then(function(j){
       var m = j.mariage, cur = etape || m.etape || 1, done = m.etapes || {}, isJournal = cur === "journal";
       var steps = m.etapes_libelles.map(function(t, i){ var n = i + 1, cls = done[n] ? "done" : (n === m.etape ? "" : "off"); return '<div class="step ' + cls + (n === cur ? " on" : "") + '" onclick="location.hash=\'#/m/' + m.code + '/' + n + '\'"><div class="n">' + n + '</div><div class="t">' + esc(t) + '</div><div>' + (done[n] ? pill("terminée", "ok") : n === m.etape ? pill("en cours", "gold") : "") + '</div></div>'; }).join("");
-      V.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:18px"><div><h2 class="sec">' + esc(m.prenoms) + '</h2><div class="muted">' + pill(m.statut, statutClass(m.statut)) + ' &nbsp;' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + ' · code ' + esc(m.code) + ' &nbsp;' + boitePill(m) + '</div><div class="row" style="margin-top:10px"><button onclick="location.hash=\'#/m/' + m.code + '/espace\'">Espace mariés</button><button class="ghost" onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal du mariage</button>' + (m.sharepoint && m.sharepoint.dossier ? '<span class="muted small">Dossier SharePoint : ' + esc(m.sharepoint.dossier) + '</span>' : '') + '</div></div>' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '</div>' +
+      var PH = ["/img/mg290.jpg", "/img/p2186.jpg", "/img/mg3.jpg", "/img/p1959.jpg"], hh = 0; String(m.code).split("").forEach(function(ch){ hh = (hh * 31 + ch.charCodeAt(0)) % 997; });
+      var jr = m.date_mariage ? Math.round((new Date(String(m.date_mariage).slice(0,10) + "T12:00:00") - new Date()) / 864e5) : null;
+      V.innerHTML = '<div class="bandeau"><img src="' + PH[hh % PH.length] + '" alt=""><div class="ombre"></div><div class="contenu"><div class="actions"><button class="plein" onclick="location.hash=\'#/m/' + m.code + '/espace\'">Espace mariés</button><button onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal</button></div><div class="k">Mariage' + (jr !== null ? ' · J − ' + jr : '') + ' · code ' + esc(m.code) + '</div><h2>' + esc(m.prenoms) + '</h2><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div></div></div>' +
+        '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.foyers || 0) + '</b><span>foyers</span></div><div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div><div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       var pane = $("pane");
       if (isJournal) { pane.innerHTML = '<div class="card"><h3>Journal de ' + esc(m.prenoms) + '</h3><p>Tout ce qui a été fait sur ce mariage, le plus récent en premier : quoi, quand, par qui, et pour une modification la valeur avant et la valeur après.</p></div><div id="jm"><p class="muted">Chargement</p></div>'; api("admin-journal", { limit: 500 }, m.code).then(function(r){ LIB = r.libelles || LIB; $("jm").innerHTML = journalHtml(r.journal, false); }).catch(function(e){ $("jm").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }); return; }
@@ -419,7 +446,7 @@
       renderListe(m, pane, r, rl); var m2 = $("rlmsg"); if (m2) m2.textContent = rl.releve ? lots + " lot(s) importé(s). " + (rl.detail || "") : (rl.detail || "");
     }).catch(function(e){ var m2 = $("rlmsg"); if (m2) m2.textContent = (/JSON|timeout|504|An error/i.test(e.message) ? "L'application a mis trop de temps à répondre ; relancer la relève, elle reprend là où elle s'est arrêtée." : e.message); if (btn) btn.disabled = false; });
   }
-  var FILTRE = "toutes";
+  var FILTRE = "toutes", VUE = window.innerWidth < 860 ? "une" : "tableau", IDX = 0;
   function renderListe(m, pane, j, releve){
     var t = j.tuiles, b = j.boite || {}, r = j.regles, admin = MOI.role === "administrateur";
     var opt = function(list, v, vide){ return '<option value="">' + (vide || "") + '</option>' + list.map(function(o){ return '<option' + (o === v ? " selected" : "") + '>' + esc(o) + '</option>'; }).join(""); };
@@ -477,7 +504,24 @@
       var s = ($("csearch").value || "").toLowerCase();
       var list = j.contacts.filter(function(c){ return (FILTRES_TUILES[FILTRE] ? (!c.desactive && c.etat !== "à voir" && FILTRES_TUILES[FILTRE].f(c)) : FILTRE === "toutes" ? !c.desactive : FILTRE === "doublon" || FILTRE === "numéro" ? (!c.desactive && c.famille === FILTRE) : c.etat === FILTRE) && (!s || (c.nom_repertoire + " " + (c.numero || "") + " " + (c.numero_2 || "") + " " + (c.cle || "") + " " + (c.prenom || "")).toLowerCase().indexOf(s) >= 0); });
       var bandeau = FILTRES_TUILES[FILTRE] ? '<div class="row" style="margin:0 0 12px"><span class="pill gold">' + esc(FILTRES_TUILES[FILTRE].l) + ' · ' + list.length + ' fiche(s)</span><button class="petit ghost" id="tout-voir">Tout afficher</button></div>' : '';
-      $("fiches").innerHTML = bandeau + '<datalist id="dl-proches">' + r.precisions.map(function(p){ return '<option value="' + esc(p) + '">'; }).join("") + '</datalist>' + (list.map(fiche).join("") || '<div class="card"><p>' + (j.contacts.length ? "Aucune ligne pour ce filtre." : "Aucune ligne pour l'instant : déposez un fichier ou relevez la boîte.") + '</p></div>');
+      var vide = '<div class="card"><p>' + (j.contacts.length ? "Aucune ligne pour ce filtre." : "Aucune ligne pour l'instant : déposez un fichier ou relevez la boîte.") + '</p></div>';
+      var vues = '<div class="vues">' + [["une", "Une à une"], ["tableau", "Tableau"], ["toutes", "Toutes"]].map(function(v){ return '<button type="button" data-vue="' + v[0] + '" class="' + (VUE === v[0] ? "on" : "") + '">' + v[1] + '</button>'; }).join("") + '</div>';
+      var corps;
+      if (!list.length) corps = vide;
+      else if (VUE === "une") {
+        IDX = Math.max(0, Math.min(IDX, list.length - 1));
+        var n = list.length, deb = Math.max(0, Math.min(IDX - 5, n - 11));
+        corps = '<div class="piloter"><span class="cnt">↔ Glissez pour passer d\'une fiche à l\'autre</span><span class="cnt">' + (IDX + 1) + ' / ' + n + '</span></div><div class="pile" id="pile"><div class="derriere"></div><div class="derriere b2"></div><div class="carte on">' + fiche(list[IDX]) + '</div></div>' +
+          '<div class="piloter" style="margin-top:14px"><button class="ghost" type="button" id="prec"' + (IDX ? '' : ' disabled') + '>Précédente</button><div class="points">' + list.slice(deb, deb + 11).map(function(c, k){ return '<i class="' + (deb + k === IDX ? "on" : "") + '"></i>'; }).join("") + '</div><button type="button" id="suiv"' + (IDX < n - 1 ? '' : ' disabled') + '>Suivante</button></div>';
+      } else if (VUE === "tableau") {
+        corps = '<div class="tableau verre"><table><thead><tr><th>Invité</th><th>État</th><th>Clé</th><th>Côté</th><th>Lien</th><th>Invitation</th><th>Accompagnant</th><th>Enfants</th><th>Il manque</th></tr></thead><tbody>' + list.map(function(c, k){ var a = c.accueil && c.accueil.accompagnant; return '<tr data-ix="' + k + '"><td><b>' + esc(c.nom_repertoire) + '</b></td><td>' + pill(c.etat, c.etat === "complète" ? "ok" : c.etat === "à voir" ? "warn" : c.etat === "désactivée" ? "" : "bad") + '</td><td>' + esc(c.cle || "") + '</td><td>' + esc(c.cote || "") + '</td><td>' + esc(c.lien || "") + '</td><td>' + esc(c.invitation || "") + '</td><td>' + esc(a ? (a.etat === "connu" ? a.libelle : a.etat) : "") + '</td><td>' + (Number.isInteger(c.nb_enfants) ? c.nb_enfants : "") + '</td><td class="muted">' + esc((c.manque || []).join(", ")) + '</td></tr>'; }).join("") + '</tbody></table></div><p class="small muted" style="margin-top:8px">Toucher une ligne ouvre la fiche.</p>';
+      } else corps = list.map(fiche).join("");
+      $("fiches").innerHTML = bandeau + vues + '<datalist id="dl-proches">' + r.precisions.map(function(p){ return '<option value="' + esc(p) + '">'; }).join("") + '</datalist>' + corps;
+      pane.querySelectorAll("[data-vue]").forEach(function(b){ b.onclick = function(){ VUE = b.dataset.vue; fiches(); }; });
+      pane.querySelectorAll("tr[data-ix]").forEach(function(tr){ tr.onclick = function(){ IDX = +tr.dataset.ix; VUE = "une"; fiches(); var pl = $("pile"); if (pl) pl.scrollIntoView({ behavior: "smooth", block: "center" }); }; });
+      if ($("prec")) $("prec").onclick = function(){ IDX--; fiches(); };
+      if ($("suiv")) $("suiv").onclick = function(){ IDX++; fiches(); };
+      var pl = $("pile"); if (pl) { var x0 = null; pl.addEventListener("pointerdown", function(e){ if (e.target.closest("input,select,button,textarea,label,a")) return; x0 = e.clientX; }); pl.addEventListener("pointerup", function(e){ if (x0 === null) return; var dx = e.clientX - x0; x0 = null; if (dx < -60 && IDX < list.length - 1) { IDX++; fiches(); } else if (dx > 60 && IDX > 0) { IDX--; fiches(); } }); pl.addEventListener("pointercancel", function(){ x0 = null; }); }
       if ($("tout-voir")) $("tout-voir").onclick = function(){ FILTRE = "toutes"; pane.querySelectorAll("[data-f]").forEach(function(x){ x.classList.toggle("ghost", x.dataset.f !== FILTRE); }); fiches(); };
       pane.querySelectorAll("[data-dem], [data-dem0]").forEach(function(b){ b.onclick = function(){ var id = +(b.dataset.dem || b.dataset.dem0); b.disabled = true; api("admin-demander", { ids: [id], retirer: !!b.dataset.dem0 }, m.code).then(function(rr){ var y = window.scrollY; renderListe(m, pane, rr, null); window.scrollTo(0, y); }).catch(function(e){ $("gmsg").textContent = e.message; b.disabled = false; }); }; });
       pane.querySelectorAll("[data-pres]").forEach(function(box){ box.onchange = function(){ var id = box.dataset.pres, tous = box.value === "tous", boxes = pane.querySelectorAll('[data-pres="' + id + '"]'); if (tous) boxes.forEach(function(x){ x.checked = box.checked; }); else { var t = pane.querySelector('[data-pres="' + id + '"][value="tous"]'); if (t) t.checked = Array.prototype.every.call(boxes, function(x){ return x.value === "tous" || x.checked; }); } var vals = Array.prototype.filter.call(boxes, function(x){ return x.checked && x.value !== "tous"; }).map(function(x){ return x.value; }); boxes.forEach(function(x){ x.disabled = true; }); api("admin-qualifier", { id: +id, champs: { periodes: vals } }, m.code).then(function(rr){ if (!rr.ok) { $("gmsg").textContent = rr.detail; boxes.forEach(function(x){ x.disabled = false; }); return; } return api("admin-liste", {}, m.code).then(function(jj){ var sc = window.scrollY; renderListe(m, pane, jj, null); window.scrollTo(0, sc); }); }).catch(function(e){ $("gmsg").textContent = e.message; boxes.forEach(function(x){ x.disabled = false; }); }); }; });

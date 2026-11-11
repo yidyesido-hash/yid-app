@@ -52,7 +52,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.5.0";
+const VERSION = "1.5.1";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -198,6 +198,15 @@ module.exports = async (req, res) => {
       if (!u) return send(res, 401, { ok: false, error: "password" });
       await store.journal(null, "Connexion", u.nom + " · " + ip(req), null, null, u.nom);
       return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count(), theme: (await mariages.reglages(u.role)).theme_defaut });
+    }
+    /* Un souci signalé depuis la note de bas de page : gardé au journal maître avec l'écran, la version et l'appareil. */
+    if (action === "admin-signaler") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const texte = String(b.texte || "").trim().slice(0, 2000);
+      if (!texte) return send(res, 422, { ok: false, detail: "Une phrase suffit." });
+      const ctx = { ecran: String(b.ecran || "").slice(0, 200), version: String(b.version || VERSION).slice(0, 20), appareil: String(b.appareil || "").slice(0, 300) };
+      await store.journal(null, "Souci signalé", texte, null, ctx, u.nom);
+      return send(res, 200, { ok: true });
     }
     if (action === "admin-check") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

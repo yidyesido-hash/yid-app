@@ -1,0 +1,212 @@
+/* =====================================================================
+   HABILLAGE 1.5 · fidèle à la maquette v5
+   Deux thèmes : clair crème, sombre brun et or. Verre en relief avec
+   surbrillance, barre de navigation flottante, vrai logo, photos.
+   Chargé après les styles de base : il ne fait que les recouvrir.
+   ===================================================================== */
+:root{
+  --ink:#1D1813; --muted:#7C7268; --gold:#B8956A; --gold2:#E4CDA4; --bad:#A3412F; --ok:#3F7A52; --warn:#9B6A2E;
+  --fond:radial-gradient(110% 70% at 100% 0%,#EFE2CB 0%,rgba(239,226,203,0) 60%),radial-gradient(90% 60% at 0% 100%,#EADBC3 0%,rgba(234,219,195,0) 60%),#F5EFE6;
+  --bg:#F5EFE6; --line:rgba(120,90,60,.14); --cream:rgba(255,253,249,.5);
+  --glass:rgba(255,253,249,.58); --glass2:rgba(255,253,249,.8);
+  --edge:rgba(255,255,255,.78); --hi:rgba(255,255,255,.95); --lo:rgba(120,90,60,.06);
+  --drop:0 1px 2px rgba(80,55,30,.06),0 10px 24px -8px rgba(80,55,30,.16),0 30px 60px -24px rgba(80,55,30,.22);
+  --sheen:rgba(255,255,255,.75);
+  --solid:linear-gradient(160deg,#2E241C 0%,#17120E 100%); --solid-ink:#F6EEDF; --solid-mute:rgba(246,238,223,.62);
+  --btn:#1D1813; --btnink:#F6EEDF; --chip:rgba(255,253,249,.62);
+  --nav:rgba(255,253,249,.66); --nav-ink:#857A6F; --nav-on:#1D1813; --nav-on-ink:#E4CDA4;
+  --pill-ok:rgba(95,158,115,.16); --pill-warn:rgba(184,149,106,.18); --pill-bad:rgba(163,65,47,.12); --pill-gold:rgba(184,149,106,.18); --pill-goldink:#7A5C38;
+  --input:rgba(255,255,255,.62);
+}
+:root[data-theme="sombre"]{
+  --ink:#F3EADB; --muted:rgba(243,234,219,.6); --gold:#D4B07A; --bad:#E39A8A; --ok:#8FC6A0; --warn:#E0B577;
+  --fond:radial-gradient(100% 60% at 100% 0%,#4A3626 0%,rgba(74,54,38,0) 62%),radial-gradient(90% 60% at 0% 100%,#3A2A1E 0%,rgba(58,42,30,0) 60%),#1A140F;
+  --bg:#1A140F; --line:rgba(255,236,210,.12); --cream:rgba(255,236,210,.05);
+  --glass:rgba(255,236,210,.07); --glass2:rgba(255,236,210,.11);
+  --edge:rgba(255,236,210,.14); --hi:rgba(255,240,220,.2); --lo:rgba(0,0,0,.25);
+  --drop:0 1px 2px rgba(0,0,0,.3),0 12px 28px -10px rgba(0,0,0,.55),0 30px 60px -24px rgba(0,0,0,.6);
+  --sheen:rgba(255,236,210,.14);
+  --solid:linear-gradient(160deg,#EBD6B0 0%,#C9A774 100%); --solid-ink:#1D1813; --solid-mute:rgba(29,24,19,.62);
+  --btn:#E4CDA4; --btnink:#1D1813; --chip:rgba(255,236,210,.08);
+  --nav:rgba(40,30,22,.66); --nav-ink:rgba(243,234,219,.6); --nav-on:#E4CDA4; --nav-on-ink:#1D1813;
+  --pill-ok:rgba(143,198,160,.14); --pill-warn:rgba(224,181,119,.14); --pill-bad:rgba(227,154,138,.14); --pill-gold:rgba(212,176,122,.16); --pill-goldink:#E4CDA4;
+  --input:rgba(255,236,210,.06);
+}
+html{ background:var(--bg); }
+body{ background:var(--fond); background-attachment:fixed; color:var(--ink); min-height:100vh; transition:background .5s,color .5s; }
+body::before,body::after{ content:""; position:fixed; border-radius:50%; filter:blur(50px); pointer-events:none; z-index:-1; }
+body::before{ width:420px; height:420px; top:-140px; right:-140px; background:rgba(212,176,122,.30); }
+body::after{ width:460px; height:460px; bottom:-160px; left:-180px; background:rgba(170,128,92,.18); }
+:root[data-theme="sombre"] body::before{ background:rgba(212,176,122,.18); }
+:root[data-theme="sombre"] body::after{ background:rgba(120,80,50,.35); }
+.serif{ font-family:"Cormorant Garamond",Georgia,serif; }
+
+/* Verre en relief : toutes les cartes de l'application */
+.card,.kpi,.light,.steps,.wrap,.fiche,.bloc > .bh,.toolbar .grp,.wcard,.verre{
+  position:relative; background:var(--glass); -webkit-backdrop-filter:blur(26px) saturate(170%); backdrop-filter:blur(26px) saturate(170%);
+  border:1px solid var(--edge); box-shadow:inset 0 1px 0 var(--hi),inset 0 -1px 0 var(--lo),var(--drop); border-radius:26px;
+}
+.card::before,.kpi::before,.wcard::before,.verre::before,.solide::before{ content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(150deg,var(--sheen) 0%,rgba(255,255,255,0) 38%); pointer-events:none; }
+.card > *,.kpi > *,.verre > *{ position:relative; }
+.solide{ position:relative; background:var(--solid); color:var(--solid-ink); border:0; box-shadow:inset 0 1px 0 rgba(255,255,255,.18),var(--drop); border-radius:26px; overflow:hidden; --sheen:rgba(255,255,255,.14); }
+.solide .muted{ color:var(--solid-mute); }
+.kpi{ border-radius:22px; } .kpi b{ font:500 32px/1 "Cormorant Garamond",serif; }
+.fiche{ border-radius:24px; border-left-width:1px; padding:14px 16px; }
+.fiche.rouge{ box-shadow:inset 3px 0 0 #C0634B,inset 0 1px 0 var(--hi),var(--drop); } .fiche.vert{ box-shadow:inset 3px 0 0 #5F9E73,inset 0 1px 0 var(--hi),var(--drop); } .fiche.orange{ box-shadow:inset 3px 0 0 var(--gold),inset 0 1px 0 var(--hi),var(--drop); }
+.fiche .top b{ font-size:20px; }
+.steps{ overflow:hidden; } .step{ border-color:var(--line); } .step.on{ background:var(--cream); }
+.step.done .n{ background:#3F7A52; border-color:#3F7A52; color:#fff; }
+.bloc > .bh{ border-radius:20px; }
+th{ background:transparent; }
+input,select,textarea{ background:var(--input); border-color:var(--line); border-radius:14px; color:var(--ink); }
+input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(184,149,106,.18); }
+select option{ background:var(--bg); color:var(--ink); }
+button{ background:var(--btn); color:var(--btnink); border-color:transparent; box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 18px -8px rgba(40,25,10,.4); }
+button.ghost{ background:var(--chip); color:var(--ink); border:1px solid var(--edge); box-shadow:inset 0 1px 0 var(--hi); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+.pill{ background:var(--chip); border:1px solid var(--edge); }
+.pill.ok,.pill.warn,.pill.bad,.pill.gold{ border-color:transparent; }
+.dot{ box-shadow:0 0 0 4px var(--cream); }
+h2.sec{ font:500 28px/1.15 "Cormorant Garamond",serif; letter-spacing:0; text-transform:none; }
+.lead{ color:var(--muted); }
+
+/* En tête : le vrai logo, blanc sur fond sombre, noir sur fond clair */
+header{ border:0; padding:18px 28px 6px; background:transparent; }
+header .marque{ display:flex; align-items:center; gap:14px; }
+header img.logo{ height:42px; width:auto; }
+:root[data-theme="sombre"] header img, :root[data-theme="sombre"] .login img{ filter:none; }
+.logo-noir{ display:inline-block; } .logo-blanc{ display:none; }
+:root[data-theme="sombre"] .logo-noir{ display:none; } :root[data-theme="sombre"] .logo-blanc{ display:inline-block; }
+header .moi{ display:flex; align-items:center; gap:10px; }
+.avatar{ width:42px; height:42px; border-radius:21px; object-fit:cover; box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--gold); display:inline-flex; align-items:center; justify-content:center; font:600 16px/1 "Cormorant Garamond",serif; background:var(--solid); color:var(--solid-ink); }
+.salut small{ display:block; font:400 12px/1.2 Inter,sans-serif; color:var(--muted); letter-spacing:0; text-transform:none; margin:0; }
+.salut b{ font:600 22px/1.1 "Cormorant Garamond",serif; }
+
+/* Barre de navigation flottante (téléphone) et rail (ordinateur) */
+#nav{ position:fixed; z-index:50; display:flex; gap:4px; padding:7px; border-radius:32px; background:var(--nav); -webkit-backdrop-filter:blur(24px) saturate(170%); backdrop-filter:blur(24px) saturate(170%); border:1px solid var(--edge); box-shadow:inset 0 1px 0 var(--hi),var(--drop); left:50%; transform:translateX(-50%); bottom:calc(22px + env(safe-area-inset-bottom)); }
+#nav[hidden]{ display:none !important; }
+#nav a{ width:48px; height:48px; padding:0; margin:0; border:0; border-radius:24px; display:flex; align-items:center; justify-content:center; color:var(--nav-ink); background:transparent; }
+#nav a.on{ background:var(--nav-on); color:var(--nav-on-ink); box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 14px -4px rgba(0,0,0,.3); }
+#nav a img{ width:32px; height:32px; border-radius:16px; object-fit:cover; }
+#nav a span.lib{ display:none; }
+main{ padding-bottom:150px; }
+@media (min-width:1000px){
+  #nav{ left:18px; top:50%; bottom:auto; transform:translateY(-50%); flex-direction:column; border-radius:30px; }
+  main{ padding-left:110px; max-width:1290px; }
+  header{ padding-left:110px; }
+}
+
+/* Note de bas de page : signaler un souci */
+.pied{ text-align:center; margin:30px 0 0; font:italic 15px "Cormorant Garamond",serif; color:var(--muted); }
+.pied a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:1px; cursor:pointer; }
+.voile{ position:fixed; inset:0; background:rgba(10,8,6,.42); z-index:80; display:flex; align-items:flex-end; justify-content:center; }
+.voile[hidden]{ display:none !important; }
+.feuille{ width:min(520px,calc(100% - 20px)); margin:10px; border-radius:30px; padding:12px 22px 24px; background:var(--glass2); -webkit-backdrop-filter:blur(30px) saturate(170%); backdrop-filter:blur(30px) saturate(170%); border:1px solid var(--edge); box-shadow:inset 0 1px 0 var(--hi),var(--drop); }
+:root[data-theme="sombre"] .feuille{ background:rgba(40,30,22,.92); }
+.feuille .grip{ width:38px; height:5px; border-radius:3px; background:var(--line); margin:0 auto 16px; }
+.feuille h3{ margin:0; font:600 26px/1.1 "Cormorant Garamond",serif; }
+
+/* Connexion : la photo du profil choisi, une bulle au logo */
+.login.ecran{ max-width:none; margin:0; position:fixed; inset:0; z-index:90; display:block; text-align:center; background:#0E0B09; color:#F6F1EA; overflow:auto; }
+.login.ecran .photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:30% 25%; }
+.login.ecran .voilage{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(14,11,9,.3) 0%,rgba(14,11,9,.15) 34%,rgba(14,11,9,.86) 70%,#0E0B09 100%); }
+.login.ecran .bulle{ position:relative; margin:18vh auto 0; width:132px; height:132px; border-radius:66px; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.12); -webkit-backdrop-filter:blur(18px) saturate(140%); backdrop-filter:blur(18px) saturate(140%); display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 14px rgba(255,255,255,.06),0 0 0 30px rgba(255,255,255,.03),0 20px 50px rgba(0,0,0,.35); }
+.login.ecran .bulle img{ width:72px; height:auto; }
+.login.ecran .bas{ position:relative; max-width:380px; margin:0 auto; padding:16vh 24px 40px; display:grid; gap:12px; }
+.login.ecran h2{ font:500 40px/1 "Cormorant Garamond",serif; letter-spacing:0; text-transform:none; color:#F6F1EA; margin:0; }
+.login.ecran p{ color:rgba(246,241,234,.7); }
+.login.ecran input{ background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); color:#fff; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+.login.ecran input::placeholder{ color:rgba(255,255,255,.6); }
+.login.ecran button{ background:#E4CDA4; color:#1D1813; }
+.profils{ display:flex; justify-content:center; gap:10px; }
+.profils button{ display:flex; align-items:center; gap:8px; padding:6px 14px 6px 6px; min-height:0; border-radius:22px; background:rgba(255,255,255,.08); color:rgba(246,241,234,.75); border:1px solid transparent; text-transform:none; letter-spacing:0; font:500 13px Inter,sans-serif; box-shadow:none; }
+.profils button.on{ background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.3); color:#fff; }
+.profils img{ width:30px; height:30px; border-radius:15px; object-fit:cover; }
+.login.ecran .msg{ color:#F2B8A8; }
+
+/* Accueil : chiffres et cartes photo des mariages */
+.chiffres{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:6px 0 24px; max-width:640px; }
+.chiffres > div{ border-radius:22px; padding:14px 16px; }
+.chiffres b{ display:block; font:500 30px/1 "Cormorant Garamond",serif; } .chiffres span{ font-size:11.5px; color:var(--muted); }
+.chiffres .solide span{ color:var(--solid-mute); }
+.chiffres .or{ background:linear-gradient(160deg,#EBD6B0,#D4B07A); color:#1D1813; box-shadow:inset 0 1px 0 rgba(255,255,255,.5),var(--drop); } .chiffres .or span{ color:#5C4A33; }
+.grid{ grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+.wcard.photo{ display:block; padding:0; height:300px; overflow:hidden; color:#F6F1EA; border:1px solid rgba(255,255,255,.25); box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 50px -14px rgba(20,12,6,.45); border-radius:30px; }
+.wcard.photo::before{ display:none; }
+.wcard.photo > img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 30%; transition:transform .6s; }
+.wcard.photo:hover > img{ transform:scale(1.03); }
+.wcard.photo .ombre{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(20,16,12,.05) 25%,rgba(20,16,12,.9) 100%); }
+.wcard.photo .j{ position:absolute; top:16px; left:16px; font-size:11px; padding:6px 11px; border-radius:999px; background:rgba(20,16,12,.38); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.18); }
+.wcard.photo .anneau{ position:absolute; top:12px; right:12px; width:56px; height:56px; border-radius:28px; background:rgba(20,16,12,.38); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.wcard.photo .anneau .gauge{ width:56px; height:56px; } .wcard.photo .anneau svg{ width:56px; height:56px; } .wcard.photo .anneau .gauge b{ font-size:14px; color:#F6F1EA; }
+.wcard.photo .txt{ position:absolute; left:20px; right:20px; bottom:18px; }
+.wcard.photo h3{ font:500 30px/1.02 "Cormorant Garamond",serif; margin:0; color:#F6F1EA; }
+.wcard.photo .meta{ color:rgba(246,241,234,.8); font-size:12.5px; margin-top:6px; }
+.wcard.photo .pill{ background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.2); color:#F6F1EA; }
+
+/* Page d'un mariage : bandeau photo */
+.bandeau{ position:relative; border-radius:30px; overflow:hidden; min-height:300px; margin-bottom:-56px; color:#F6F1EA; box-shadow:0 24px 50px -16px rgba(20,12,6,.45); }
+.bandeau > img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 30%; }
+.bandeau .ombre{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(20,16,12,.45) 0%,rgba(20,16,12,.05) 32%,rgba(20,16,12,.2) 55%,rgba(20,16,12,.92) 100%); }
+.bandeau .contenu{ position:relative; padding:22px 24px 82px; display:flex; flex-direction:column; min-height:300px; }
+.bandeau .k{ font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; font-weight:600; color:#E4CDA4; margin-top:auto; }
+.bandeau h2{ font:500 44px/1 "Cormorant Garamond",serif; margin:8px 0 0; color:#F6F1EA; }
+.bandeau .meta{ font-size:13.5px; color:rgba(246,241,234,.82); margin-top:8px; }
+.bandeau .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.bandeau .actions button{ background:rgba(255,255,255,.16); color:#F6F1EA; border:1px solid rgba(255,255,255,.28); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
+.bandeau .actions button.plein{ background:#F6F1EA; color:#1D1813; }
+.resume{ position:relative; margin:0 16px 22px; display:flex; gap:18px; align-items:center; padding:16px 20px; border-radius:28px; z-index:2; }
+.resume .gauge b{ font-size:22px; }
+.resume .cases{ flex:1; display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; }
+.resume .cases b{ display:block; font:500 24px/1 "Cormorant Garamond",serif; } .resume .cases span{ font-size:11.5px; color:var(--muted); }
+
+/* Étapes en pastilles sur téléphone */
+@media (max-width:860px){
+  header{ padding:14px 18px 4px; }
+  .steps{ display:flex; gap:6px; overflow-x:auto; background:transparent; border:0; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; padding:2px 0 8px; border-radius:0; }
+  .step{ flex:0 0 auto; min-width:0; display:flex; align-items:center; gap:8px; padding:7px 14px 7px 7px; border:1px solid var(--edge); border-radius:999px; background:var(--glass); box-shadow:inset 0 1px 0 var(--hi); }
+  .step .n{ width:24px; height:24px; font-size:12px; }
+  .step > div:last-child{ display:none; }
+  .step.on{ background:var(--solid); color:var(--solid-ink); border-color:transparent; }
+  .step.on .n{ background:#E4CDA4; color:#1D1813; border-color:#E4CDA4; }
+  .bandeau h2{ font-size:38px; }
+  .resume{ flex-wrap:wrap; }
+  .chiffres{ gap:8px; }
+}
+
+/* Liste : choix de la vue, une à une, tableau */
+.vues{ display:inline-flex; padding:4px; border-radius:22px; background:var(--chip); border:1px solid var(--edge); box-shadow:inset 0 1px 0 var(--hi); margin-bottom:12px; }
+.vues button{ min-height:34px; padding:6px 14px; border-radius:18px; background:transparent; color:var(--muted); border:0; box-shadow:none; text-transform:none; letter-spacing:0; font:500 12.5px Inter,sans-serif; }
+.vues button.on{ background:var(--btn); color:var(--btnink); }
+.pile{ position:relative; height:auto; touch-action:pan-y; }
+.pile .carte{ display:none; }
+.pile .carte.on{ display:block; animation:entre .35s cubic-bezier(.2,.8,.2,1); }
+.pile .carte.on .fiche{ margin:0; }
+@keyframes entre{ from{ opacity:0; transform:translateX(30px) scale(.98); } to{ opacity:1; transform:none; } }
+.pile .derriere{ position:absolute; top:14px; bottom:14px; right:-12px; width:30px; border-radius:24px; background:linear-gradient(160deg,#EBD6B0,#C9A774); opacity:.6; z-index:-1; }
+.pile .derriere.b2{ right:-22px; top:26px; bottom:26px; background:var(--glass2); opacity:.9; }
+.piloter{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 0 4px; }
+.piloter .cnt{ font-size:12.5px; color:var(--muted); }
+.points{ display:flex; gap:5px; } .points i{ width:6px; height:6px; border-radius:3px; background:var(--ink); opacity:.22; } .points i.on{ width:18px; opacity:.85; }
+.tableau{ overflow:auto; border-radius:24px; max-height:70vh; }
+.tableau table{ font-size:13px; }
+.tableau th,.tableau td{ white-space:nowrap; }
+.tableau th:first-child,.tableau td:first-child{ position:sticky; left:0; background:var(--glass2); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); z-index:1; }
+.tableau thead th{ position:sticky; top:0; z-index:2; background:var(--glass2); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); }
+.tableau tr{ cursor:pointer; } .tableau tbody tr:hover td{ background:rgba(184,149,106,.08); }
+
+/* Ajustements après essai sur téléphone */
+#nav{ flex-wrap:nowrap; } #nav a{ margin:0 !important; flex:0 0 48px; }
+.login.ecran .profils button{ background:rgba(255,255,255,.08); color:rgba(246,241,234,.75); box-shadow:none; }
+.login.ecran .profils button.on{ background:rgba(255,255,255,.2); color:#fff; }
+.resume .cases{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media (max-width:860px){
+  .bandeau,.bandeau .contenu{ min-height:340px; }
+  .bandeau .ombre{ background:linear-gradient(180deg,rgba(20,16,12,.5) 0%,rgba(20,16,12,.1) 30%,rgba(20,16,12,.55) 60%,rgba(20,16,12,.94) 100%); }
+  .resume{ display:grid; grid-template-columns:auto 1fr; gap:10px 14px; padding:14px 16px; }
+  .resume .gauge,.resume .gauge svg{ width:80px; height:80px; }
+  .resume .cases{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 10px; }
+  .resume .cases b{ font-size:22px; }
+  .resume > .small{ grid-column:1 / -1; }
+}
+.layout > div{ min-width:0; }
+@media (min-width:861px){ .bandeau .ombre{ background:linear-gradient(90deg,rgba(17,13,10,.9) 0%,rgba(17,13,10,.6) 48%,rgba(17,13,10,.18) 100%); } }
