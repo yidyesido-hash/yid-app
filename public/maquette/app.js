@@ -1,6 +1,16 @@
+// Thème clair ou sombre, retenu d'un écran à l'autre
+(function(){
+  var f=document.querySelector('.f');if(!f||f.hasAttribute('data-fixed'))return;
+  var t='clair';try{t=localStorage.getItem('yid-theme')||'clair'}catch(e){}
+  f.classList.toggle('dark',t==='sombre');document.body.style.background=t==='sombre'?'#120D0A':'#0E0B09';
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){b.classList.toggle('on',b.dataset.themeSet===t)});
+})();
+document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-set]');if(!b)return;e.preventDefault();var t=b.dataset.themeSet;try{localStorage.setItem('yid-theme',t)}catch(x){}
+  var f=document.querySelector('.f');if(f&&!f.hasAttribute('data-fixed'))f.classList.toggle('dark',t==='sombre');document.querySelectorAll('[data-theme-set]').forEach(function(x){x.classList.toggle('on',x.dataset.themeSet===t)})});
+
 // Mise à l'échelle de l'écran dans la fenêtre
 (function(){
-  var f=document.querySelector('.f'),w=document.getElementById('w');
+  var f=document.querySelector('.f'),w=document.getElementById('w');if(!f)return;
   function fit(){var W=f.offsetWidth,H=f.offsetHeight,r=Math.min(1,document.documentElement.clientWidth/W);f.style.transform='scale('+r+')';f.style.transformOrigin='top left';w.style.width=W*r+'px';w.style.height=H*r+'px'}
   fit();addEventListener('resize',fit);
 })();
@@ -32,6 +42,7 @@ function Stack(el){
   if(ok)ok.addEventListener('click',function(){var c=cards[i];if(c.classList.contains('done')){go(i+1);return}
     if(c.dataset.req&&c.querySelectorAll('.need').length){c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');return}
     c.classList.add('done');if(box.querySelector('[data-pct]'))pct();setTimeout(function(){if(i<cards.length-1)go(i+1);else lay()},520)});
+  el.querySelectorAll('.okmark').forEach(function(m){m.addEventListener('click',function(e){e.stopPropagation();m.closest('.sc').classList.remove('done');if(box.querySelector('[data-pct]'))pct();lay()})});
   el.querySelectorAll('[data-need]').forEach(function(n){n.classList.add('need')});
   el.querySelectorAll('.ch').forEach(function(b){b.addEventListener('click',function(){b.parentNode.querySelectorAll('.ch').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');var n=b.closest('[data-need]');if(n)n.classList.remove('need')})});
   function pct(){var d=cards.filter(function(c){return c.classList.contains('done')}).length;box.querySelectorAll('[data-pct]').forEach(function(p){p.textContent=Math.round(40+60*d/cards.length)+' %'})}
