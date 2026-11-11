@@ -116,11 +116,13 @@
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
+<link rel="stylesheet" href="/espace-habillage.css">
 </head>
 <body>
 <div class="page">
+  <div class="hero"><img class="ph" src="/img/p2186.jpg" alt=""><div class="voile"></div><img class="logo" src="/img/logo-blanc.png" alt="Yes I Do"></div>
   <header class="top">
-    <img src="/logo.png" alt="Yes I Do">
+    <img src="/img/logo-noir.png" alt="Yes I Do" style="height:56px">
     <div class="eyebrow">Votre espace</div>
     <h1 id="prenoms">&nbsp;</h1>
     <div class="sub" id="sous"></div>
@@ -128,15 +130,17 @@
   <div id="erreur" class="surface vide" hidden></div>
   <div id="app" hidden>
     <nav class="tabs" id="tabs">
-      <button data-t="parcours" class="on">Votre parcours</button>
+      <button data-t="parcours" class="on">Parcours</button>
       <button data-t="liste">Votre liste</button>
-      <button data-t="contacts">Envoyer des contacts</button>
+      <button data-t="contacts">Envoyer</button>
+      <button class="joindre" id="joindre" type="button" aria-label="Nous joindre"><img src="/img/cess.jpg" alt=""><img src="/img/regis.jpg" alt=""></button>
     </nav>
     <section id="t-parcours"></section>
     <section id="t-liste" hidden></section>
     <section id="t-contacts" hidden></section>
   </div>
-  <footer>Yes I Do · <span class="direct">mis à jour en direct</span></footer>
+  <footer>Yes I Do · <span class="direct">mis à jour en direct</span><span class="souci">Une difficulté sur cette page ? <a href="#" id="souci">Dites le nous</a></span></footer>
+  <div class="voile-c" id="contact" hidden><div class="feuille"><div class="grip"></div><h3>Nous joindre</h3><p class="muted small" style="margin:4px 0 6px">Vos interlocuteurs pour ce mariage, en ligne directe.</p><div id="equipe"></div><div style="text-align:center;margin-top:12px"><button class="pill light" type="button" id="fermer">Fermer</button></div></div></div>
 </div>
 <script>
 (function(){
@@ -279,7 +283,11 @@
   }
 
   /* ---------- navigation et direct ---------- */
-  function onglet(t){ ONGLET = t; document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.t === t); }); ["parcours", "liste", "contacts"].forEach(function(k){ $("t-" + k).hidden = k !== t; }); rafraichir(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  var PH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>', WA = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></svg>';
+  function contact(){ var eq = (D && D.equipe) || []; $("equipe").innerHTML = eq.map(function(p){ return '<div class="ligne"><img src="' + esc(p.photo) + '" alt=""><div style="flex:1"><b style="font-size:15px">' + esc(p.prenom) + '</b><div class="muted small">Ligne directe Yes I Do</div></div><a class="rond tel' + (p.tel ? '' : ' off') + '" href="' + esc(p.tel || "#") + '" aria-label="Appeler ' + esc(p.prenom) + '">' + PH + '</a><a class="rond wa' + (p.whatsapp ? '' : ' off') + '" href="' + esc(p.whatsapp || "#") + '" target="_blank" rel="noopener" aria-label="WhatsApp ' + esc(p.prenom) + '">' + WA + '</a></div>'; }).join(""); $("contact").hidden = false; }
+  $("joindre").onclick = contact; $("souci").onclick = function(e){ e.preventDefault(); contact(); };
+  $("fermer").onclick = function(){ $("contact").hidden = true; }; $("contact").onclick = function(e){ if (e.target === $("contact")) $("contact").hidden = true; };
+  function onglet(t){ ONGLET = t; document.querySelectorAll("#tabs button[data-t]").forEach(function(b){ b.classList.toggle("on", b.dataset.t === t); }); ["parcours", "liste", "contacts"].forEach(function(k){ $("t-" + k).hidden = k !== t; }); rafraichir(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
   function rafraichir(tout){
     var m = D.mariage;
     $("prenoms").textContent = m.prenoms; $("sous").textContent = [dateLongue(m.date), m.lieu].filter(Boolean).join(" · ");
@@ -288,7 +296,7 @@
     if (ONGLET === "liste") { if (tout || !$("invites")) listeVue(); else { var y = window.scrollY, s = $("cherche").value; listeVue(); $("cherche").value = s; invites(); window.scrollTo(0, y); } }
     if (ONGLET === "contacts" && tout) contacts();
   }
-  document.querySelectorAll("#tabs button").forEach(function(b){ b.onclick = function(){ onglet(b.dataset.t); }; });
+  document.querySelectorAll("#tabs button[data-t]").forEach(function(b){ b.onclick = function(){ onglet(b.dataset.t); }; });
   function charger(){ return api("espace-voir").then(function(r){ var change = !D || r.signature !== D.signature || JSON.stringify(r.mariage) !== JSON.stringify(D.mariage); D = r; return change; }); }
   if (!J) { $("erreur").hidden = false; $("erreur").textContent = "Ce lien est incomplet. Utilisez le lien personnel que nous vous avons adressé."; return; }
   charger().then(function(){ $("app").hidden = false; rafraichir(true); }).catch(function(e){ $("erreur").hidden = false; $("erreur").textContent = e.message; });
