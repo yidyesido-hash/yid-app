@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.4.1, base locale");
+  console.log("Recette yid-app v1.5.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -314,6 +314,27 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   check("normalisation : outre mer, +33 sur un 0693 corrigé, pays déduit sans +, pays incertain, fixe, invalide", p2.normaliser("0690 12 34 56", "FR").numero === "+590690123456" && /remplacé par \+262/.test(p2.normaliser("+33 6 93 20 54 05", "FR").correction) && /Sénégal/.test(p2.normaliser("221771234567", "FR").correction) && p2.normaliser("01 42 00 00 00", "FR").statut === "fixe probable" && p2.normaliser("12", "FR").statut === "invalide");
   r = await call("POST", "/api/forms?action=admin-reglages", {}, H);
   check("réglages : modèle d'accusé de réception et interrupteur présents", /fichier de contacts nous est bien parvenu/.test(r.json.accuse_modele) && r.json.accuse_actif === "Oui");
+
+  /* 1.5.0 : l'accueil de l'invité */
+  const acc = require("../lib/accueil");
+  const mF = { prenoms: "Camille et Arthur", parametres: { checklist: { prenoms: "Camille et Arthur", prenom_epouse: "Camille", prenom_epoux: "Arthur", registre: "Civilité et nom" } } };
+  const mP = { prenoms: "Camille et Arthur", parametres: { checklist: { prenoms: "Camille et Arthur", prenom_epouse: "Camille", prenom_epoux: "Arthur" } } };
+  check("accueil : registre formel, « Chère Madame Marchal, »", acc.salutation({ civilite: "Madame", nom_repertoire: "Hélène Marchal" }, mF) === "Chère Madame Marchal,");
+  check("accueil : registre par le prénom, « Cher Antoine, »", acc.salutation({ civilite: "Monsieur", nom_repertoire: "Antoine Vidal" }, mP) === "Cher Antoine,");
+  check("accueil : sans civilité, aucune supposition, « Bonjour Hélène, »", acc.salutation({ nom_repertoire: "Hélène Marchal" }, mF) === "Bonjour Hélène,");
+  check("accueil : la mère de la mariée est accueillie au nom de Camille", /^Camille tient à vous avoir/.test(acc.accroche({ lien: "Père / Mère", cote: "Épouse" }, mP)));
+  check("accueil : un collègue reçoit une formule sobre", acc.accroche({ lien: "Collègue", cote: "Époux" }, mP) === "Camille et Arthur seraient honorés de votre présence.");
+  check("accueil : accompagnant connu, à indiquer, non prévu, à décider", acc.accompagnant({ invitation: "Invitation pour deux", accompagnant: "Paul Marchal" }).etat === "connu" && acc.accompagnant({ invitation: "Invitation pour deux" }).etat === "à indiquer" && acc.accompagnant({ invitation: "Invitation unique", accompagnant: "X" }).etat === "non prévu" && acc.accompagnant({ invitation: "Ne sait pas encore" }).etat === "à décider");
+  {
+    const l0 = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json;
+    const cible = l0.contacts.find(c => !c.desactive);
+    let q = await call("POST", "/api/forms?action=admin-qualifier&w=AC27", { id: cible.id, champs: { civilite: "Madame", invitation: "Invitation pour deux", accompagnant: "Paul Marchal" } }, H);
+    const apres = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === cible.id);
+    check("fiche invité : civilité et accompagnant enregistrés, aperçu d'accueil renvoyé", q.json.ok && apres.civilite === "Madame" && apres.accompagnant === "Paul Marchal" && apres.accueil && apres.accueil.accompagnant.etat === "connu" && /^(Chère|Bonjour) /.test(apres.accueil.salutation), apres && apres.accueil && apres.accueil.salutation);
+    q = await call("POST", "/api/forms?action=admin-qualifier&w=AC27", { id: cible.id, champs: { civilite: "Docteur" } }, H);
+    check("fiche invité : civilité inconnue refusée", q.status === 422 || q.json.ok === false);
+    check("liste : les civilités proposées sont transmises", Array.isArray(l0.civilites) && l0.civilites.join() === "Madame,Monsieur");
+  }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
