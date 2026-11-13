@@ -36,6 +36,9 @@
      ?action=admin-sharepoint POST réécrire l'onglet Base invités du classeur Pilotage
      ?action=admin-etape     POST  terminer une étape : n (2 exige une liste sans rouge ni orange) ; ouvrir : true ouvre l'étape n sans terminer la précédente
      ?action=admin-demander  POST  ce qui manque sera demandé à l'invité : ids, retirer
+     ?action=photos-equipe   POST  les photos de profil de l'équipe (nom : image)
+     ?action=admin-photo     POST  changer sa photo de profil : photo (data URL), vide pour la retirer
+     ?action=admin-valider   POST  valider une fiche complète ou retirer la validation : id, valide (true | false)
      ?action=admin-attente   POST  liste d'attente : ids, op entrer | monter | descendre | retirer
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
@@ -43,6 +46,7 @@
    Côté mariés (lien personnel, clé j, sans compte) :
      ?action=espace-voir      POST  leur mariage, leur parcours, leur liste (champs du couple seulement), les règles d'or
      ?action=espace-qualifier POST  compléter une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periodes }
+     ?action=espace-demander  POST  « Je ne sais pas, demandez lui » : ce qui manque sera demandé à l'invité : id
      ?action=espace-retirer   POST  retirer ou remettre un invité : id, retire
      ?action=espace-deposer   POST  envoyer d'autres contacts : fichiers [{ name, b64 }], cote
    ===================================================================== */
@@ -52,7 +56,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.5.2";
+const VERSION = "1.6.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -208,6 +212,14 @@ module.exports = async (req, res) => {
       await store.journal(null, "Souci signalé", texte, null, ctx, u.nom);
       return send(res, 200, { ok: true });
     }
+    /* Photos de profil : chacun change la sienne ; la liste sert à l'écran de connexion et aux cartes. */
+    if (action === "photos-equipe") return send(res, 200, { ok: true, photos: await require("../lib/utilisateurs").photos() });
+    if (action === "admin-photo") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      if (!u.nom || u.nom === "administrateur") return send(res, 422, { ok: false, detail: "Connectez vous avec votre prénom pour choisir une photo." });
+      try { await require("../lib/utilisateurs").setPhoto(u.nom, b.photo); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+      return send(res, 200, { ok: true });
+    }
     if (action === "admin-check") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const out = { ok: true, version: VERSION, base: {}, sharepoint: {}, boite: {} };
@@ -272,6 +284,7 @@ module.exports = async (req, res) => {
       try {
         if (action === "espace-qualifier") await espace.qualifier(m, b.id, b.champs || {});
         else if (action === "espace-retirer") await espace.retirer(m, b.id, !!b.retire);
+        else if (action === "espace-demander") await espace.demanderInvite(m, b.id);
         else if (action === "espace-deposer") {
           const fichiers = (b.fichiers || []).slice(0, 10).map(f => ({ name: String(f.name || "contacts.vcf").slice(0, 120), buffer: Buffer.from(String(f.b64 || ""), "base64") })).filter(f => f.buffer.length);
           const recu = await espace.deposer(m, fichiers, b.cote, !!b.attente);
@@ -304,7 +317,7 @@ module.exports = async (req, res) => {
       if (m.boite_email && graph.enabled()) { try { releve = await liste.relever(w, u.nom, false, await mariages.reglages()); } catch (e) { releve = { detail: e.message }; } }
       return send(res, 200, { ok: true, mariage: releve && releve.releve ? await mariages.fiche(w) : m, formulaires: !!WEDDINGS[w], moi: u, releve });
     }
-    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-qualifier-groupe", "admin-demander", "admin-attente", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
+    if (["admin-liste", "admin-importer", "admin-qualifier", "admin-qualifier-groupe", "admin-demander", "admin-valider", "admin-attente", "admin-anomalie", "admin-contact", "admin-cote", "admin-nommer", "admin-numero", "admin-lot", "admin-relever", "admin-vider", "admin-export-liste", "admin-archive", "admin-etape", "admin-sharepoint"].includes(action)) {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = await store.mariage(w); if (!m) return send(res, 404, { ok: false, error: "wedding" });
       const refus = (e, k) => send(res, 422, { ok: false, error: k || "liste", detail: e.message });
@@ -319,6 +332,7 @@ module.exports = async (req, res) => {
         if (action === "admin-qualifier") await liste.qualifier(w, Number(b.id), b.champs || {}, u.nom);
         if (action === "admin-qualifier-groupe") await liste.qualifierGroupe(w, ids(), b.champs || {}, u.nom);
         if (action === "admin-demander") { const d = await liste.demander(w, ids(), !!b.retirer, u.nom); return send(res, 200, Object.assign({ ok: true, demande: d }, await liste.liste(w))); }
+        if (action === "admin-valider") await liste.valider(w, Number(b.id), b.valide !== false, u.nom);
         if (action === "admin-attente") await liste.attente(w, ids(), String(b.op || ""), u.nom);
         if (action === "admin-anomalie") await liste.trancher(w, ids(), b.decision, u.nom);
         if (action === "admin-contact") await liste.desactiver(w, ids(), !!b.desactive, b.motif, u.nom);

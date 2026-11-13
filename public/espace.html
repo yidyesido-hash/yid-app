@@ -117,6 +117,8 @@
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
 <link rel="stylesheet" href="/espace-habillage.css">
+<link rel="stylesheet" href="/cartes.css">
+<script src="/cartes.js"></script>
 </head>
 <body>
 <div class="page">
@@ -159,9 +161,32 @@
   function libelleEtat(e){ return e === "complet" ? "Complet" : e === "à compléter" ? "À compléter" : e === "avec Yes I Do" ? "À voir avec Yes I Do" : "Retiré"; }
 
   /* ---------- parcours ---------- */
+  var PIDX = 0;
+  var QC = {
+    "côté": { q: "De quel côté est %s ?", k: "cote", o: function(){ return D.cotes; } },
+    "lien": { q: "Quel est votre lien avec %s ?", k: "lien", o: function(){ return ["Père / Mère", "Frère / Sœur", "Témoin", "Cousin / Cousine", "Oncle / Tante", "Ami(e) proche", "Ami(e)", "Collègue"]; } },
+    "invitation": { q: "%s viendra t il accompagné ?", k: "invitation", o: function(){ return D.invitations; } },
+    "enfants": { q: "Combien d'enfants viendront avec %s ?", k: "nb_enfants", o: function(){ return ["0", "1", "2", "3", "4"]; } },
+    "hébergement": { q: "Où logera %s ?", k: "hebergement", o: function(){ return D.mariage.lieux || []; } }
+  };
+  function precision(c, k){
+    var mq = c.manque || [], q0 = null; for (var x = 0; x < mq.length; x++) if (QC[mq[x]]) { q0 = QC[mq[x]]; break; }
+    var prenom = (c.prenom || String(c.nom || "").split(" ")[0] || "cet invité");
+    var peut = mq.indexOf("côté") < 0 && mq.indexOf("lien") < 0;
+    return '<div class="sc ' + YID.ton(k + 4) + '"><div class="k">Une précision</div><div class="nomc" style="margin-top:8px">' + esc(c.nom || "Sans nom") + '</div>' +
+      (q0 ? '<div style="font-size:14px;margin-top:8px;opacity:.82">' + esc(q0.q.replace("%s", prenom)) + '</div><div style="flex:1"></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + q0.o().map(function(v){ return '<button type="button" class="ch" data-pc="' + c.id + '" data-k="' + q0.k + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join("") + '</div>' : '<div style="font-size:14px;margin-top:8px;opacity:.82">À préciser : ' + esc(mq.join(", ")) + '</div><div style="flex:1"></div>') +
+      (peut ? '<button type="button" class="lienbas" data-pd="' + c.id + '" style="margin-top:12px;align-self:flex-start">Je ne sais pas, demandez lui</button>' : '') + '</div>';
+  }
   function parcours(){
     var m = D.mariage, ouverte = null;
-    var html = '<h2>Votre parcours</h2><p class="intro">Les grandes étapes de votre mariage avec Yes I Do. L\'étape en cours est ouverte, touchez les autres pour les lire.</p><div class="surface"><div class="frise">' +
+    var t = D.tuiles, tot = (t.recues && t.recues.n) || 0, ok = (t.completees && t.completees.n) || 0, pc = tot ? Math.round(ok / tot * 100) : 0;
+    var rouges = D.contacts.filter(function(c){ return c.etat === "à compléter"; });
+    var C = 2 * Math.PI * 31, anneauS = '<svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/><circle cx="38" cy="38" r="31" fill="none" stroke="#E4CDA4" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pc / 100)).toFixed(1) + '" transform="rotate(-90 38 38)"/><text x="38" y="44" text-anchor="middle" font-family="Cormorant Garamond" font-size="21" fill="#F6EEDF">' + pc + '%</text></svg>';
+    var tete = '<div class="sombre-c">' + anneauS + '<div style="flex:1;min-width:0"><div class="serif-c">' + (rouges.length ? "Votre liste est presque prête" : tot ? "Votre liste est complète" : "Votre liste vous attend") + '</div><div class="petit-c">' + ok + ' invité(s) complet(s) sur ' + tot + (rouges.length ? '. Plus que ' + rouges.length + ' précision(s).' : '.') + '</div></div></div>';
+    if (rouges.length) {
+      tete += '<div class="metap" style="margin-top:22px"><span class="k-c">Une précision, s\'il vous plaît</span><span id="pcnt" class="muted small"></span></div><div class="pile2" id="ppile" style="height:300px">' + rouges.map(function(c, k){ return precision(c, k); }).join("") + '</div><div class="dots" id="pdots"></div><div style="margin-top:14px"><button type="button" class="cta encre" id="psuiv"><span>Suivante</span></button></div><div class="msg" id="pmsg" style="text-align:center;margin-top:8px"></div>';
+    }
+    var html = tete + '<h2 style="margin-top:38px">Votre parcours</h2><p class="intro">Les grandes étapes de votre mariage avec Yes I Do. L\'étape en cours est ouverte, touchez les autres pour les lire.</p><div class="surface"><div class="frise">' +
       D.parcours.map(function(e, i){
         var faite = !!m.etapes[e.n], encours = !faite && (m.etape === e.n || (m.etape === 5 && e.n === 6)), cls = faite ? "faite" : encours ? "encours" : "avenir";
         var ouvert = OUVERT["e" + e.n] !== undefined ? OUVERT["e" + e.n] : encours;
@@ -173,6 +198,12 @@
     if (m.hebergement !== "aucun") faits.push(["Hébergement", (m.lieux || []).filter(function(x){ return x !== "Par leurs propres moyens"; }).join(" · ") + (m.hebergement === "partie" ? " (une partie des invités)" : "")]);
     html += '<h2 style="margin-top:34px">Le cadre de votre mariage</h2><p class="intro">Ce que nous avons posé ensemble lors de notre premier échange.</p><div class="faits">' + faits.filter(function(f){ return f[1]; }).map(function(f){ return '<div class="fait"><span>' + esc(f[0]) + '</span><b>' + esc(f[1]) + '</b></div>'; }).join("") + '</div>';
     $("t-parcours").innerHTML = html;
+    if ($("ppile")) {
+      var P = YID.pileActive = YID.pile($("ppile"), { index: PIDX, onChange: function(i, n){ PIDX = i; $("pcnt").textContent = (i + 1) + " sur " + n; YID.points($("pdots"), i, n); } });
+      $("psuiv").onclick = function(){ if (P.index() < P.total - 1) P.suivante(); else P.secoue(); };
+      $("t-parcours").querySelectorAll("[data-pc]").forEach(function(b){ b.onclick = function(){ var ch = {}; ch[b.dataset.k] = b.dataset.k === "nb_enfants" ? +b.dataset.v : b.dataset.v; b.classList.add("sel"); OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-qualifier", { id: +b.dataset.pc, champs: ch }).then(function(r){ D = r; OCCUPE = false; $("pmsg").textContent = ""; parcours(); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
+      $("t-parcours").querySelectorAll("[data-pd]").forEach(function(b){ b.onclick = function(){ OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-demander", { id: +b.dataset.pd }).then(function(r){ D = r; OCCUPE = false; $("pmsg").textContent = "Nous le demanderons à l'invité."; parcours(); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
+    }
     $("t-parcours").querySelectorAll("[data-e]").forEach(function(el){ el.onclick = function(){ var k = "e" + el.dataset.e; OUVERT[k] = !(el.querySelector(".d")); parcours(); }; });
   }
 
@@ -267,9 +298,10 @@
     var m = D.mariage;
     $("t-contacts").innerHTML = '<h2>Envoyer des contacts</h2><p class="intro">Un oubli, un ajout, un doute ? Envoyez nous les contacts tels qu\'ils sont dans votre téléphone. Notre outil reconnaît les doublons, vous ne risquez rien.</p>' +
       '<div class="surface"><div class="depot"><div class="choix"><label><input type="radio" name="cote" value="Épouse">Côté épouse</label><label><input type="radio" name="cote" value="Époux">Côté époux</label></div><div class="choix"><label><input type="radio" name="dest" value="liste" checked>Pour votre liste</label><label><input type="radio" name="dest" value="attente">Pour votre liste d\'attente</label></div>' +
-      '<input type="file" id="fichiers" multiple accept=".vcf,.csv,.xlsx,text/vcard,text/x-vcard">' +
+      '<label class="fichier"><input type="file" id="fichiers" multiple accept=".vcf,.csv,.xlsx,text/vcard,text/x-vcard" hidden><span class="pill light">Choisir vos fichiers</span><span class="muted small" id="fnoms">Aucun fichier choisi</span></label>' +
       '<div style="text-align:center"><button class="pill" id="envoyer">Envoyer</button></div><div class="msg" id="dmsg" style="text-align:center"></div><div id="recu"></div>' +
       '<p class="small muted" style="text-align:center;margin:6px 0 0">Fichiers acceptés : contacts exportés du téléphone (.vcf), export Google ou Outlook (.csv).' + (m.boite ? ' Vous pouvez aussi les envoyer par email à ' + esc(m.boite) + ', en indiquant Époux ou Épouse dans l\'objet.' : '') + '</p></div></div>';
+    $("fichiers").onchange = function(){ var f = Array.prototype.slice.call(this.files || []); $("fnoms").textContent = f.length ? f.map(function(x){ return x.name; }).join(", ") : "Aucun fichier choisi"; };
     $("envoyer").onclick = function(){
       var files = Array.prototype.slice.call($("fichiers").files || []), cote = (document.querySelector('input[name=cote]:checked') || {}).value || "";
       if (!files.length) { $("dmsg").textContent = "Choisissez un ou plusieurs fichiers."; return; }
