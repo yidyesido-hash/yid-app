@@ -329,7 +329,7 @@
     if (ONGLET === "contacts" && tout) contacts();
   }
   document.querySelectorAll("#tabs button[data-t]").forEach(function(b){ b.onclick = function(){ onglet(b.dataset.t); }; });
-  function charger(){ return api("espace-voir").then(function(r){ var change = !D || r.signature !== D.signature || JSON.stringify(r.mariage) !== JSON.stringify(D.mariage); D = r; return change; }); }
+  function charger(){ return api("espace-voir").then(function(r){ var ph = document.querySelector(".hero img.ph"); if (ph && r.mariage && r.mariage.photo && ph.getAttribute("src") !== r.mariage.photo) ph.src = r.mariage.photo; var change = !D || r.signature !== D.signature || JSON.stringify(r.mariage) !== JSON.stringify(D.mariage); D = r; return change; }); }
   if (!J) { $("erreur").hidden = false; $("erreur").textContent = "Ce lien est incomplet. Utilisez le lien personnel que nous vous avons adressé."; return; }
   charger().then(function(){ $("app").hidden = false; rafraichir(true); }).catch(function(e){ $("erreur").hidden = false; $("erreur").textContent = e.message; });
   setInterval(function(){

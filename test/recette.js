@@ -8,7 +8,7 @@ const handler = require("../api/forms");
 function call(method, url, body, headers) {
   return new Promise((resolve) => {
     const req = { method, url, headers: Object.assign({ "user-agent": "recette" }, headers || {}), body: body === undefined ? undefined : JSON.stringify(body), socket: { remoteAddress: "127.0.0.1" }, on() {} };
-    const res = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k] = v; }, end(s) { resolve({ status: this.statusCode, json: s ? JSON.parse(s) : {} }); } };
+    const res = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k] = v; }, end(s) { let j = {}; try { j = s && !Buffer.isBuffer(s) ? JSON.parse(s) : {}; } catch (e) {} resolve({ status: this.statusCode, json: j, body: s }); } };
     handler(req, res);
   });
 }
@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.6.0, base locale");
+  console.log("Recette yid-app v1.6.1, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -334,6 +334,21 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     q = await call("POST", "/api/forms?action=admin-qualifier&w=AC27", { id: cible.id, champs: { civilite: "Docteur" } }, H);
     check("fiche invité : civilité inconnue refusée", q.status === 422 || q.json.ok === false);
     check("liste : les civilités proposées sont transmises", Array.isArray(l0.civilites) && l0.civilites.join() === "Madame,Monsieur");
+  }
+
+  /* 1.6.1 : la photo du mariage */
+  {
+    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const r1 = await call("POST", "/api/forms?action=admin-photo-mariage&w=AC27", { photo: png }, H);
+    check("photo du mariage : enregistrée, une clé publique est rendue", r1.json.ok && /^[A-Za-z0-9_-]{20,}$/.test(r1.json.photo_cle || ""));
+    const r2 = await call("GET", "/api/forms?action=photo&k=" + encodeURIComponent(r1.json.photo_cle || "x"));
+    check("photo du mariage : servie par sa clé", r2.status === 200);
+    const r3 = await call("GET", "/api/forms?action=photo&k=inconnue");
+    check("photo du mariage : une clé inconnue ne sert rien", r3.status === 404);
+    const r4 = await call("POST", "/api/forms?action=admin-photo-mariage&w=AC27", { photo: "data:text/html;base64,PGI+" }, H);
+    check("photo du mariage : un fichier qui n'est pas une image est refusé", r4.status === 422);
+    const acc = (await call("POST", "/api/forms?action=admin-accueil", {}, H)).json;
+    check("accueil : la carte du mariage connaît sa photo", (acc.mariages || []).some(m => m.code === "AC27" && m.photo_cle === r1.json.photo_cle));
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

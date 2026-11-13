@@ -38,6 +38,8 @@
      ?action=admin-demander  POST  ce qui manque sera demandé à l'invité : ids, retirer
      ?action=photos-equipe   POST  les photos de profil de l'équipe (nom : image)
      ?action=admin-photo     POST  changer sa photo de profil : photo (data URL), vide pour la retirer
+     ?action=photo           GET   la photo d'un mariage : k (clé publique)
+     ?action=admin-photo-mariage POST  changer la photo d'un mariage : photo (data URL), vide pour revenir à la photo par défaut (w=CODE)
      ?action=admin-valider   POST  valider une fiche complète ou retirer la validation : id, valide (true | false)
      ?action=admin-attente   POST  liste d'attente : ids, op entrer | monter | descendre | retirer
      ?action=admin-utilisateurs POST  l'équipe : les accès nommés (administrateur seulement)
@@ -56,7 +58,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.6.0";
+const VERSION = "1.6.1";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -219,6 +221,17 @@ module.exports = async (req, res) => {
       if (!u.nom || u.nom === "administrateur") return send(res, 422, { ok: false, detail: "Connectez vous avec votre prénom pour choisir une photo." });
       try { await require("../lib/utilisateurs").setPhoto(u.nom, b.photo); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
       return send(res, 200, { ok: true });
+    }
+    /* La photo d'un mariage : envoyée depuis la page du mariage, servie à tous par sa clé */
+    if (action === "photo") {
+      const ph = await mariages.photo(q.k);
+      if (!ph) { res.statusCode = 404; return res.end(); }
+      res.statusCode = 200; res.setHeader("Content-Type", ph.type); res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); return res.end(ph.buffer);
+    }
+    if (action === "admin-photo-mariage") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      try { const cle = await mariages.setPhoto(q.w || b.w, b.photo, u.nom); return send(res, 200, { ok: true, photo_cle: cle }); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-check") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
