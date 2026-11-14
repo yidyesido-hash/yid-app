@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.6.2, base locale");
+  console.log("Recette yid-app v1.7.1, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -379,7 +379,12 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("appel guidé : une étape se rouvre", r.json.ok && r.json.pct === 0);
     /* on force les étapes pour éprouver la clôture : fiches et proches viennent des données vivantes */
     await A("valider", { n: 1 });
+    r = await A("valider", { n: 2 });
+    check("appel guidé : l'étape 2 bloque tant qu'une fiche est rouge", r.status === 422 && /rouge/.test(r.json.detail));
+    for (const c of (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.filter(c => c.etat === "à compléter"))
+      await call("POST", "/api/forms?action=admin-qualifier&w=AC27", { id: c.id, champs: { cote: c.cote || "Épouse", invitation: c.invitation || "Invitation unique", lien: "Ami(e)", nb_enfants: 0, hebergement: c.hebergement || undefined } }, H);
     const v2 = (await A("lire")).json;
+    check("appel guidé : une fois les fiches complétées, l'étape 2 est prête", v2.etapes[1].pret, JSON.stringify(v2.etapes[1].exigences));
     if (v2.etapes[1].pret) {
       await A("valider", { n: 2 }); await A("donnee", { k: "aucun_proche", v: true });
       const v3 = (await A("lire")).json;
@@ -390,6 +395,12 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
       r = await A("terminer");
       check("appel guidé : clos à 100 %, inscrit dans l'historique", r.json.ok && r.json.en_cours === false && r.json.historique.length === 1 && r.json.historique[0].bilan.mode);
       const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 20 }, H)).json.journal || [];
+      const hid = r.json.historique[0].id;
+      check("appel guidé : le compte rendu garde l'état de départ et les décisions", r.json.historique[0].depart && r.json.historique[0].decisions && r.json.historique[0].decisions.mode === 3);
+      r = await A("supprimer", { id: hid });
+      check("appel guidé : un appel se supprime du journal des appels", r.json.ok && r.json.historique.length === 0);
+      r = await A("supprimer", { id: "inconnu" });
+      check("appel guidé : supprimer un appel inconnu est refusé", r.status === 422);
       check("appel guidé : la clôture est au journal avec sa durée", j.some(x => x.operation === "Appel guidé" && /clos en \d+ min/.test(x.detail || "")));
     } else {
       r = await A("valider", { n: 2 });

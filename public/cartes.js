@@ -16,6 +16,8 @@
     var i = Math.max(0, Math.min(opts.index || 0, cards.length - 1)), x0 = null, y0 = null, dx = 0, bouge = false, axe = null;
     function lay(){
       cards.forEach(function(c, k){ var p = k - i; c.style.pointerEvents = p === 0 ? "auto" : "none";
+        /* seules les cartes voisines existent pour le moteur graphique : 80 calques à grande ombre saturent la mémoire des téléphones */
+        c.style.display = (p < -1 || p > 3) ? "none" : ""; c.style.visibility = p > 2 ? "hidden" : ""; if (p === -1) { clearTimeout(c._cache); c._cache = setTimeout(function(){ if (cards.indexOf(c) < i) c.style.visibility = "hidden"; }, 480); }
         if (p < 0) { c.style.transform = "translateX(-118%) rotate(-7deg)"; c.style.opacity = 0; }
         else if (p > 2) { c.style.transform = "translateX(56px) scale(.82)"; c.style.opacity = 0; }
         else { c.style.transform = "translateX(" + (p * 24) + "px) scale(" + (1 - p * .07) + ")"; c.style.opacity = p === 0 ? 1 : (p === 1 ? .94 : .72); }
@@ -33,10 +35,10 @@
     el.addEventListener("pointerup", fin); el.addEventListener("pointercancel", fin); el.addEventListener("pointerleave", fin);
     el.addEventListener("click", function(e){ if (bouge) { e.preventDefault(); e.stopPropagation(); bouge = false; } }, true);
     lay();
-    return { aller: go, suivante: function(){ if (i < cards.length - 1) go(i + 1); }, precedente: function(){ if (i > 0) go(i - 1); }, index: function(){ return i; }, secoue: secoue, carte: function(){ return cards[i]; }, total: cards.length };
+    return { el: el, aller: go, suivante: function(){ if (i < cards.length - 1) go(i + 1); }, precedente: function(){ if (i > 0) go(i - 1); }, index: function(){ return i; }, secoue: secoue, carte: function(){ return cards[i]; }, total: cards.length };
   };
   /* les flèches du clavier pilotent la pile visible */
-  document.addEventListener("keydown", function(e){ if (/input|select|textarea/i.test((e.target.tagName || ""))) return; var p = YID.pileActive; if (!p) return; if (e.key === "ArrowRight") p.suivante(); if (e.key === "ArrowLeft") p.precedente(); });
+  document.addEventListener("keydown", function(e){ if (/input|select|textarea/i.test((e.target.tagName || ""))) return; var p = YID.pileActive; if (!p || !p.el || !document.body.contains(p.el)) return; if (e.key === "ArrowRight") p.suivante(); if (e.key === "ArrowLeft") p.precedente(); });
 
   YID.points = function(el, i, n){ if (!el) return; var deb = Math.max(0, Math.min(i - 5, n - 11)), h = ""; for (var k = deb; k < Math.min(n, deb + 11); k++) h += '<i class="' + (k === i ? "on" : "") + '"></i>'; el.innerHTML = h; };
 
