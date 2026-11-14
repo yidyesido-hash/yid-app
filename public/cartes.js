@@ -50,6 +50,33 @@
     });
   };
 
+
+  /* Choisir une photo : la galerie du téléphone, ou les fichiers et les drives (Google Drive, OneDrive, Dropbox, iCloud).
+     L'image est réduite dans le navigateur avant l'envoi : maxi px sur le plus grand côté, en JPEG. */
+  YID.choisirPhoto = function(maxi, fin, erreur){
+    var v = document.getElementById("choixphoto");
+    if (!v) {
+      v = document.createElement("div"); v.id = "choixphoto"; v.className = "voile"; v.hidden = true;
+      v.innerHTML = '<div class="feuille"><div class="grip"></div><h3>Choisir une photo</h3><p class="muted small" style="margin:6px 0 16px">Depuis votre téléphone, ou depuis Google Drive, OneDrive, Dropbox ou iCloud.</p>' +
+        '<label class="choix"><input type="file" accept="image/*" hidden data-src="galerie"><span class="pic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></span><span><b>Galerie photos</b><small>les photos de ce téléphone</small></span></label>' +
+        '<label class="choix"><input type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.gif" hidden data-src="fichiers"><span class="pic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span><b>Fichiers et drives</b><small>Google Drive, OneDrive, Dropbox, iCloud</small></span></label>' +
+        '<label class="choix"><input type="file" accept="image/*" capture="environment" hidden data-src="appareil"><span class="pic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>Prendre une photo</b><small>avec l\'appareil</small></span></label>' +
+        '<div class="msg" id="choixmsg"></div><button type="button" class="ghost" data-fermerchoix style="width:100%;margin-top:10px">Annuler</button></div>';
+      document.body.appendChild(v);
+      v.addEventListener("click", function(e){ if (e.target === v || e.target.closest("[data-fermerchoix]")) v.hidden = true; });
+    }
+    var msg = v.querySelector("#choixmsg"); msg.textContent = "";
+    v.querySelectorAll("input[type=file]").forEach(function(inp){ inp.value = ""; inp.onchange = function(){
+      var f = inp.files[0]; if (!f) return;
+      msg.textContent = "Préparation de la photo";
+      var url = URL.createObjectURL(f), im = new Image();
+      im.onload = function(){ var k = Math.min(1, maxi / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url); v.hidden = true; fin(c.toDataURL("image/jpeg", .82)); };
+      im.onerror = function(){ URL.revokeObjectURL(url); msg.textContent = /hei[cf]/i.test(f.name + f.type) ? "Ce format HEIC n'est pas lu par ce navigateur : choisissez la photo depuis la galerie, elle sera convertie, ou enregistrez la en JPEG." : "Image illisible : choisissez un JPEG ou un PNG."; if (erreur) erreur(msg.textContent); };
+      im.src = url;
+    }; });
+    v.hidden = false;
+  };
+
   function remonter(){
     var b = document.createElement("button"); b.id = "remonter"; b.type = "button"; b.setAttribute("aria-label", "Remonter en haut de la page");
     b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';

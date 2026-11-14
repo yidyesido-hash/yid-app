@@ -1,9 +1,55 @@
 {
   "outputDirectory": "public",
-  "functions": { "api/forms.js": { "maxDuration": 60 } },
-  "crons": [{ "path": "/api/forms?action=cron-sync", "schedule": "0 6 * * *" }],
+  "functions": {
+    "api/forms.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/forms?action=cron-sync",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "headers": [
-    { "source": "/yid-forms.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] },
-    { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
+    {
+      "source": "/yid-forms.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
+      "source": "/img/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(cartes\\.css|cartes\\.js|habillage\\.css|espace-habillage\\.css)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
+  "regions": [
+    "fra1"
   ]
 }

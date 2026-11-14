@@ -66,3 +66,21 @@ img,svg,video{ max-width:100%; }
 .pile2 > .sc.t-photo > img{ inset:0; }
 .pile2 > .sc.t-photo > .ombre{ inset:0; }
 @media (min-width:861px){ #b-fiches .pile2{ max-width:560px; } #b-fiches .metap,#b-fiches .dots,#b-fiches #valider{ max-width:606px; } #b-fiches .dots{ justify-content:center; } }
+
+/* Choix de la source d'une photo */
+#choixphoto .choix{ display:flex; align-items:center; gap:14px; padding:14px 4px; border-bottom:1px solid var(--line,rgba(120,90,60,.14)); cursor:pointer; }
+#choixphoto .choix:last-of-type{ border-bottom:0; }
+#choixphoto .pic{ width:44px; height:44px; border-radius:22px; flex:0 0 44px; display:flex; align-items:center; justify-content:center; background:var(--cream,rgba(255,253,249,.6)); border:1px solid var(--edge,rgba(255,255,255,.8)); }
+#choixphoto b{ display:block; font-size:15px; } #choixphoto small{ display:block; font-size:12px; opacity:.6; margin-top:2px; }
+
+/* Fluidité sur téléphone : le flou en temps réel coûte cher quand il se répète sur des dizaines de cartes.
+   On le garde sur la barre, les feuilles et la carte de tête ; ailleurs, un verre dépoli peint, sans calcul. */
+@media (max-width:860px){
+  .fiche,.kpi,.bloc > .bh,.toolbar .grp,.card,.verre,.wrap,.steps,.step,.tableau th:first-child,.tableau td:first-child,.tableau thead th,.inv,.chiffre,.fait,.surface{
+    -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .fiche,.kpi,.bloc > .bh,.toolbar .grp,.card,.verre,.wrap{ background:var(--glass2); }
+  .pile2 > .sc{ -webkit-backdrop-filter:none; backdrop-filter:none; }
+  body::before{ filter:none; background:radial-gradient(circle,rgba(212,176,122,.28) 0%,rgba(212,176,122,0) 70%) !important; }
+  body::after{ filter:none; background:radial-gradient(circle,rgba(170,128,92,.18) 0%,rgba(170,128,92,0) 70%) !important; }
+  :root[data-theme="sombre"] body::after{ background:radial-gradient(circle,rgba(120,80,50,.35) 0%,rgba(120,80,50,0) 70%) !important; }
+}
