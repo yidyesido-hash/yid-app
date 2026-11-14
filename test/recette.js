@@ -351,6 +351,54 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("accueil : la carte du mariage connaît sa photo", (acc.mariages || []).some(m => m.code === "AC27" && m.photo_cle === r1.json.photo_cle));
   }
 
+  /* 1.7.0 : l'appel guidé */
+  {
+    const A = (op, b) => call("POST", "/api/forms?action=admin-appel&w=AC27", Object.assign({ op }, b || {}), H);
+    let r = await A("lire");
+    check("appel guidé : aucun appel en cours au départ", r.json.ok && r.json.en_cours === false);
+    r = await A("valider", { n: 1 });
+    check("appel guidé : rien ne se valide sans appel démarré", r.status === 422);
+    r = await A("demarrer");
+    check("appel guidé : démarré, six étapes à 0 %", r.json.en_cours && r.json.etapes.length === 6 && r.json.pct === 0);
+    r = await A("valider", { n: 1 });
+    check("appel guidé : l'étape 1 refuse tant que la durée n'est pas annoncée", r.status === 422 && /durée/i.test(r.json.detail));
+    r = await A("valider", { n: 2 });
+    check("appel guidé : on ne saute pas une étape", r.status === 422 && /étape 1/.test(r.json.detail));
+    await A("donnee", { k: "duree", v: true }); await A("donnee", { k: "registre", v: "Civilité et nom" });
+    r = await A("valider", { n: 1 });
+    check("appel guidé : étape 1 validée, 17 %", r.json.ok && r.json.pct === 17 && r.json.courante === 2);
+    const l = (await call("POST", "/api/forms?action=admin-mariage&w=AC27", {}, H)).json.mariage;
+    check("appel guidé : la formule choisie rejoint la checklist du mariage", ((l.parametres || {}).checklist || {}).registre === "Civilité et nom");
+    r = await A("donnee", { k: "mode", v: 7 });
+    check("appel guidé : un mode d'envoi inconnu est refusé", r.status === 422);
+    r = await A("note", { texte: "Le couple préfère les messages en soirée" });
+    check("appel guidé : la note est gardée", r.json.appel.notes === "Le couple préfère les messages en soirée");
+    r = await A("terminer");
+    check("appel guidé : la clôture exige 100 %", r.status === 422 && /100 %/.test(r.json.detail));
+    r = await A("rouvrir", { n: 1 });
+    check("appel guidé : une étape se rouvre", r.json.ok && r.json.pct === 0);
+    /* on force les étapes pour éprouver la clôture : fiches et proches viennent des données vivantes */
+    await A("valider", { n: 1 });
+    const v2 = (await A("lire")).json;
+    if (v2.etapes[1].pret) {
+      await A("valider", { n: 2 }); await A("donnee", { k: "aucun_proche", v: true });
+      const v3 = (await A("lire")).json;
+      if (!v3.etapes[2].pret) { await A("donnee", { k: "qui", v: "Cécilia" }); await A("donnee", { k: "creneau", v: "en soirée" }); }
+      await A("valider", { n: 3 }); await A("donnee", { k: "mode", v: 3 }); await A("donnee", { k: "annonce", v: true }); await A("valider", { n: 4 });
+      await A("donnee", { k: "date_limite", v: "2027-03-01" }); await A("donnee", { k: "rythme", v: "Une fois par semaine" }); await A("valider", { n: 5 });
+      await A("donnee", { k: "recap", v: true }); await A("valider", { n: 6 });
+      r = await A("terminer");
+      check("appel guidé : clos à 100 %, inscrit dans l'historique", r.json.ok && r.json.en_cours === false && r.json.historique.length === 1 && r.json.historique[0].bilan.mode);
+      const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 20 }, H)).json.journal || [];
+      check("appel guidé : la clôture est au journal avec sa durée", j.some(x => x.operation === "Appel guidé" && /clos en \d+ min/.test(x.detail || "")));
+    } else {
+      r = await A("valider", { n: 2 });
+      check("appel guidé : l'étape 2 bloque tant qu'une fiche est rouge", r.status === 422 && /rouge/.test(r.json.detail));
+      r = await A("abandonner");
+      check("appel guidé : un appel s'abandonne sans rien perdre", r.json.ok && r.json.en_cours === false);
+    }
+  }
+
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

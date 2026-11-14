@@ -23,7 +23,7 @@
       if (opts.onChange) opts.onChange(i, cards.length);
     }
     function secoue(){ var c = cards[i]; if (!c) return; c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); }
-    function go(n){ if (n === i || n < 0 || n >= cards.length) { lay(); return; } i = n; lay(); }
+    function go(n){ if (n > i && opts.peut && !opts.peut(n)) { lay(); secoue(); if (opts.refus) opts.refus(n); return; } if (n === i || n < 0 || n >= cards.length) { lay(); return; } i = n; lay(); }
     el.addEventListener("pointerdown", function(e){ if (e.target.closest("input,select,textarea,button,a,label")) return; x0 = e.clientX; y0 = e.clientY; dx = 0; bouge = false; axe = null; if (cards[i]) cards[i].classList.add("drag"); });
     el.addEventListener("pointermove", function(e){ if (x0 === null || !cards[i]) return; var ddx = e.clientX - x0, ddy = e.clientY - y0;
       if (!axe && (Math.abs(ddx) > 8 || Math.abs(ddy) > 8)) axe = Math.abs(ddx) > Math.abs(ddy) ? "x" : "y";

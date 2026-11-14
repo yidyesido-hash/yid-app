@@ -39,6 +39,7 @@
      ?action=photos-equipe   POST  les photos de profil de l'équipe (nom : image)
      ?action=admin-photo     POST  changer sa photo de profil : photo (data URL), vide pour la retirer
      ?action=photo           GET   la photo d'un mariage : k (clé publique)
+     ?action=admin-appel     POST  l'appel guidé de qualification (w=CODE) : op lire | demarrer | donnee (k, v) | note (texte) | valider (n) | rouvrir (n) | terminer | abandonner ; renvoie toujours l'état de l'appel
      ?action=admin-photo-mariage POST  changer la photo d'un mariage : photo (data URL), vide pour revenir à la photo par défaut (w=CODE)
      ?action=admin-valider   POST  valider une fiche complète ou retirer la validation : id, valide (true | false)
      ?action=admin-attente   POST  liste d'attente : ids, op entrer | monter | descendre | retirer
@@ -58,12 +59,13 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.6.2";
+const VERSION = "1.7.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
 const espace = require("../lib/espace");
+const appel = require("../lib/appel");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -227,6 +229,12 @@ module.exports = async (req, res) => {
       const ph = await mariages.photo(q.k);
       if (!ph) { res.statusCode = 404; return res.end(); }
       res.statusCode = 200; res.setHeader("Content-Type", ph.type); res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); return res.end(ph.buffer);
+    }
+    if (action === "admin-appel") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w, op = String(b.op || "lire");
+      try { if (op !== "lire") await appel.agir(w, op, b, u.nom); return send(res, 200, Object.assign({ ok: true }, await appel.vue(w))); }
+      catch (e) { let etat = null; try { etat = await appel.vue(w); } catch (_) {} return send(res, 422, Object.assign({ ok: false, detail: e.message }, etat || {})); }
     }
     if (action === "admin-photo-mariage") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

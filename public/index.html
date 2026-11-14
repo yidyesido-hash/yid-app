@@ -106,7 +106,7 @@
 <header>
   <div class="marque"><img class="logo logo-noir" src="/img/logo-noir.png" alt="Yes I Do"><img class="logo logo-blanc" src="/img/logo-blanc.png" alt="Yes I Do"></div>
   <div class="moi" id="moi" hidden><span id="avatar"></span><div class="salut"><small id="ladate"></small><b id="who"></b></div></div>
-  <nav id="nav" hidden><a href="#/" data-v="accueil" title="Accueil" aria-label="Accueil"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7v9H4z"/></svg></a><a href="#/nouveau" data-v="nouveau" title="Créer un mariage" aria-label="Créer un mariage"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a><a href="#/guide" data-v="guide" title="Guide et ressources" aria-label="Guide et ressources"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></svg></a><a href="#/reglages" data-v="reglages" title="Réglages" aria-label="Réglages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></a><a href="#" id="bascule" title="Clair ou sombre" aria-label="Clair ou sombre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z"/></svg></a><a href="#" id="logout" title="Se déconnecter" aria-label="Se déconnecter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/></svg></a><span class="version" id="ver" hidden></span></nav>
+  <nav id="nav" hidden><a href="#/" data-v="accueil" title="Accueil" aria-label="Accueil"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7v9H4z"/></svg></a><a href="#/nouveau" data-v="nouveau" title="Créer un mariage" aria-label="Créer un mariage"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a><a href="#/guide" data-v="guide" title="Guide et ressources" aria-label="Guide et ressources"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></svg></a><a href="#/reglages" data-v="reglages" title="Réglages" aria-label="Réglages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></a><a href="#" id="bascule" title="Clair ou sombre" aria-label="Clair ou sombre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z"/></svg></a><a href="#" id="logout" title="Se déconnecter" aria-label="Se déconnecter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/></svg></a><span class="version" id="ver" hidden></span></nav>
 </header>
 <main>
   <div class="login ecran" id="login">
@@ -182,6 +182,7 @@
     if (!TOKEN) return;
     var h = location.hash || "#/";
     document.querySelectorAll("#nav a[data-v]").forEach(function(a){ a.classList.toggle("on", (h === "#/" && a.dataset.v === "accueil") || h.indexOf("#/" + a.dataset.v) === 0); });
+    var ap = h.match(/^#\/m\/([A-Za-z0-9]+)\/appel/); if (ap) return appelGuide(ap[1].toUpperCase());
     var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal|espace))?/);
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
@@ -305,6 +306,115 @@
   }
 
   /* ---------- mariage : les huit étapes ---------- */
+  /* ---------- l'appel guidé (R8) : qualification de la liste avec le couple ---------- */
+  var APPEL_IX = null, APPEL_T = null, APPEL_ROUGE = 0;
+  function appelGuide(code){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    if (APPEL_T) { clearInterval(APPEL_T); APPEL_T = null; }
+    Promise.all([api("admin-appel", { op: "lire" }, code), api("admin-mariage", {}, code)]).then(function(r){ dessinerAppel(code, r[0], r[1].mariage); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function dessinerAppel(code, A, m){
+    var yy = window.scrollY; setTimeout(function(){ window.scrollTo(0, yy); }, 0);
+    var IC_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7"/></svg>';
+    var IC_LOCK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+    var retour = '<a href="#/m/' + code + '" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a>';
+    if (!A.en_cours) {
+      var hist = (A.historique || []).map(function(h){ var b = h.bilan || {}; return '<div style="padding:12px 0;border-top:1px solid var(--line)"><b>' + fmt(h.fin) + '</b> · ' + h.duree_min + ' min · ' + esc(h.cloture_par || h.par) + '<div class="muted small" style="margin-top:4px">' + b.completes + ' fiche(s) complète(s) sur ' + b.total + ', ' + b.a_demander + ' à demander aux invités, ' + (b.proches || []).length + ' proche(s) à accompagner' + (b.mode ? '. ' + esc(b.mode) : '') + '</div></div>'; }).join("");
+      V.innerHTML = '<div class="appel">' + retour +
+        '<div class="sc t-espresso solo" style="margin-top:16px"><div class="k">Appel guidé</div><div class="nomc" style="font-size:30px;margin-top:8px">Qualifier la liste avec ' + esc(m.prenoms) + '</div>' +
+        '<p style="font:italic 18px/1.35 \'Cormorant Garamond\',serif;opacity:.85;margin:14px 0 0">Six étapes, une vingtaine de minutes. L\'application vous guide, vous validez étape par étape. Un appel interrompu reprend là où il s\'est arrêté.</p>' +
+        '<ol class="sub" style="margin:18px 0 0;padding-left:18px;line-height:1.9;font-size:13px">' + ["Accueil et cadre de l'appel", "Les invités à préciser", "Les proches à accompagner", "La façon d'écrire aux invités", "Le calendrier des relances", "Récapitulatif et clôture"].map(function(t){ return '<li>' + t + '</li>'; }).join("") + '</ol></div>' +
+        '<div style="margin-top:18px"><button type="button" class="cta or" id="ademarrer"><span>Démarrer l\'appel</span></button></div><p class="err" id="amsg"></p>' +
+        (hist ? '<div class="verre" style="margin-top:22px;padding:6px 20px 8px;border-radius:24px"><h3 style="margin:12px 0 4px">Appels précédents</h3>' + hist + '</div>' : '') + '</div>';
+      $("ademarrer").onclick = function(){ this.disabled = true; api("admin-appel", { op: "demarrer" }, code).then(function(r){ APPEL_IX = 0; APPEL_ROUGE = 0; dessinerAppel(code, r, m); }).catch(function(e){ $("amsg").textContent = e.message; }); };
+      return;
+    }
+    var a = A.appel, d = a.donnees || {}, E = A.etapes, n = E.length;
+    var premiere = 0; while (premiere < n - 1 && E[premiere].valide) premiere++;
+    if (APPEL_IX === null || APPEL_IX > premiere) APPEL_IX = premiere;
+    var ch = function(k, v, on, lib){ return '<button type="button" class="ch' + (on ? ' sel' : '') + '" data-ak="' + k + '" data-av="' + esc(JSON.stringify(v)) + '">' + esc(lib) + '</button>'; };
+    var bascule = function(k, lib){ return ch(k, !d[k], !!d[k], (d[k] ? "✓ " : "") + lib); };
+    var rangee = function(html){ return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' + html + '</div>'; };
+    var QUESTIONS = {
+      "côté": { q: "De quel côté ?", k: "cote", o: A.cotes },
+      "invitation": { q: "Son invitation", k: "invitation", o: A.invitations },
+      "lien": { q: "Son lien avec le couple", k: "lien", o: A.liens },
+      "enfants": { q: "Combien d'enfants ?", k: "nb_enfants", o: ["0", "1", "2", "3", "4"] },
+      "hébergement": { q: "Où est il logé ?", k: "hebergement", o: A.lieux || [] }
+    };
+    function contenu(e){
+      var no = e.n;
+      if (no === 1) return '<div class="k" style="margin-top:18px">Le cadre</div>' + rangee(bascule("duree", "Durée annoncée au couple")) +
+        '<div class="k" style="margin-top:18px">S\'adresser aux invités</div>' + rangee(A.registres.map(function(x){ return ch("registre", x, A.registre === x, x === "Par le prénom" ? "Par le prénom · Bonjour Hélène" : "Civilité et nom · Chère Madame Marchal"); }).join(""));
+      if (no === 2) {
+        var R = A.rouges; if (!R.length) return '<p style="margin:18px 0 0">Toutes les fiches sont complètes ou parties en demande aux invités.</p>';
+        APPEL_ROUGE = Math.min(APPEL_ROUGE, R.length - 1); var c = R[APPEL_ROUGE], mq = c.manque || [], q0 = null;
+        for (var x = 0; x < mq.length; x++) if (QUESTIONS[mq[x]]) { q0 = QUESTIONS[mq[x]]; break; }
+        var num = String(c.numero || "").replace(/[^0-9+]/g, "");
+        return '<div class="carte-in"><div class="k">Invité ' + (APPEL_ROUGE + 1) + ' sur ' + R.length + '</div><div class="nomc" style="font-size:22px;margin-top:6px">' + esc(c.nom) + '</div><div class="sub" style="font-size:12px;margin-top:3px">' + esc([c.cote ? "côté " + c.cote.toLowerCase() : "côté à préciser", c.lien, c.invitation].filter(Boolean).join(" · ")) + '</div>' +
+          '<div class="alerte">Il manque : ' + esc(mq.join(", ")) + '</div>' +
+          (q0 ? '<div class="k" style="margin-top:14px">' + esc(q0.q) + '</div>' + rangee(q0.o.map(function(v){ return '<button type="button" class="ch" data-aq="' + c.id + '" data-k="' + q0.k + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join(""))
+            : mq.indexOf("précision") >= 0 ? '<div class="k" style="margin-top:14px">Précision sur son lien</div><div style="display:flex;gap:6px;margin-top:10px"><input id="aprec" placeholder="Parents de qui, témoin de qui…" style="flex:1"><button type="button" class="ch sel" data-aprec="' + c.id + '">OK</button></div>' : '') +
+          '<div style="display:flex;align-items:center;gap:10px;margin-top:14px">' + (num ? '<a class="lienbas" href="tel:' + esc(num) + '">Appeler</a>' : '') + '<span style="flex:1"></span>' + (mq.indexOf("côté") < 0 && mq.indexOf("lien") < 0 ? '<button type="button" class="lienbas" data-adem="' + c.id + '">À demander à l\'invité</button>' : '') + '</div></div>';
+      }
+      if (no === 3) {
+        var P = A.proches, nb = P.filter(function(p){ return p.assistance; }).length;
+        return '<div class="k" style="margin-top:16px">' + (nb ? nb + ' proche(s) à accompagner' : 'Touchez les proches à accompagner') + '</div><input id="aprox" placeholder="Rechercher un invité" style="margin-top:8px;width:100%"><div class="proches" id="alist">' +
+          P.map(function(p){ return '<button type="button" class="ch' + (p.assistance ? ' sel' : '') + '" data-aass="' + p.id + '" data-on="' + (p.assistance ? 0 : 1) + '" data-nom="' + esc(String(p.nom || "").toLowerCase()) + '">' + esc(p.nom) + '</button>'; }).join("") + '</div>' +
+          (nb ? '<div class="k" style="margin-top:14px">Qui les appelle</div>' + rangee(A.qui.map(function(x){ return ch("qui", x, d.qui === x, x); }).join("")) +
+            '<div class="k" style="margin-top:14px">Moment préféré</div><input id="acren" value="' + esc(d.creneau || "") + '" placeholder="En soirée, le week end, après 18 h…" style="margin-top:8px;width:100%">'
+            : rangee(bascule("aucun_proche", "Aucun proche à accompagner")));
+      }
+      if (no === 4) return '<div class="k" style="margin-top:18px">Mode d\'envoi</div><div style="display:grid;gap:6px;margin-top:10px">' + A.modes.map(function(x){ return ch("mode", x.n, Number(d.mode) === x.n, x.l + (x.n === 3 ? " (recommandé)" : "")); }).join("") + '</div>' +
+        '<div class="k" style="margin-top:18px">Le couple prévient ses invités</div><p class="sub" style="font:italic 15px/1.35 \'Cormorant Garamond\',serif;margin:8px 0 0">« ' + esc(A.annonce) + ' »</p>' + rangee(bascule("annonce", "Le couple enverra ce message") + '<button type="button" class="ch" id="acopier">Copier le texte</button>');
+      if (no === 5) return '<div class="k" style="margin-top:18px">Date limite de réponse</div><input type="date" id="adate" value="' + esc(d.date_limite || "") + '" style="margin-top:8px;width:100%">' +
+        '<div class="k" style="margin-top:18px">Rythme des relances</div><div style="display:grid;gap:6px;margin-top:10px">' + A.rythmes.map(function(x){ return ch("rythme", x, d.rythme === x, x); }).join("") + '</div>';
+      if (no === 6) { var b = A.bilan; return '<div class="recap">' + [["Fiches complètes", b.completes + " sur " + b.total], ["À demander aux invités", b.a_demander], ["Proches à accompagner", b.proches.length ? b.proches.length + (b.qui ? ", par " + b.qui : "") + (b.creneau ? ", " + b.creneau : "") : "aucun"], ["S'adresser aux invités", b.registre], ["Envoi", b.mode || "à choisir"], ["Date limite", b.date_limite ? fdate(b.date_limite) : "à fixer"], ["Relances", b.rythme || "à choisir"]].map(function(l){ return '<div><span class="sub">' + l[0] + '</span><b>' + esc(l[1]) + '</b></div>'; }).join("") + '</div>' + rangee(bascule("recap", "Récapitulatif relu avec le couple")); }
+      return "";
+    }
+    function exig(e){ return '<div class="exig">' + e.exigences.map(function(x){ return '<div class="' + (x.ok ? "ok" : "") + '"><span class="rondv">' + (x.ok ? IC_OK : "") + '</span><span>' + esc(x.l) + '</span><span class="sub" style="margin-left:auto;font-size:10.5px;white-space:nowrap">' + (x.facultatif ? "facultatif" : "requis") + '</span></div>'; }).join("") + '</div>'; }
+    var cartes = E.map(function(e, k){ return '<div class="sc ' + ["t-espresso", "t-cacao", "t-champagne", "t-sable", "t-espresso", "t-cacao"][k] + (e.valide ? ' valide' : '') + '" data-n="' + e.n + '">' +
+      '<button type="button" class="okmark" data-rouvrir="' + e.n + '" aria-label="Validée, toucher pour rouvrir">' + IC_OK + '</button>' +
+      '<div class="k">Étape ' + e.n + ' sur ' + n + '</div><div class="nomc" style="margin-top:8px;padding-right:40px">' + esc(e.titre) + '</div>' +
+      '<div style="font:italic 17px/1.35 \'Cormorant Garamond\',serif;margin-top:10px;opacity:.85">' + esc(e.script) + '</div>' +
+      '<p class="sub" style="font-size:12px;margin:10px 0 0">' + esc(e.aide) + '</p>' + contenu(e) + '<div style="flex:1"></div>' + exig(e) + '</div>'; }).join("");
+    var frise = '<div class="frise">' + E.map(function(e, k){ return '<button type="button" data-fr="' + k + '" class="' + (e.valide ? "fait" : k === premiere ? "cours" : "") + '"><i></i><span>' + esc(e.titre) + '</span></button>'; }).join("") + '</div>';
+    V.innerHTML = '<div class="appel"><div class="tete"><span class="pastille"><img src="/img/logo-blanc.png" alt=""><i></i></span><div style="flex:1;min-width:0"><b>' + esc(m.prenoms) + '</b><div class="muted small">Appel en cours · <span id="chrono"></span></div></div><button type="button" class="quitter" id="aquitter">Quitter</button></div>' +
+      '<div class="grille"><div><div class="prog"><div class="barre"><i style="width:' + A.pct + '%"></i></div><span>' + A.pct + ' %</span></div>' +
+      '<div class="metap"><span class="hint">' + IC_LOCK + ' Validez une étape pour passer à la suivante</span><span id="acnt" style="opacity:.6"></span></div>' +
+      '<div class="pile2" id="apile">' + cartes + '</div><div class="dots" id="adots"></div>' +
+      '<div style="margin-top:16px"><button type="button" class="cta or" id="avalider"><span>Valider l\'étape</span></button></div><p class="err" id="amsg" style="text-align:center"></p>' +
+      '<details class="verre notes"' + (a.notes ? ' open' : '') + '><summary>Notes de l\'appel</summary><textarea id="anotes" rows="4" placeholder="Ce que le couple a dit, à retenir pour la suite">' + esc(a.notes || "") + '</textarea></details>' +
+      '<p style="text-align:center;margin-top:14px"><button type="button" class="lienbas muted" id="aabandon" style="background:none;border:0;box-shadow:none;text-decoration:underline;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:0">Abandonner cet appel</button></p></div>' +
+      '<aside class="direct verre"><div class="k">En direct</div><div class="pctg">' + A.pct + ' %</div>' + frise + '<div class="k" style="margin-top:18px">Bilan à cet instant</div><div class="recap petit">' + [["Fiches complètes", A.bilan.completes + " / " + A.bilan.total], ["Rouges", A.rouges.length], ["À demander", A.bilan.a_demander], ["Proches", A.bilan.proches.length]].map(function(l){ return '<div><span class="sub">' + l[0] + '</span><b>' + l[1] + '</b></div>'; }).join("") + '</div></aside></div></div>';
+    var t0 = new Date(a.debut).getTime(), tick = function(){ var el = $("chrono"); if (!el) { clearInterval(APPEL_T); APPEL_T = null; return; } var s = Math.max(0, Math.floor((Date.now() - t0) / 1000)); el.textContent = Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0"); };
+    tick(); APPEL_T = setInterval(tick, 1000);
+    var envoyer = function(corps){ $("amsg").textContent = ""; return api("admin-appel", corps, code).then(function(r){ if (!r.ok) $("amsg").textContent = r.detail || "Action impossible"; if (r.en_cours !== undefined) dessinerAppel(code, r, m); return r; }).catch(function(e){ $("amsg").textContent = e.message; }); };
+    var recharger = function(){ return api("admin-appel", { op: "lire" }, code).then(function(r){ dessinerAppel(code, r, m); }); };
+    var majCta = function(){ var e = E[APPEL_IX], b = $("avalider").querySelector("span"); b.textContent = e.valide ? (APPEL_IX < n - 1 ? "Étape suivante" : "Clore l'appel") : (APPEL_IX === n - 1 ? "Valider et clore l'appel" : "Valider l'étape"); };
+    var P = YID.pile($("apile"), { index: APPEL_IX, peut: function(k){ return E[k - 1] && E[k - 1].valide; }, refus: function(){ $("amsg").textContent = "Validez d'abord cette étape."; },
+      onChange: function(i){ APPEL_IX = i; $("acnt").textContent = (i + 1) + " / " + n; YID.points($("adots"), i, n); majCta(); V.querySelectorAll("[data-fr]").forEach(function(x){ x.classList.toggle("vue", +x.dataset.fr === i); }); } });
+    $("avalider").onclick = function(){ var e = E[APPEL_IX];
+      if (e.valide) { if (APPEL_IX < n - 1) P.suivante(); else envoyer({ op: "terminer" }).then(function(r){ if (r && r.ok) { APPEL_IX = null; } }); return; }
+      if (!e.pret) { P.secoue(); $("amsg").textContent = "Pour valider : " + e.exigences.filter(function(x){ return !x.ok && !x.facultatif; }).map(function(x){ return x.l.toLowerCase(); }).join(", ") + "."; return; }
+      var dernier = APPEL_IX === n - 1; if (!dernier) APPEL_IX++;
+      envoyer({ op: "valider", n: e.n }).then(function(r){ if (dernier && r && r.ok) envoyer({ op: "terminer" }).then(function(rr){ if (rr && rr.ok) APPEL_IX = null; }); }); };
+    V.querySelectorAll("[data-rouvrir]").forEach(function(b){ b.onclick = function(){ var k = +b.dataset.rouvrir; if (!window.confirm("Rouvrir l'étape " + k + " ? Les étapes suivantes seront à valider de nouveau.")) return; APPEL_IX = k - 1; envoyer({ op: "rouvrir", n: k }); }; });
+    V.querySelectorAll("[data-fr]").forEach(function(b){ b.onclick = function(){ P.aller(+b.dataset.fr); }; });
+    V.querySelectorAll("[data-ak]").forEach(function(b){ b.onclick = function(){ b.classList.add("sel"); envoyer({ op: "donnee", k: b.dataset.ak, v: JSON.parse(b.dataset.av) }); }; });
+    V.querySelectorAll("[data-aq]").forEach(function(b){ b.onclick = function(){ var c = {}; c[b.dataset.k] = b.dataset.k === "nb_enfants" ? +b.dataset.v : b.dataset.v; b.classList.add("sel"); api("admin-qualifier", { id: +b.dataset.aq, champs: c }, code).then(function(r){ if (!r.ok) $("amsg").textContent = r.detail; return recharger(); }); }; });
+    V.querySelectorAll("[data-aprec]").forEach(function(b){ b.onclick = function(){ var v = ($("aprec").value || "").trim(); if (!v) return; api("admin-qualifier", { id: +b.dataset.aprec, champs: { precision: v } }, code).then(recharger); }; });
+    V.querySelectorAll("[data-adem]").forEach(function(b){ b.onclick = function(){ b.disabled = true; api("admin-demander", { ids: [+b.dataset.adem] }, code).then(recharger); }; });
+    V.querySelectorAll("[data-aass]").forEach(function(b){ b.onclick = function(){ b.classList.toggle("sel"); api("admin-qualifier", { id: +b.dataset.aass, champs: { assistance: b.dataset.on === "1" } }, code).then(function(r){ if (!r.ok) $("amsg").textContent = r.detail; return recharger(); }); }; });
+    if ($("aprox")) $("aprox").oninput = function(){ var s = this.value.toLowerCase(); V.querySelectorAll("#alist [data-aass]").forEach(function(b){ b.hidden = s && b.dataset.nom.indexOf(s) < 0; }); };
+    if ($("acren")) $("acren").onchange = function(){ envoyer({ op: "donnee", k: "creneau", v: this.value }); };
+    if ($("adate")) $("adate").onchange = function(){ envoyer({ op: "donnee", k: "date_limite", v: this.value }); };
+    if ($("acopier")) $("acopier").onclick = function(){ var b = this; try { navigator.clipboard.writeText(A.annonce).then(function(){ b.textContent = "Texte copié"; }); } catch (e) {} };
+    $("anotes").onchange = function(){ api("admin-appel", { op: "note", texte: this.value }, code); };
+    $("aquitter").onclick = function(){ location.hash = "#/m/" + code; };
+    $("aabandon").onclick = function(){ if (!window.confirm("Abandonner cet appel ? Ce qui a été saisi sur les fiches reste acquis.")) return; api("admin-appel", { op: "abandonner" }, code).then(function(r){ APPEL_IX = null; dessinerAppel(code, r, m); }); };
+  }
+
   function mariage(code, etape){
     V.innerHTML = '<p class="muted">Chargement</p>';
     api("admin-mariage", {}, code).then(function(j){
@@ -316,7 +426,7 @@
         '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.foyers || 0) + '</b><span>foyers</span></div><div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div><div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' +
         '<div class="tuiles-m"><a class="solide tm" href="#/m/' + m.code + '/2"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E4CDA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><b>Invités</b><span class="sm">' + (m.foyers || 0) + ' foyers' + (m.anomalies ? ' · ' + m.anomalies + ' à traiter' : '') + '</span></a>' +
         '<a class="verre tm" href="#/m/' + m.code + '/espace"><span class="ic clair"><img src="/img/logo-noir.png" alt="" class="logo-noir" style="width:20px"><img src="/img/logo-blanc.png" alt="" class="logo-blanc" style="width:20px"></span><b>Espace mariés</b><span class="sm">lien, suivi en direct</span></a>' +
-        '<span class="verre tm off"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">prochaine version</span></span></div>' +
+        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a></div>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       $("mphoto").onclick = function(){ YID.choisirPhoto(1600, function(d){ $("mphmsg").textContent = "Envoi"; api("admin-photo-mariage", { photo: d }, m.code).then(function(r){ if (!r.ok) throw new Error(r.detail || "Envoi impossible"); V.querySelector(".bandeau > img").src = "/api/forms?action=photo&k=" + r.photo_cle; $("mphmsg").textContent = "Photo enregistrée."; setTimeout(function(){ $("mphmsg").textContent = ""; }, 2500); }).catch(function(e){ $("mphmsg").textContent = e.message; }); }); };
       var pane = $("pane");
