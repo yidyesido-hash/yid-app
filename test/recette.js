@@ -415,7 +415,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts;
     const avecCle = l.filter(c => c.cle && !c.desactive);
     check("lien personnel : chaque fiche complète reçoit un jeton non devinable", avecCle.length > 0 && avecCle.every(c => /^[a-z0-9]{12}$/.test(c.jeton || "")) && new Set(avecCle.map(c => c.jeton)).size === avecCle.length);
-    check("lien personnel : une fiche sans clé n'a pas de jeton", l.filter(c => !c.cle).every(c => !c.jeton));
+    check("lien personnel : toute fiche active a son jeton, même complétée sans clé", l.filter(c => !c.desactive).every(c => /^[a-z0-9]{12}$/.test(c.jeton || "")));
     const c0 = avecCle[0];
     let r = await call("GET", "/api/forms?action=invite&yid=" + c0.jeton);
     check("lien personnel : l'accueil est rendu, avec la salutation et les questions", r.json.ok && /^(Bonjour|Cher|Chère)/.test(r.json.salutation) && r.json.questions[0].k === "presence", JSON.stringify(r.json).slice(0, 200));

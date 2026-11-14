@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.8.0">
-<link rel="stylesheet" href="/cartes.css?v=1.8.0">
-<script src="/cartes.js?v=1.8.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.8.1">
+<link rel="stylesheet" href="/cartes.css?v=1.8.1">
+<script src="/cartes.js?v=1.8.1"></script>
 </head>
 <body>
 <header>
@@ -680,7 +680,7 @@
         (mq.length && !c.desactive && !c.motifs ? '<div class="alerte">Il manque : ' + esc(mq.join(", ")) + '</div>' : '') +
         '<div style="flex:1"></div>' + milieu +
         '<div style="display:flex;align-items:center;gap:8px;margin-top:16px">' + (num ? '<a class="rond" href="tel:' + esc(num) + '" aria-label="Appeler">' + IC_TEL + '</a><a class="rond" href="https://wa.me/' + esc(num.replace(/^\+/, "")) + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + IC_WA + '</a>' : '') +
-        (c.jeton ? '<button type="button" class="rond" data-lien="' + c.jeton + '" aria-label="Copier son lien personnel" title="Copier son lien personnel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>' : '') + '<span style="flex:1"></span>' + (mq.length && mq.indexOf("côté") < 0 && mq.indexOf("lien") < 0 && !c.motifs ? '<button type="button" class="lienbas" data-dem="' + c.id + '">À demander à l\'invité</button>' : '<button type="button" class="lienbas" data-plein="' + c.id + '">Fiche complète</button>') + '</div></div>';
+        (c.jeton && c.etat === "complète" ? '<button type="button" class="rond" data-lien="' + c.jeton + '" aria-label="Copier son lien personnel" title="Copier son lien personnel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>' : '') + '<span style="flex:1"></span>' + (mq.length && mq.indexOf("côté") < 0 && mq.indexOf("lien") < 0 && !c.motifs ? '<button type="button" class="lienbas" data-dem="' + c.id + '">À demander à l\'invité</button>' : '<button type="button" class="lienbas" data-plein="' + c.id + '">Fiche complète</button>') + '</div></div>';
     }
     function lier(root){
       root.querySelectorAll("[data-dem], [data-dem0]").forEach(function(b){ b.onclick = function(){ var id = +(b.dataset.dem || b.dataset.dem0); b.disabled = true; api("admin-demander", { ids: [id], retirer: !!b.dataset.dem0 }, m.code).then(function(rr){ var y = window.scrollY; renderListe(m, pane, rr, null); window.scrollTo(0, y); }).catch(function(e){ $("gmsg").textContent = e.message; b.disabled = false; }); }; });
