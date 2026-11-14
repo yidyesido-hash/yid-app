@@ -5,6 +5,9 @@
      <script src="https://invites.yidyesido.info/yid-invite.js" defer></script>
    Le lien envoyé à l'invité est l'adresse du site suivie de ?yid=JETON.
    Sans jeton, le script ne fait rien : le site reste tel quel.
+   Avec jeton : « Le mariage de » devient « Bonjour Aïssa » (Bonsoir de 18 h
+   à 4 h 30), une phrase d'invitation suit les prénoms des mariés, et le
+   bouton de confirmation ouvre le formulaire personnel en plein écran.
    ===================================================================== */
 (function () {
   if (window.YIDInvite) return; window.YIDInvite = true;
@@ -38,7 +41,7 @@
 .yi-err{color:#9B3B2E;font:400 14px/1.5 Inter,sans-serif;margin:12px 0 0;min-height:1em}\
 .yi-merci{font:italic 400 22px/1.45 "Cormorant Garamond",Georgia,serif;margin:22px 0 0}\
 .yi-lien{background:none;border:0;padding:0;margin-top:14px;font:500 13px Inter,sans-serif;color:var(--doux);text-decoration:underline;text-underline-offset:3px;cursor:pointer}\
-.yi-bulle{position:fixed;left:18px;bottom:18px;z-index:9999;width:58px;height:58px;border-radius:29px;border:0;background:#141210;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}\
+.yi-plein{position:fixed;inset:0;z-index:10001;background:rgba(20,16,12,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);overflow-y:auto;padding:24px 14px}.yi-plein .yi-carte{position:relative;margin:4vh auto}.yi-fermer{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:20px;border:1px solid var(--trait);background:#fff;font:400 22px/1 Inter,sans-serif;color:var(--encre);cursor:pointer;padding:0}.yi-phrase{display:block;margin:14px auto 0;font-style:italic;font-weight:400;letter-spacing:.02em!important;text-transform:none!important;line-height:1.35}.yi-bulle{position:fixed;left:18px;bottom:18px;z-index:9999;width:58px;height:58px;border-radius:29px;border:0;background:#141210;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}\
 .yi-bulle img{width:30px}\
 .yi-voile{position:fixed;inset:0;z-index:10000;background:rgba(20,18,16,.4);display:flex;align-items:flex-end;justify-content:center}\
 .yi-feuille{width:min(480px,100%);margin:10px;background:#fff;border-radius:28px;padding:24px}\
@@ -56,17 +59,44 @@
     fetch(API + "?action=invite&yid=" + jeton).then(function(r){ return r.json(); }).then(function(d){ if (d && d.ok) poser(d); }).catch(function(){});
   }
 
+  function salut(){ var h = new Date(), m = h.getHours() * 60 + h.getMinutes(); return m >= 270 && m < 1080 ? "Bonjour" : "Bonsoir"; }
+  function feuilles(){ var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), out = [], n; while ((n = w.nextNode())) if (n.nodeValue.trim()) out.push(n); return out; }
+  /* le haut du site : « Le mariage de » devient la salutation, la phrase d'invitation suit les prénoms */
+  function accueillir(d){
+    var T = feuilles(), k = -1;
+    for (var i = 0; i < T.length; i++) if (/^\s*le mariage de\s*$/i.test(T[i].nodeValue)) { k = i; break; }
+    if (k < 0) return false;
+    var kick = T[k].parentNode; T[k].nodeValue = salut() + " " + d.appel + ",";
+    var datee = null, dernier = null;
+    for (var j = k + 1; j < T.length && j < k + 12; j++) { if (/\b20\d\d\b/.test(T[j].nodeValue)) { datee = T[j].parentNode; break; } dernier = T[j].parentNode; }
+    if (!dernier) return true;
+    var bloc = dernier.closest(".sqs-block-content, .sqs-html-content, h1, h2, h3, p") || dernier;
+    var cs = getComputedStyle(dernier), ph = document.createElement("span");
+    ph.className = "yi-phrase"; ph.textContent = "ont le plaisir de vous convier à leur mariage";
+    ph.style.fontFamily = cs.fontFamily; ph.style.color = getComputedStyle(kick).color || cs.color; ph.style.fontSize = "clamp(17px, 4.6vw, 22px)";
+    bloc.appendChild(ph);
+    return true;
+  }
+  /* le bouton de confirmation du site ouvre le formulaire personnel en plein écran */
+  function brancher(ouvrir){
+    document.querySelectorAll("a, button").forEach(function(b){ if (!/confirm|rsvp|r\.s\.v\.p/i.test(b.textContent || "")) return; if (b.closest(".yi")) return;
+      b.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); ouvrir(); }, true); });
+  }
   function poser(d){
-    var sec = el("section", "yi yi-sec"); sec.id = "yid-accueil";
-    var hero = document.querySelector("#sections > section, main section, .page-section, article");
-    if (hero && hero.parentNode) hero.parentNode.insertBefore(sec, hero.nextSibling); else document.body.insertBefore(sec, document.body.firstChild);
+    accueillir(d);
+    var sec = el("div", "yi yi-plein"); sec.id = "yid-accueil"; sec.hidden = true; document.body.appendChild(sec);
+    var ouvrir = function(){ sec.hidden = false; document.documentElement.style.overflow = "hidden"; dessiner(false); };
+    var fermer = function(){ sec.hidden = true; document.documentElement.style.overflow = ""; };
+    sec.onclick = function(e){ if (e.target === sec) fermer(); };
+    brancher(ouvrir);
     var R = {}; d.questions.forEach(function(q){ R[q.k] = q.v; });
     var carte = el("div", "yi-carte"); sec.appendChild(carte);
+    var croix = function(){ var x = el("button", "yi-fermer", "×"); x.type = "button"; x.setAttribute("aria-label", "Fermer"); x.onclick = fermer; carte.insertBefore(x, carte.firstChild); };
     function visible(q){ if (!q.si) return true; var p = q.si.split(":"), k = p[0], i = p[1]; if (i === "*") return !!R[k]; var qq = d.questions.filter(function(z){ return z.k === k; })[0]; return qq && qq.o && R[k] === qq.o[+i]; }
     function dessiner(merci){
       var h = '<div class="yi-k">' + esc(d.couple) + (d.date ? " · " + new Date(d.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "") + '</div>' +
-        '<div class="yi-sal">' + esc(d.salutation) + '</div><p class="yi-acc">' + esc(d.accroche) + '</p>';
-      if (merci || (d.deja && !carte._modif)) { h += '<p class="yi-merci">' + (R.presence && d.questions[0].o && R.presence === d.questions[0].o[1] ? "Nous avons bien noté votre réponse, et la transmettons aux mariés avec tous vos mots." : "Merci, votre réponse est bien notée. Nous revenons vers vous très prochainement pour la suite de votre venue.") + '</p><button type="button" class="yi-lien" data-modif>Modifier ma réponse</button>'; carte.innerHTML = h; carte.querySelector("[data-modif]").onclick = function(){ carte._modif = true; dessiner(false); }; return; }
+        '<div class="yi-sal">' + esc(salut() + " " + d.appel + ",") + '</div><p class="yi-acc">' + esc(d.accroche) + '</p>';
+      if (merci || (d.deja && !carte._modif)) { h += '<p class="yi-merci">' + (R.presence && d.questions[0].o && R.presence === d.questions[0].o[1] ? "Nous avons bien noté votre réponse, et la transmettons aux mariés avec tous vos mots." : "Merci, votre réponse est bien notée. Nous revenons vers vous très prochainement pour la suite de votre venue.") + '</p><button type="button" class="yi-lien" data-modif>Modifier ma réponse</button>'; carte.innerHTML = h; croix(); carte.querySelector("[data-modif]").onclick = function(){ carte._modif = true; dessiner(false); }; return; }
       d.questions.forEach(function(q, n){ if (!visible(q)) return;
         h += '<div class="yi-q"><label class="yi-l">' + esc(q.l) + '</label>' + (q.aide ? '<span class="yi-aide">' + esc(q.aide) + '</span>' : '');
         if (q.type === "choix") h += '<div class="yi-opts">' + q.o.map(function(o){ return '<button type="button" class="yi-opt" data-k="' + q.k + '" data-v="' + esc(o) + '" aria-pressed="' + (R[q.k] === o) + '">' + esc(o) + '</button>'; }).join("") + '</div>';
@@ -76,7 +106,7 @@
         else if (q.type === "enfants") { var E = R.enfants || []; for (var i = 0; i < q.n; i++) h += '<div class="yi-enf"><input type="text" placeholder="Prénom" data-ep="' + i + '" value="' + esc((E[i] || {}).prenom || "") + '"><input type="number" min="0" max="25" placeholder="Âge" data-ea="' + i + '" value="' + esc((E[i] || {}).age == null ? "" : E[i].age) + '"></div>'; }
         h += '</div>'; });
       h += '<button type="button" class="yi-btn" data-envoi>Envoyer ma réponse</button><p class="yi-err" data-err></p>';
-      carte.innerHTML = h;
+      carte.innerHTML = h; croix();
       carte.querySelectorAll("[data-k]").forEach(function(b){ b.onclick = function(){ lire(); R[b.dataset.k] = b.dataset.v; dessiner(false); }; });
       carte.querySelector("[data-envoi]").onclick = envoyer;
     }
@@ -87,10 +117,9 @@
     function envoyer(){
       lire(); var b = carte.querySelector("[data-envoi]"), err = carte.querySelector("[data-err]"); b.disabled = true; err.textContent = "";
       fetch(API + "?action=invite-repondre", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ yid: jeton, reponses: R }) })
-        .then(function(r){ return r.json(); }).then(function(x){ if (!x.ok) { err.textContent = x.detail || "Votre réponse n'a pas pu être envoyée."; b.disabled = false; return; } d.deja = true; carte._modif = false; dessiner(true); sec.scrollIntoView({ behavior: "smooth", block: "start" }); })
+        .then(function(r){ return r.json(); }).then(function(x){ if (!x.ok) { err.textContent = x.detail || "Votre réponse n'a pas pu être envoyée."; b.disabled = false; return; } d.deja = true; carte._modif = false; dessiner(true); sec.scrollTop = 0; })
         .catch(function(){ err.textContent = "La connexion a été interrompue, merci de réessayer."; b.disabled = false; });
     }
-    dessiner(false);
     bulle(d.equipe || []);
   }
 
