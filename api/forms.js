@@ -39,6 +39,8 @@
      ?action=photos-equipe   POST  les photos de profil de l'équipe (nom : image)
      ?action=admin-photo     POST  changer sa photo de profil : photo (data URL), vide pour la retirer
      ?action=photo           GET   la photo d'un mariage : k (clé publique)
+     ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
+     ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
      ?action=admin-appel     POST  l'appel guidé de qualification (w=CODE) : op lire | demarrer | donnee (k, v) | note (texte) | valider (n) | rouvrir (n) | terminer | abandonner ; renvoie toujours l'état de l'appel
      ?action=admin-photo-mariage POST  changer la photo d'un mariage : photo (data URL), vide pour revenir à la photo par défaut (w=CODE)
      ?action=admin-valider   POST  valider une fiche complète ou retirer la validation : id, valide (true | false)
@@ -59,13 +61,14 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.7.1";
+const VERSION = "1.8.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
 const checklist = require("../lib/checklist");
 const espace = require("../lib/espace");
 const appel = require("../lib/appel");
+const invite = require("../lib/invite");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -178,10 +181,12 @@ const linkFor = (cfg, hh) => cfg.site.replace(/\/$/, "") + "/?k=" + hh.key + (hh
    POINT D'ENTRÉE
    ===================================================================== */
 module.exports = async (req, res) => {
-  cors(req, res);
-  if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   const q = query(req);
   const action = q.action || "";
+  cors(req, res);
+  /* le lien personnel est lu depuis le site du mariage, quel qu'il soit : seul le jeton ouvre la fiche */
+  if (action === "invite" || action === "invite-repondre") res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   try {
     await store.migrate();
     const b = req.method === "POST" ? await body(req) : {};
@@ -229,6 +234,14 @@ module.exports = async (req, res) => {
       const ph = await mariages.photo(q.k);
       if (!ph) { res.statusCode = 404; return res.end(); }
       res.statusCode = 200; res.setHeader("Content-Type", ph.type); res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); return res.end(ph.buffer);
+    }
+    if (action === "invite" || action === "invite-repondre") {
+      if (!(await store.rateLimit(ip(req) + (action === "invite" ? ":lien" : ":reponse"), action === "invite" ? 90 : 20))) return send(res, 429, { ok: false, error: "slow down" });
+      const jt = String(q.yid || b.yid || "");
+      try {
+        if (action === "invite") { const v = await invite.lire(jt); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
+        return send(res, 200, await invite.repondre(jt, b));
+      } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-appel") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
@@ -390,6 +403,7 @@ module.exports = async (req, res) => {
         await store.journal(fresh.id, "Étape terminée", n + ". " + (checklist.ETAPES[n - 1] || ""), { etape: fresh.etape }, { etape: suivante }, u.nom);
         return send(res, 200, { ok: true, mariage: await mariages.fiche(w) });
       }
+      await invite.assurer(m.id);
       return send(res, 200, Object.assign({ ok: true }, await liste.liste(w)));
     }
     const cfg = WEDDINGS[w];

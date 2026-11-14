@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.7.1, base locale");
+  console.log("Recette yid-app v1.8.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -408,6 +408,33 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
       r = await A("abandonner");
       check("appel guidé : un appel s'abandonne sans rien perdre", r.json.ok && r.json.en_cours === false);
     }
+  }
+
+  /* 1.8.0 : le lien personnel de l'invité */
+  {
+    const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts;
+    const avecCle = l.filter(c => c.cle && !c.desactive);
+    check("lien personnel : chaque fiche complète reçoit un jeton non devinable", avecCle.length > 0 && avecCle.every(c => /^[a-z0-9]{12}$/.test(c.jeton || "")) && new Set(avecCle.map(c => c.jeton)).size === avecCle.length);
+    check("lien personnel : une fiche sans clé n'a pas de jeton", l.filter(c => !c.cle).every(c => !c.jeton));
+    const c0 = avecCle[0];
+    let r = await call("GET", "/api/forms?action=invite&yid=" + c0.jeton);
+    check("lien personnel : l'accueil est rendu, avec la salutation et les questions", r.json.ok && /^(Bonjour|Cher|Chère)/.test(r.json.salutation) && r.json.questions[0].k === "presence", JSON.stringify(r.json).slice(0, 200));
+    check("lien personnel : rien de l'administration ne fuit (ni clé, ni numéro)", !JSON.stringify(r.json).includes(c0.cle) && !JSON.stringify(r.json).includes(String(c0.numero || "x")));
+    r = await call("GET", "/api/forms?action=invite&yid=abcdefghjkmn");
+    check("lien personnel : un jeton inconnu ne montre rien", r.status === 404);
+    r = await call("GET", "/api/forms?action=invite&yid=" + c0.cle);
+    check("lien personnel : la clé AC001 n'ouvre pas la fiche", r.status === 404);
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: {} });
+    check("lien personnel : sans réponse à la présence, rien n'est enregistré", r.status === 422);
+    const qs = (await call("GET", "/api/forms?action=invite&yid=" + c0.jeton)).json.questions;
+    const rep = { presence: qs[0].o[0], mot: "Avec plaisir" };
+    for (const q of qs) { if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: rep });
+    check("lien personnel : la réponse est enregistrée", r.json.ok && r.json.present === true, JSON.stringify(r.json));
+    const apres = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === c0.id);
+    check("lien personnel : la fiche porte la réponse et sa date", apres.reponse && apres.reponse.presence === qs[0].o[0] && apres.reponse_le);
+    const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 10 }, H)).json.journal || [];
+    check("lien personnel : la réponse est au journal, signée invité", j.some(x => x.operation === "Réponse de l'invité" && x.operateur === "invité"));
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
