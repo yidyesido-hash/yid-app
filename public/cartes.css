@@ -218,3 +218,5 @@ details.card summary{ cursor:pointer; } details.card input{ width:100%; box-sizi
 .tab-3d{ position:fixed; inset:0; z-index:300; background:#15110d; } .tab-3d canvas{ display:block; } .tab-3d-t{ position:absolute; left:20px; top:18px; color:#fff; display:flex; flex-direction:column; gap:2px; } .tab-3d-t b{ font:500 30px/1 "Cormorant Garamond",Georgia,serif; color:#E8C98F; }
 .tab-3d-r{ position:absolute; left:50%; bottom:28px; transform:translateX(-50%); } .tab-3d-msg{ position:absolute; inset:auto 0 50% 0; text-align:center; color:#E8DCCB; }
 @media (min-width:900px){ .tab-voile{ align-items:center; } .tab-feuille{ border-radius:28px; } }
+/* étape 7 */
+.cl-c{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--line,rgba(127,112,98,.2)); cursor:pointer; } .cl-c input{ margin-top:3px; width:20px; height:20px; flex:none; } .cl-c span{ display:flex; flex-direction:column; gap:2px; }

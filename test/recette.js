@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.16.0, base locale");
+  console.log("Recette yid-app v1.17.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -634,6 +634,37 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("plan : chaque table reçoit une place dans la salle", r.json.tables.every(t => typeof t.x === "number" && typeof t.y === "number"));
     r = await P({ op: "disposer", positions: { [tA.id]: { x: 30, y: 40 } }, accueil: { x: 50, y: 96 } });
     check("plan : la salle se dispose, point d'accueil compris", r.json.tables[0].x === 30 && r.json.accueil.y === 96);
+  }
+
+  /* 1.17.0 : étape 7, clôture (en dernier : la suppression vide la liste d'AC27) */
+  {
+    const K = (b) => call("POST", "/api/forms?action=admin-cloture&w=AC27", b || {}, H);
+    let r = await K();
+    const n0 = r.json.bilan.invites;
+    check("clôture : le bilan se calcule sur la liste vivante", r.json.ok && n0 > 0 && r.json.bilan.presents >= 1 && r.json.coches.length === 5);
+    r = await K({ op: "noter", rdv: "2027-07-20T12:30", retours: "Un accueil remarqué", notes: "Prévoir deux tablettes" });
+    check("clôture : rendez vous et retours du couple enregistrés", r.json.rdv === "2027-07-20T12:30" && r.json.retours === "Un accueil remarqué");
+    r = await K({ op: "cocher", k: "merci", on: true });
+    check("clôture : une case se coche, avec qui et quand", r.json.coches[0].ok && r.json.coches[0].par);
+    r = await K({ op: "purger", confirme: "AC27" });
+    check("clôture : pas de suppression avant le lendemain du mariage", !r.json.ok && /lendemain/.test(r.json.detail));
+    const db = require("../lib/db"); await db.query("UPDATE mariage SET date_mariage = $2 WHERE code = $1", ["AC27", new Date(Date.now() - 3 * 864e5).toISOString().slice(0, 10)]);
+    const A = await call("POST", "/api/forms?action=admin-accueil", {}, H);
+    check("clôture : la suppression due apparaît dans À faire", JSON.stringify(A.json).indexOf("suppression des données des invités") >= 0);
+    const em = require("../lib/emails"), mm = await require("../lib/store").mariageFresh("AC27");
+    check("clôture : le modèle de remerciement existe", require("fs").readFileSync(require("path").join(__dirname, "..", "lib", "emails.js"), "utf8").indexOf('cle: "remerciement"') >= 0 && !!mm);
+    r = await K({ op: "purger", confirme: "XX00" });
+    check("clôture : la suppression exige le code du mariage", !r.json.ok && /code/.test(r.json.detail));
+    r = await K({ op: "clore" });
+    check("clôture : on ne clôt pas avant la suppression", !r.json.ok);
+    r = await K({ op: "purger", confirme: "ac27" });
+    check("clôture : la suppression passe, le bilan reste", r.json.ok && r.json.purge && r.json.bilan.invites === n0);
+    const L = await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H);
+    check("clôture : plus aucun invité en base", L.json.contacts.length === 0);
+    const jr = await db.query("SELECT count(*)::int AS n FROM journal j JOIN mariage m ON m.id = j.mariage_id WHERE m.code = 'AC27' AND j.detail IS NOT NULL AND j.operation <> 'Données des invités supprimées'");
+    check("clôture : le journal ne garde plus le détail", jr[0].n === 0);
+    r = await K({ op: "clore" });
+    check("clôture : le mariage se clôt", r.json.ok && r.json.close);
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

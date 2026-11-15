@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.16.0">
-<link rel="stylesheet" href="/cartes.css?v=1.16.0">
-<script src="/cartes.js?v=1.16.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.17.0">
+<link rel="stylesheet" href="/cartes.css?v=1.17.0">
+<script src="/cartes.js?v=1.17.0"></script>
 </head>
 <body>
 <header>
@@ -838,6 +838,7 @@
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
       if (cur === 5) { logistiqueEtape(m, pane); return; }
       if (cur === 6) { planEtape(m, pane); return; }
+      if (cur === 7) { clotureEtape(m, pane); return; }
       var titles = m.etapes_libelles, L = m.liste || {};
       if (cur === 3) {
         pane.innerHTML = '<div class="card"><h3>3. ' + esc(titles[2]) + '</h3><p class="muted">D\'abord l\'appel guidé avec le couple, puis le premier message à chaque invité, puis son accès personnel.</p></div>' +
@@ -853,6 +854,45 @@
       }
       pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape n\'est pas encore construite. ' + (cur === 5 ? "Elle accueillera l'hébergement, les transferts et la logistique des invités confirmés." : "Elle viendra ensuite.") + '</p></div>';
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+
+
+  /* ---------- étape 7 : clôture (remerciement, bilan avec le couple, suppression des données des invités) ---------- */
+  function clotureEtape(m, pane){
+    var admin = MOI.role === "administrateur";
+    var dessiner = function(C){
+      var B = C.bilan || {}, purge = C.purge;
+      var ch = function(v, l){ return '<div><b>' + (v == null ? "·" : v) + '</b><span>' + l + '</span></div>'; };
+      var echeance = !C.date_mariage ? "La date du mariage n'est pas renseignée sur la fiche." : purge ? "Données supprimées le " + fmt(purge.le) + " par " + esc(purge.par) + "." :
+        !C.passe ? "La suppression s'ouvrira le lendemain du mariage, et devra être faite au plus tard le " + fdate(C.purge_prevue) + "." :
+        C.jours_avant_purge > 0 ? "À faire au plus tard le " + fdate(C.purge_prevue) + ", dans " + C.jours_avant_purge + " jour" + (C.jours_avant_purge > 1 ? "s" : "") + "." : '<b style="color:var(--bad)">L\'échéance du ' + fdate(C.purge_prevue) + ' est dépassée.</b>';
+      pane.innerHTML = '<div class="card"><h3>7. Clôture</h3><p class="muted">Remercier les invités, faire le bilan avec le couple, puis supprimer les données des invités sous trente jours. ' + (C.close ? '<b>Le mariage est clos.</b>' : '') + '</p></div>' +
+        '<div class="card"><h3>Le remerciement</h3><p>Un message aux invités présents, au nom du couple, dans les jours qui suivent le mariage. Le modèle « Remerciement après le mariage » est prêt dans les envois groupés.</p><p style="margin-top:10px"><a class="lienbas" href="#/m/' + m.code + '/messagerie/brouillons">Préparer le remerciement</a></p></div>' +
+        '<div class="card"><h3>Le bilan' + (purge ? ' <span class="muted small">figé le ' + fmt(purge.le) + '</span>' : '') + '</h3><div class="cases" style="margin-top:10px">' +
+          ch(B.invites, "invités") + ch(B.reponses, "réponses") + ch(B.taux_reponse != null ? B.taux_reponse + " %" : null, "taux de réponse") + ch(B.delai_median_jours, "jours pour répondre, médiane") +
+          ch(B.presents, "foyers présents") + ch(B.personnes_attendues, "personnes attendues") + ch(B.personnes_accueillies, "personnes accueillies") + ch(B.declines, "ont décliné") +
+          ch(B.emails_envoyes, "emails envoyés") + ch(B.appels_guides, "appels guidés") + ch(B.tables, "tables") + '</div>' +
+          '<label class="small muted" style="display:block;margin-top:16px">Rendez vous bilan avec le couple</label><input type="datetime-local" id="clrdv" value="' + esc(C.rdv || "") + '">' +
+          '<label class="small muted" style="display:block;margin-top:12px">Ce que le couple nous dit</label><textarea id="clret" rows="4" placeholder="Leurs mots, ce qu\'ils ont aimé, ce qu\'ils auraient voulu autrement">' + esc(C.retours) + '</textarea>' +
+          '<label class="small muted" style="display:block;margin-top:12px">Ce que l\'équipe retient pour les prochains mariages</label><textarea id="clnot" rows="4">' + esc(C.notes) + '</textarea><span class="muted small" id="clmsg"></span></div>' +
+        '<div class="card"><h3>Avant la suppression</h3><p class="muted small">Ce que l\'outil ne fait pas lui même, à cocher au fil de l\'eau.</p>' + C.coches.map(function(x){ return '<label class="cl-c"><input type="checkbox" data-clk="' + x.k + '"' + (x.ok ? ' checked' : '') + '><span><b>' + esc(x.l) + '</b>' + (x.h ? '<span class="small muted">' + esc(x.h) + '</span>' : '') + (x.ok ? '<span class="small muted">' + fmt(x.le) + ', ' + esc(x.par) + '</span>' : '') + '</span></label>'; }).join("") + '</div>' +
+        '<div class="card"><h3>La suppression des données des invités</h3><p>' + echeance + '</p>' +
+          (purge ? '<p class="small muted">Restent le bilan chiffré, les tables sans noms et la trace des opérations sans leur contenu. L\'espace mariés est fermé.</p>' + (C.close ? '' : '<div class="row" style="margin-top:12px"><button id="clclore">Clore le mariage</button></div>') :
+          '<p class="small muted">Sont effacés : les invités, leurs numéros, leurs emails, leurs réponses, les lots reçus, les plans de placement nominatifs et le détail du journal. Le bilan chiffré est conservé. Cette action est définitive.</p>' +
+          (admin ? '<div class="row" style="margin-top:12px"><button class="ghost" id="clpurge"' + (C.passe ? '' : ' disabled') + ' style="color:var(--bad)">Supprimer les données des invités</button></div>' : '<p class="small muted">Réservée à un administrateur.</p>')) + '<p class="err" id="clerr"></p></div>';
+      var noter = function(){ $("clmsg").textContent = "Enregistrement"; api("admin-cloture", { op: "noter", rdv: $("clrdv").value, retours: $("clret").value, notes: $("clnot").value }, m.code).then(function(r){ $("clmsg").textContent = r.ok ? "Enregistré" : (r.detail || ""); setTimeout(function(){ if ($("clmsg")) $("clmsg").textContent = ""; }, 1800); }); };
+      $("clrdv").onchange = noter; $("clret").onchange = noter; $("clnot").onchange = noter;
+      pane.querySelectorAll("[data-clk]").forEach(function(c){ c.onchange = function(){ api("admin-cloture", { op: "cocher", k: c.dataset.clk, on: c.checked }, m.code).then(function(r){ if (r.ok) dessiner(r); }); }; });
+      if ($("clpurge")) $("clpurge").onclick = function(){
+        var restent = C.coches.filter(function(x){ return !x.ok; }).length;
+        var code = window.prompt((restent ? restent + " point(s) de la liste « Avant la suppression » ne sont pas cochés.\n\n" : "") + "Suppression définitive des données de " + B.invites + " invité(s). Retapez le code du mariage (" + m.code + ") pour confirmer.");
+        if (!code) return;
+        api("admin-cloture", { op: "purger", confirme: code }, m.code).then(function(r){ if (!r.ok) { $("clerr").textContent = r.detail || "Suppression impossible"; return; } dessiner(r); });
+      };
+      if ($("clclore")) $("clclore").onclick = function(){ api("admin-cloture", { op: "clore" }, m.code).then(function(r){ if (!r.ok) { $("clerr").textContent = r.detail; return; } location.hash = "#/m/" + m.code + "/7"; mariage(m.code, 7); }); };
+    };
+    pane.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-cloture", {}, m.code).then(function(r){ if (!r.ok) throw new Error(r.detail || "Chargement impossible"); dessiner(r); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
 
   /* ---------- espace mariés : le lien personnel du couple et son parcours ---------- */
