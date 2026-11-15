@@ -116,9 +116,15 @@
   .vues-c{ display:inline-flex; gap:4px; padding:4px; border-radius:24px; background:rgba(255,255,255,.7); border:1px solid var(--line); margin:16px 0 4px; }
   .vues-c button{ border:0; background:none; border-radius:20px; padding:9px 18px; font:500 13px Inter,sans-serif; color:inherit; cursor:pointer; }
   .vues-c button.on{ background:#1D1813; color:#fff; }
-  .pile-inv{ height:max(560px, calc(100dvh - 240px)); margin-top:12px; }
+  .pile-inv{ height:470px; margin-top:12px; }
   .pile-inv > .sc{ overflow-y:auto; overscroll-behavior:contain; text-align:left; }
-  .pile-inv > .sc.inv{ border:0; }
+  .pile-inv > .sc{ display:flex; flex-direction:column; }
+  .pile-inv .sub{ color:inherit !important; opacity:.72; }
+  .pile-inv .suivi{ background:rgba(255,255,255,.14); color:inherit; } .pile-inv .suivi.oui::before{ content:"● "; color:#7FC394; } .pile-inv .suivi.non::before{ content:"● "; color:#E08C7E; }
+  .pile-inv .k{ opacity:.7; }
+  .acc-c{ font:italic 400 18px/1.4 "Cormorant Garamond",Georgia,serif; margin:8px 0 0; }
+  .etat-c{ display:inline-block; font:600 11px Inter,sans-serif; letter-spacing:.08em; padding:6px 12px; border-radius:14px; background:rgba(255,255,255,.14); }
+  .etat-c.rouge{ background:rgba(196,84,68,.22); } .etat-c.vert{ background:rgba(95,158,115,.25); } .etat-c.orange{ background:rgba(212,176,122,.28); }
   .pile-inv .form{ margin-top:14px; }
   .suivi{ margin-top:8px; font-size:13px; padding:8px 12px; border-radius:14px; background:rgba(184,149,106,.12); display:inline-block; }
   .suivi.oui{ background:rgba(95,158,115,.14); color:#2F6B45; } .suivi.non{ background:rgba(155,59,46,.1); color:#8A3328; }
@@ -126,9 +132,9 @@
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
-<link rel="stylesheet" href="/espace-habillage.css?v=1.11.0">
-<link rel="stylesheet" href="/cartes.css?v=1.11.0">
-<script src="/cartes.js?v=1.11.0"></script>
+<link rel="stylesheet" href="/espace-habillage.css?v=1.11.1">
+<link rel="stylesheet" href="/cartes.css?v=1.11.1">
+<script src="/cartes.js?v=1.11.1"></script>
 </head>
 <body>
 <div class="page">
@@ -233,7 +239,7 @@
     "présents": { l: "Présents", cache: true, f: function(c){ return c.reponse && c.reponse.present; } },
     "absents": { l: "Absents", cache: true, f: function(c){ return c.reponse && !c.reponse.present; } }
   };
-  var VUE_C = "une", IDX_C = 0;
+  var VUE_C = "une", IDX_C = 0, FICHE_C = null;
   function listeVue(){
     var t = D.tuiles, m = D.mariage, total = t.completees.sur || 0, p = total ? t.completees.n / total : 0;
     var ep = (t.attendus.cotes || {}).epouse || 0, ex = (t.attendus.cotes || {}).epoux || 0, tot = Math.max(1, ep + ex);
@@ -301,11 +307,32 @@
     if (!list.length) { $("invites").innerHTML = '<div class="vide">Aucun invité ici.</div>'; return; }
     if (VUE_C === "une") {
       IDX_C = Math.max(0, Math.min(IDX_C, list.length - 1));
-      var tons = ["t-ivoire", "t-sable", "t-champagne", "t-ivoire"];
-      $("invites").innerHTML = '<div class="metap"><span class="hint">↔ Glissez d\'un invité à l\'autre</span><span id="icnt" style="opacity:.6"></span></div><div class="pile2 pile-inv" id="ipile">' +
-        list.map(function(c, k){ var col = couleur(c.etat); return '<div class="sc ' + tons[k % tons.length] + ' inv ' + col + '" data-id="' + c.id + '"><div class="k">' + esc(c.cercle ? c.cercle.l : "") + (c.cote ? " · côté " + esc(c.cote.toLowerCase()) : "") + '</div><div class="tete" style="margin-top:8px"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' + corps(c, true) + '</div>'; }).join("") +
-        '</div><div class="dots" id="idots"></div>';
-      YID.pileActive = YID.pile($("ipile"), { index: IDX_C, onChange: function(i, n){ IDX_C = i; $("icnt").textContent = (i + 1) + " / " + n; YID.points($("idots"), i, n); } });
+      var tons = ["t-espresso", "t-sable", "t-cacao", "t-ivoire", "t-champagne"];
+      var IC_T = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>', IC_W = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>';
+      $("invites").innerHTML = '<div class="metap"><span class="hint">↔ Glissez pour passer d\'un invité à l\'autre</span><span id="icnt" style="opacity:.6"></span></div><div class="pile2 pile-inv" id="ipile">' +
+        list.map(function(c, k){
+          var nom = c.nom || "Sans nom", ini = nom.split(/\s+/).filter(Boolean).slice(0, 2).map(function(x){ return x.charAt(0).toUpperCase(); }).join(""), num = String(c.numero || "").replace(/[^\d+]/g, "");
+          var sous = [c.cercle && c.cercle.rang < 8 ? c.cercle.l : "", c.cote ? "côté " + c.cote.toLowerCase() : "côté à préciser", c.lien, c.invitation].filter(Boolean).join(" · ");
+          var milieu = c.reponse || c.contact ? suivi(c) : c.accueil ? '<div class="k" style="margin-top:6px">Accueil sur son lien</div><p class="acc-c">' + esc(c.accueil) + '</p>' : '';
+          return '<div class="sc ' + tons[k % tons.length] + '" data-id="' + c.id + '">' +
+            '<div style="display:flex;align-items:center;gap:12px"><span class="ini">' + esc(ini || "·") + '</span><div style="min-width:0;flex:1"><div class="nomc">' + esc(nom) + '</div><div class="sub" style="font-size:12px;margin-top:4px">' + esc(sous) + '</div></div></div>' +
+            '<div style="margin-top:12px"><span class="etat-c ' + couleur(c.etat) + '">' + libelleEtat(c.etat) + '</span></div>' +
+            (c.manque.length ? '<div class="alerte">Il manque : ' + esc(c.manque.join(", ")) + '</div>' : '') +
+            (c.a_demander && c.a_demander.length ? '<p class="sub" style="font-size:12.5px;margin:10px 0 0">Nous le demanderons à l\'invité : ' + esc(c.a_demander.join(", ")) + '</p>' : '') +
+            '<div style="flex:1"></div>' + milieu +
+            '<div style="display:flex;align-items:center;gap:8px;margin-top:16px">' + (num ? '<a class="rond" href="tel:' + esc(num) + '" aria-label="Appeler">' + IC_T + '</a><a class="rond" href="https://wa.me/' + esc(num.replace(/^\+/, "")) + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + IC_W + '</a>' : '') +
+            '<span style="flex:1"></span><button type="button" class="lienbas" data-fiche="' + c.id + '">Fiche complète</button></div></div>'; }).join("") +
+        '</div><div class="dots" id="idots"></div><div style="margin-top:16px"><button type="button" class="cta or" id="icta"><span>Compléter la fiche</span></button></div>';
+      if (!$("ifiche")) { var vf = document.createElement("div"); vf.className = "voile-c"; vf.id = "ifiche"; vf.hidden = true; vf.innerHTML = '<div class="feuille" style="max-height:88vh;overflow:auto"><div class="grip"></div><div id="ifiche-c"></div><button type="button" class="lienbas" id="ifermer" style="margin:16px auto 0;display:block">Fermer</button></div>'; document.body.appendChild(vf); }
+      var ouvrirFiche = function(id){ var c = list.filter(function(x){ return x.id === id; })[0] || D.contacts.filter(function(x){ return x.id === id; })[0]; if (!c) return; FICHE_C = id; $("ifiche-c").innerHTML = '<h3 style="margin:6px 0 2px">' + esc(c.nom || "Sans nom") + '</h3><p class="small muted" style="margin:0 0 6px">' + esc([c.cercle ? c.cercle.l : "", c.numero].filter(Boolean).join(" · ")) + '</p>' + formulaire(c); $("ifiche").hidden = false; lierForms($("ifiche-c")); };
+      var fermerFiche = function(){ $("ifiche").hidden = true; FICHE_C = null; };
+      $("ifermer").onclick = fermerFiche; $("ifiche").onclick = function(e){ if (e.target === $("ifiche")) fermerFiche(); };
+      if (FICHE_C && !$("ifiche").hidden && !OCCUPE) ouvrirFiche(FICHE_C);
+      $("invites").querySelectorAll("[data-fiche]").forEach(function(b){ b.onclick = function(){ ouvrirFiche(+b.dataset.fiche); }; });
+      var majC = function(){ var c = list[IDX_C], b = $("icta").querySelector("span"); if (!c) return; b.textContent = c.etat === "à compléter" ? "Compléter la fiche" : IDX_C < list.length - 1 ? "Invité suivant" : "Revoir la fiche"; };
+      var PI = YID.pileActive = YID.pile($("ipile"), { index: IDX_C, onChange: function(i, n){ IDX_C = i; $("icnt").textContent = (i + 1) + " / " + n; YID.points($("idots"), i, n); majC(); } });
+      $("icta").onclick = function(){ var c = list[IDX_C]; if (!c) return; if (c.etat === "à compléter" || IDX_C === list.length - 1) ouvrirFiche(c.id); else PI.suivante(); };
+      return;
     } else {
       var prec = null;
       $("invites").innerHTML = list.map(function(c){
@@ -314,7 +341,10 @@
       }).join("");
     }
     $("invites").querySelectorAll("[data-ouvre]").forEach(function(el){ el.onclick = function(){ var id = el.dataset.ouvre; OUVERT[id] = !OUVERT[id]; invites(); }; });
-    $("invites").querySelectorAll("[data-form]").forEach(function(f){
+    lierForms($("invites"));
+  }
+  function lierForms(root){
+    root.querySelectorAll("[data-form]").forEach(function(f){
       var id = +f.dataset.form, msg = f.querySelector("[data-msg]");
       var envoyer = function(champs){ OCCUPE = true; msg.className = "msg"; msg.textContent = "Enregistrement"; api("espace-qualifier", { id: id, champs: champs }).then(function(r){ D = r; OCCUPE = false; rafraichir(); var m2 = document.querySelector('[data-msg="' + id + '"]'); if (m2) m2.textContent = "Enregistré"; }).catch(function(e){ OCCUPE = false; msg.className = "msg err"; msg.textContent = e.message; }); };
       f.querySelectorAll("[data-c]").forEach(function(el){ el.onchange = function(){ var ch = {}; ch[el.dataset.c] = el.value === "" && el.dataset.c === "nb_enfants" ? null : el.value; envoyer(ch); }; el.onfocus = function(){ OCCUPE = true; }; el.onblur = function(){ setTimeout(function(){ OCCUPE = false; }, 400); }; });
