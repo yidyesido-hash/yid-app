@@ -194,3 +194,27 @@ details.card summary{ cursor:pointer; } details.card input{ width:100%; box-sizi
 .pl-a .ch{ background:#1D1813; color:#fff; } .pl-a .ch.sel{ background:#5F9E73 !important; color:#fff !important; }
 .contact .cases-c span{ display:block; overflow-wrap:normal; word-break:keep-all; font-size:10.5px; line-height:1.3; }
 @media (max-width:420px){ .card .contact .cases-c[style*="repeat(4"]{ grid-template-columns:repeat(2,1fr) !important; } }
+/* tablette jour J */
+.tab-j{ max-width:900px; margin:0 auto; } .tab-tete{ display:flex; align-items:center; gap:10px; } .tab-compte{ margin-left:auto; font-size:14px; } .tab-compte b{ font:500 24px/1 "Cormorant Garamond",Georgia,serif; }
+.tab-vues{ margin:12px 0 14px; } .tab-q{ width:100%; box-sizing:border-box; min-height:56px; font-size:18px !important; border-radius:28px; padding:0 22px; }
+.tab-l{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; margin-top:8px; padding:14px 18px; border-radius:20px; border:1px solid rgba(127,112,98,.2); background:rgba(255,255,255,.7); color:inherit; font:inherit; text-transform:none; letter-spacing:0; cursor:pointer; min-height:64px; box-shadow:none; }
+.tab-l .tab-n{ flex:1; min-width:0; display:flex; flex-direction:column; } .tab-l.ok{ opacity:.6; } .tab-t{ font:500 22px/1 "Cormorant Garamond",Georgia,serif; white-space:nowrap; } .tab-ok{ color:#5F9E73; font-size:20px; }
+.tab-voile{ position:fixed; inset:0; z-index:200; background:rgba(20,16,12,.45); display:flex; align-items:flex-end; justify-content:center; }
+.tab-feuille{ position:relative; width:min(640px,100%); max-height:90vh; overflow:auto; background:var(--bg,#FAF7F2); border-radius:28px 28px 0 0; padding:24px 22px 30px; box-sizing:border-box; }
+.tab-x{ position:absolute; top:14px; right:14px; width:42px; height:42px; min-height:0; border-radius:21px; border:0; background:rgba(127,112,98,.15); font:400 24px/1 Inter,sans-serif; color:inherit; padding:0; cursor:pointer; z-index:3; }
+.tab-grande{ font:500 38px/1.05 "Cormorant Garamond",Georgia,serif; color:#B8955F; margin-top:6px; }
+.tab-inf{ display:grid; gap:2px; margin-top:14px; } .tab-inf > div{ display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid rgba(127,112,98,.2); font-size:14px; } .tab-inf b{ text-align:right; font-weight:600; }
+.tab-act{ display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; } .tab-act .cta{ flex:1 1 100%; } .tab-feuille select{ width:100%; margin-top:6px; }
+.tab-scan{ position:relative; border-radius:24px; overflow:hidden; background:#000; aspect-ratio:4/3; } .tab-scan video{ width:100%; height:100%; object-fit:cover; display:block; }
+.tab-viseur{ position:absolute; inset:18% 22%; border:3px solid rgba(232,201,143,.9); border-radius:22px; box-shadow:0 0 0 999px rgba(0,0,0,.25); }
+.tab-res{ margin-top:12px; padding:16px 18px; border-radius:20px; min-height:20px; } .tab-res:empty{ display:none; } .tab-res.ok{ background:rgba(95,158,115,.16); } .tab-res.deja{ background:rgba(212,176,122,.2); } .tab-res.ko{ background:rgba(180,71,58,.14); }
+.tab-plan-o{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.tab-svg{ width:100%; aspect-ratio:1; max-height:72vh; background:#FBF8F3; border-radius:22px; border:1px solid rgba(127,112,98,.2); touch-action:none; }
+.tab-svg .salle{ fill:none; stroke:rgba(127,112,98,.3); stroke-width:.3; }
+.tab-svg .tb-t circle{ fill:#F3ECE1; stroke:#CDB89A; stroke-width:.35; } .tab-svg .tb-t text, .tab-svg .tb-acc text{ font:600 2.6px Inter,sans-serif; text-anchor:middle; fill:#3A2E24; pointer-events:none; }
+.tab-svg .tb-t.cible circle{ fill:#D4B07A; stroke:#B8955F; } .tab-svg .tb-t.trop circle{ stroke:#B4473A; stroke-width:.6; } .tab-svg .tb-t{ cursor:pointer; }
+.tab-svg .tb-acc rect{ fill:#1D1813; } .tab-svg .tb-acc text{ fill:#fff; font-size:2px; }
+.tab-svg .chemin{ fill:none; stroke:#D4B07A; stroke-width:1; stroke-dasharray:2 1.2; stroke-linecap:round; animation:tbch 1.2s linear infinite; } @keyframes tbch{ to{ stroke-dashoffset:-3.2; } }
+.tab-3d{ position:fixed; inset:0; z-index:300; background:#15110d; } .tab-3d canvas{ display:block; } .tab-3d-t{ position:absolute; left:20px; top:18px; color:#fff; display:flex; flex-direction:column; gap:2px; } .tab-3d-t b{ font:500 30px/1 "Cormorant Garamond",Georgia,serif; color:#E8C98F; }
+.tab-3d-r{ position:absolute; left:50%; bottom:28px; transform:translateX(-50%); } .tab-3d-msg{ position:absolute; inset:auto 0 50% 0; text-align:center; color:#E8DCCB; }
+@media (min-width:900px){ .tab-voile{ align-items:center; } .tab-feuille{ border-radius:28px; } }

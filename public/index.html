@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.12.1">
-<link rel="stylesheet" href="/cartes.css?v=1.12.1">
-<script src="/cartes.js?v=1.12.1"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.16.0">
+<link rel="stylesheet" href="/cartes.css?v=1.16.0">
+<script src="/cartes.js?v=1.16.0"></script>
 </head>
 <body>
 <header>
@@ -319,7 +319,7 @@
     var envoyer = function(corps){ return api("admin-plan", corps, m.code).then(function(r){ if (!r.ok) { $("plmsg").textContent = r.detail; return; } dessinerPlan(m, pane, r); }); };
     var nomT = {}; R.tables.forEach(function(t){ nomT[t.id] = t.nom; });
     var h = '<div class="card"><h3>6. Plan de table et jour J</h3><div class="contact"><div class="cases-c" style="grid-template-columns:repeat(4,1fr)"><div class="verre"><b>' + R.foyers.length + '</b><span>foyers présents</span></div><div class="verre"><b>' + R.personnes + '</b><span>personnes</span></div><div class="verre"><b>' + R.tables.length + '</b><span>tables</span></div><div class="verre' + (R.a_placer ? ' plein' : '') + '"><b>' + R.a_placer + '</b><span>à placer</span></div></div></div>' +
-      '<div class="vues" style="margin-top:6px"><button type="button" data-plm="plan" class="' + (PL_MODE === "plan" ? "on" : "") + '">Plan de table</button><button type="button" data-plm="jourj" class="' + (PL_MODE === "jourj" ? "on" : "") + '">Accueil jour J</button></div></div><p class="err" id="plmsg">' + esc(msg || "") + '</p>';
+      '<p style="margin:4px 0 10px"><a class="lienbas" href="#/m/' + m.code + '/accueil">Tablette du jour J : rechercher, scanner, plan, parcours 3D</a></p><div class="vues" style="margin-top:6px"><button type="button" data-plm="plan" class="' + (PL_MODE === "plan" ? "on" : "") + '">Plan de table</button><button type="button" data-plm="jourj" class="' + (PL_MODE === "jourj" ? "on" : "") + '">Accueil jour J</button></div></div><p class="err" id="plmsg">' + esc(msg || "") + '</p>';
     if (!R.foyers.length) h += '<div class="card"><p class="muted" style="margin:0">Le plan se construit avec les invités qui ont confirmé leur présence sur leur lien personnel. Aucune confirmation pour l\'instant.</p></div>';
     if (PL_MODE === "plan") {
       var aPlacer = R.foyers.filter(function(f){ return !f.table || !nomT[f.table]; }), prec = null;
@@ -333,7 +333,7 @@
         '<p class="small muted" style="margin:10px 0 0">Régénérer les tables retire les placements des tables qui disparaissent.</p></details>';
     } else {
       var q = PL_Q.toLowerCase(), L = R.foyers.filter(function(f){ return !q || f.nom.toLowerCase().indexOf(q) >= 0 || (f.accompagnant || "").toLowerCase().indexOf(q) >= 0; });
-      h += '<div class="card"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + R.arrives + ' / ' + R.personnes + ' personnes accueillies</b><a class="lienbas" href="#/m/' + m.code + '/accueil">Plein écran</a></div><input id="plq" placeholder="Rechercher un invité ou son accompagnant" value="' + esc(PL_Q) + '" style="width:100%;box-sizing:border-box;margin-top:12px" autocomplete="off"></div>' +
+      h += '<div class="card"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + R.arrives + ' / ' + R.personnes + ' personnes accueillies</b><a class="lienbas" href="#/m/' + m.code + '/accueil">Ouvrir la tablette</a></div><input id="plq" placeholder="Rechercher un invité ou son accompagnant" value="' + esc(PL_Q) + '" style="width:100%;box-sizing:border-box;margin-top:12px" autocomplete="off"></div>' +
         L.map(function(f){ return '<div class="card pl-a' + (f.arrive ? ' ok' : '') + '"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><b>' + esc(f.nom) + '</b><div class="small muted">' + (f.personnes > 1 ? f.personnes + ' personnes' + (f.accompagnant ? ', avec ' + esc(f.accompagnant) : '') + (f.enfants.length ? ', ' + esc(f.enfants.join(", ")) : '') : '1 personne') + '</div></div><div class="pl-tab">' + esc(nomT[f.table] || "sans table") + '</div><button type="button" class="ch' + (f.arrive ? ' sel' : '') + '" data-plar="' + f.id + '" data-on="' + (f.arrive ? 0 : 1) + '">' + (f.arrive ? "✓ Arrivé" : "Accueillir") + '</button></div></div>'; }).join("");
     }
     pane.innerHTML = h;
@@ -349,11 +349,141 @@
       envoyer({ op: "tables", tables: t }); };
     if ($("plsave")) $("plsave").onclick = function(){ var t = R.tables.map(function(x){ return { id: x.id, nom: (pane.querySelector('[data-tid="' + x.id + '"][data-k="nom"]') || {}).value, places: (pane.querySelector('[data-tid="' + x.id + '"][data-k="places"]') || {}).value }; }); envoyer({ op: "tables", tables: t }); };
   }
-  /* l'accueil jour J en plein écran, pour l'équipe sur place */
+  /* ---------- la tablette du jour J (M40) : retrouver, scanner, plan vu du dessus, parcours 3D ---------- */
+  var TB = { onglet: "chercher", q: "", sel: null, edit: false, R: null, m: null, flux: null, pause: false };
   function accueilJourJ(code){
     V.innerHTML = '<p class="muted">Chargement</p>';
-    api("admin-mariage", {}, code).then(function(r){ var m = r.mariage; PL_MODE = "jourj"; V.innerHTML = '<div class="msgr"><a href="#/m/' + code + '/6" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><div id="jjpane" style="margin-top:10px"></div></div>'; planEtape(m, $("jjpane")); });
+    Promise.all([api("admin-mariage", {}, code), api("admin-plan", {}, code)]).then(function(r){ TB.m = r[0].mariage; TB.R = r[1]; tablette(); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
+  function tbRecharger(R){ if (R && R.foyers) TB.R = R; tablette(); }
+  function tbEnvoyer(corps){ return api("admin-plan", corps, TB.m.code).then(function(r){ if (!r.ok) { window.alert(r.detail || "Action impossible"); return r; } TB.R = r; return r; }); }
+  function tbTable(id){ return (TB.R.tables || []).filter(function(t){ return t.id === id; })[0] || null; }
+  function tablette(){
+    var R = TB.R, m = TB.m; tbStopScan();
+    var ONG = [["chercher", "Rechercher"], ["scanner", "Scanner"], ["plan", "Plan"]];
+    V.innerHTML = '<div class="tab-j"><div class="tab-tete"><a href="#/m/' + m.code + '/6" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><div class="tab-compte"><b>' + R.arrives + '</b> / ' + R.personnes + ' accueillis</div></div>' +
+      '<div class="vues tab-vues">' + ONG.map(function(o){ return '<button type="button" data-tbo="' + o[0] + '" class="' + (TB.onglet === o[0] ? "on" : "") + '">' + o[1] + '</button>'; }).join("") + '</div><div id="tbc"></div></div><div id="tbfiche"></div>';
+    V.querySelectorAll("[data-tbo]").forEach(function(b){ b.onclick = function(){ TB.onglet = b.dataset.tbo; TB.edit = false; tablette(); }; });
+    if (TB.onglet === "chercher") tbChercher(); else if (TB.onglet === "scanner") tbScanner(); else tbPlan();
+    if (TB.sel) tbFiche(TB.sel);
+  }
+  function tbChercher(){
+    var R = TB.R, C = $("tbc");
+    C.innerHTML = '<input id="tbq" class="tab-q" placeholder="Nom de l\'invité ou de son accompagnant" value="' + esc(TB.q) + '" autocomplete="off"><div id="tbl"></div>';
+    var liste = function(){ var q = TB.q.toLowerCase(), L = R.foyers.filter(function(f){ return !q || f.nom.toLowerCase().indexOf(q) >= 0 || (f.accompagnant || "").toLowerCase().indexOf(q) >= 0; });
+      $("tbl").innerHTML = L.map(function(f){ var t = tbTable(f.table); return '<button type="button" class="tab-l' + (f.arrive ? ' ok' : '') + '" data-tbf="' + f.id + '"><span class="tab-n"><b>' + esc(f.nom) + '</b><span class="small muted">' + f.personnes + ' pers.' + (f.accompagnant ? ' · avec ' + esc(f.accompagnant) : '') + '</span></span><span class="tab-t">' + esc(t ? t.nom : "sans table") + '</span>' + (f.arrive ? '<span class="tab-ok">✓</span>' : '') + '</button>'; }).join("") || '<p class="muted">Aucun invité ne correspond.</p>';
+      $("tbl").querySelectorAll("[data-tbf]").forEach(function(b){ b.onclick = function(){ TB.sel = +b.dataset.tbf; tbFiche(TB.sel); }; }); };
+    $("tbq").oninput = function(){ TB.q = this.value; liste(); }; liste();
+  }
+  function tbFiche(id){
+    var f = TB.R.foyers.filter(function(x){ return x.id === id; })[0], F = $("tbfiche"); if (!f || !F) return;
+    var t = tbTable(f.table);
+    F.innerHTML = '<div class="tab-voile"><div class="tab-feuille"><button type="button" class="tab-x" id="tbx">×</button><div class="k">' + esc((f.cercle && f.cercle.l) || "") + '</div><h2 style="margin:6px 0 4px">' + esc(f.nom) + '</h2>' +
+      '<div class="tab-grande">' + esc(t ? t.nom : "Sans table") + '</div>' +
+      '<div class="tab-inf">' + [[f.personnes + " personne" + (f.personnes > 1 ? "s" : ""), (f.accompagnant ? "avec " + f.accompagnant : "") + (f.enfants.length ? (f.accompagnant ? ", " : "") + "enfants : " + f.enfants.join(", ") : "")], ["Hébergement", f.hebergement], ["Arrivée", f.arrivee], ["Un mot", f.mot], ["Téléphone", f.numero]].filter(function(x){ return x[1] || x[0].indexOf("personne") >= 0; }).map(function(x){ return '<div><span class="sub">' + esc(x[0]) + '</span><b>' + esc(x[1] || "") + '</b></div>'; }).join("") + '</div>' +
+      (f.arrive ? '<p class="small" style="color:#2F6B45;margin:12px 0 0">Accueilli' + (f.arrive.le ? ' à ' + new Date(f.arrive.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : '') + (f.arrive.par ? ' par ' + esc(f.arrive.par) : '') + '</p>' : '') +
+      '<div class="tab-act"><button type="button" class="cta or" id="tbarr"><span>' + (f.arrive ? "Annuler l'accueil" : "Accueillir") + '</span></button>' +
+      (t ? '<button type="button" class="petit" id="tbvoir">Voir sur le plan</button><button type="button" class="petit" id="tb3d">Parcours 3D</button>' : '') + '</div>' +
+      '<label class="small muted" style="display:block;margin-top:14px">Placer ou changer de table</label><select id="tbch"><option value="">Sans table</option>' + TB.R.tables.map(function(x){ return '<option value="' + x.id + '"' + (x.id === f.table ? ' selected' : '') + '>' + esc(x.nom) + ' (' + x.occupees + (x.places ? '/' + x.places : '') + ')</option>'; }).join("") + '</select></div></div>';
+    $("tbx").onclick = function(){ TB.sel = null; F.innerHTML = ""; };
+    F.querySelector(".tab-voile").onclick = function(e){ if (e.target.classList.contains("tab-voile")) { TB.sel = null; F.innerHTML = ""; } };
+    $("tbarr").onclick = function(){ this.disabled = true; tbEnvoyer({ op: "arrive", contact: f.id, on: !f.arrive }).then(function(){ tablette(); }); };
+    $("tbch").onchange = function(){ tbEnvoyer({ op: "placer", contact: f.id, table: this.value || null }).then(function(){ tablette(); }); };
+    if ($("tbvoir")) $("tbvoir").onclick = function(){ TB.onglet = "plan"; TB.cible = f.table; TB.sel = null; tablette(); };
+    if ($("tb3d")) $("tb3d").onclick = function(){ tb3D(f.table, f.nom); };
+  }
+  /* ---- le scan des pass ---- */
+  function tbStopScan(){ if (TB.flux) { TB.flux.getTracks().forEach(function(t){ t.stop(); }); TB.flux = null; } TB.scanActif = false; }
+  function tbScanner(){
+    var C = $("tbc");
+    C.innerHTML = '<div class="tab-scan"><video id="tbv" playsinline muted></video><div class="tab-viseur"></div></div><div id="tbres" class="tab-res"></div><div style="display:flex;gap:8px;margin-top:12px"><input id="tbman" placeholder="Ou saisir le code du pass" style="flex:1"><button type="button" class="petit" id="tbmanb">Vérifier</button></div><p class="small muted" id="tbinfo" style="margin-top:8px"></p>';
+    var traiter = function(texte){ if (TB.pause) return; TB.pause = true;
+      api("admin-plan", { op: "scan", texte: texte }, TB.m.code).then(function(r){ if (r.foyers) TB.R = r; var s = r.scan || { statut: "inconnu" }, f = s.id && TB.R.foyers.filter(function(x){ return x.id === s.id; })[0], t = f && tbTable(f.table);
+        var M = { ok: ["ok", "Bienvenue " + (s.nom || ""), t ? t.nom : "Sans table"], deja: ["deja", "Déjà accueilli : " + (s.nom || ""), "à " + (s.le ? new Date(s.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "") + (s.par ? " par " + s.par : "")], absent: ["ko", s.nom + " n'a pas confirmé sa présence", "Vérifier avec le couple"], inconnu: ["ko", "Pass inconnu pour ce mariage", "Rechercher l'invité par son nom"] }[s.statut];
+        $("tbres").className = "tab-res " + M[0]; $("tbres").innerHTML = '<b>' + esc(M[1]) + '</b><div class="tab-grande" style="margin-top:4px">' + esc(M[2]) + '</div>' + (s.id ? '<button type="button" class="petit" id="tbouvre" style="margin-top:10px">Ouvrir sa fiche</button>' : '');
+        if ($("tbouvre")) $("tbouvre").onclick = function(){ TB.sel = s.id; tbFiche(s.id); };
+        if (navigator.vibrate) navigator.vibrate(s.statut === "ok" ? 80 : [60, 60, 60]);
+        document.querySelector(".tab-compte").innerHTML = '<b>' + TB.R.arrives + '</b> / ' + TB.R.personnes + ' accueillis';
+        setTimeout(function(){ TB.pause = false; }, 2500); }); };
+    $("tbmanb").onclick = function(){ var v = $("tbman").value.trim(); if (v) { TB.pause = false; traiter(v); } };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $("tbinfo").textContent = "L'appareil photo n'est pas accessible sur cet appareil : saisissez le code."; return; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false }).then(function(fl){
+      TB.flux = fl; TB.scanActif = true; var v = $("tbv"); v.srcObject = fl; v.play();
+      var lire = function(det){ var cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
+        var tour = function(){ if (!TB.scanActif || !$("tbv")) return;
+          if (v.readyState >= 2 && !TB.pause) {
+            if (det) det.detect(v).then(function(c){ if (c && c[0]) traiter(c[0].rawValue); }).catch(function(){});
+            else if (window.jsQR) { cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0); var d = cx.getImageData(0, 0, cv.width, cv.height), q = window.jsQR(d.data, d.width, d.height); if (q && q.data) traiter(q.data); }
+          }
+          setTimeout(tour, 250); };
+        tour(); };
+      if ("BarcodeDetector" in window) { try { lire(new window.BarcodeDetector({ formats: ["qr_code"] })); return; } catch (e) {} }
+      var sc = document.createElement("script"); sc.src = "/vendor/jsQR.js"; sc.onload = function(){ lire(null); }; sc.onerror = function(){ $("tbinfo").textContent = "Lecture automatique indisponible : saisissez le code."; }; document.head.appendChild(sc);
+    }).catch(function(){ $("tbinfo").textContent = "Autorisez l'appareil photo pour scanner les pass, ou saisissez le code."; });
+  }
+  /* ---- le plan vu du dessus, et la disposition de la salle ---- */
+  function tbPlan(){
+    var R = TB.R, C = $("tbc"), cible = TB.cible, a = R.accueil || { x: 50, y: 94 }, ct = cible && tbTable(cible);
+    C.innerHTML = '<div class="tab-plan-o"><span class="small muted" style="flex:1">' + (TB.edit ? "Faites glisser les tables et le point d'accueil, puis enregistrez." : ct ? "Le chemin mène à " + esc(ct.nom) + "." : "Touchez une table pour voir qui y est.") + '</span>' + (TB.edit ? '<button type="button" class="petit" id="tbsave">Enregistrer</button>' : '<button type="button" class="petit ghost" id="tbedit">Disposer la salle</button>') + (ct && !TB.edit ? '<button type="button" class="petit" id="tb3dp">Parcours 3D</button>' : '') + '</div>' +
+      '<svg id="tbsvg" class="tab-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"><rect x="1" y="1" width="98" height="98" rx="3" class="salle"/>' +
+      (ct && !TB.edit ? '<path d="M' + tbChemin(a, ct, R.tables).map(function(q){ return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + '" class="chemin"/>' : '') +
+      R.tables.map(function(t){ return '<g class="tb-t' + (t.id === cible ? ' cible' : '') + (t.trop ? ' trop' : '') + '" data-tbt="' + t.id + '" transform="translate(' + t.x + ' ' + t.y + ')"><circle r="5.2"/><text y="1.2">' + esc(t.nom.replace(/^Table\s+/i, "")) + '</text></g>'; }).join("") +
+      '<g class="tb-acc" data-tbacc="1" transform="translate(' + a.x + ' ' + a.y + ')"><rect x="-5" y="-2.2" width="10" height="4.4" rx="2.2"/><text y="1">Accueil</text></g></svg><div id="tbtab"></div>';
+    if ($("tbedit")) $("tbedit").onclick = function(){ TB.edit = true; tbPlan(); };
+    if ($("tb3dp")) $("tb3dp").onclick = function(){ tb3D(cible, ""); };
+    var svg = $("tbsvg"), pt = function(e){ var r = svg.getBoundingClientRect(), s = Math.min(r.width, r.height), ox = (r.width - s) / 2, oy = (r.height - s) / 2; return { x: Math.max(3, Math.min(97, (e.clientX - r.left - ox) / s * 100)), y: Math.max(3, Math.min(97, (e.clientY - r.top - oy) / s * 100)) }; };
+    if (TB.edit) {
+      var pos = {}, acc = { x: a.x, y: a.y }, glisse = null;
+      svg.querySelectorAll("[data-tbt],[data-tbacc]").forEach(function(g){ g.style.cursor = "grab"; g.onpointerdown = function(e){ glisse = g; g.setPointerCapture(e.pointerId); e.preventDefault(); };
+        g.onpointermove = function(e){ if (glisse !== g) return; var p = pt(e); g.setAttribute("transform", "translate(" + p.x.toFixed(1) + " " + p.y.toFixed(1) + ")"); if (g.dataset.tbt) pos[g.dataset.tbt] = p; else acc = p; };
+        g.onpointerup = function(){ glisse = null; }; });
+      $("tbsave").onclick = function(){ tbEnvoyer({ op: "disposer", positions: pos, accueil: acc }).then(function(){ TB.edit = false; tbPlan(); }); };
+    } else svg.querySelectorAll("[data-tbt]").forEach(function(g){ g.onclick = function(){ TB.cible = g.dataset.tbt; var t = tbTable(TB.cible), ici = R.foyers.filter(function(f){ return f.table === t.id; });
+      tbPlan(); $("tbtab").innerHTML = '<div class="card" style="margin-top:12px"><b>' + esc(t.nom) + '</b> <span class="small muted">' + t.occupees + (t.places ? ' / ' + t.places : '') + ' places</span><div style="margin-top:8px">' + (ici.map(function(f){ return '<button type="button" class="ch" data-tbf="' + f.id + '">' + esc(f.nom) + (f.arrive ? ' ✓' : '') + '</button>'; }).join("") || '<span class="small muted">Personne pour l\'instant.</span>') + '</div></div>';
+      $("tbtab").querySelectorAll("[data-tbf]").forEach(function(b){ b.onclick = function(){ TB.sel = +b.dataset.tbf; tbFiche(TB.sel); }; }); }; });
+  }
+  /* le chemin passe par les allées : une allée verticale libre, puis l'allée devant la table */
+  function tbChemin(a, t, tables){
+    var autres = tables.filter(function(x){ return x.id !== t.id; }), libreX = function(x, y1, y2){ return !autres.some(function(o){ return Math.abs(o.x - x) < 6.8 && o.y > Math.min(y1, y2) - 6.8 && o.y < Math.max(y1, y2) + 6.8; }); };
+    var dy = a.y >= t.y ? 1 : -1, yF = null;
+    for (var d = 7; d < 40 && yF == null; d += 0.5) { var y = t.y + dy * d; if (!autres.some(function(o){ return Math.abs(o.y - y) < 6.8 && o.x > Math.min(t.x, a.x) - 20 && o.x < Math.max(t.x, a.x) + 20 && Math.abs(o.x - t.x) < 40; })) yF = y; }
+    if (yF == null) yF = t.y + dy * 9;
+    var lane = a.x; for (var k = 0; k < 50; k++) { if (libreX(a.x + k, a.y, yF)) { lane = a.x + k; break; } if (libreX(a.x - k, a.y, yF)) { lane = a.x - k; break; } }
+    return [[a.x, a.y], [lane, a.y - dy * 0.01], [lane, yF], [t.x, yF], [t.x, t.y + dy * 5.4]];
+  }
+  /* ---- le parcours 3D : le chemin doré de l'accueil à la table, la caméra qui accompagne, le halo à l'arrivée ---- */
+  function tb3D(tableId, nom){
+    var R = TB.R, t = tbTable(tableId), a = R.accueil || { x: 50, y: 94 }; if (!t) return;
+    var ov = document.createElement("div"); ov.className = "tab-3d"; ov.innerHTML = '<div class="tab-3d-t"><b>' + esc(t.nom) + '</b>' + (nom ? '<span class="small">' + esc(nom) + '</span>' : '') + '</div><button type="button" class="tab-x" style="color:#fff">×</button><button type="button" class="petit tab-3d-r">Revoir</button><p class="tab-3d-msg small">Chargement de la vue 3D</p>';
+    document.body.appendChild(ov); var arret = false;
+    ov.querySelector(".tab-x").onclick = function(){ arret = true; ov.remove(); };
+    import("/vendor/three.module.min.js").then(function(THREE){
+      ov.querySelector(".tab-3d-msg").remove();
+      var W = ov.clientWidth, H = ov.clientHeight, r = new THREE.WebGLRenderer({ antialias: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio)); r.setSize(W, H); r.setClearColor(0x15110d); ov.insertBefore(r.domElement, ov.firstChild);
+      var sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(55, W / H, 0.1, 400); sc.fog = new THREE.Fog(0x15110d, 60, 160);
+      sc.add(new THREE.HemisphereLight(0xfff3e0, 0x2a2018, 0.9)); var dl = new THREE.DirectionalLight(0xffe6c0, 0.8); dl.position.set(20, 60, 30); sc.add(dl);
+      var X = function(v){ return (v - 50) * 1.2; }, sol = new THREE.Mesh(new THREE.PlaneGeometry(130, 130), new THREE.MeshStandardMaterial({ color: 0x3a2e24, roughness: .9 })); sol.rotation.x = -Math.PI / 2; sc.add(sol);
+      var nappe = new THREE.MeshStandardMaterial({ color: 0xf3ece1, roughness: .7 }), or = new THREE.MeshStandardMaterial({ color: 0xd4b07a, emissive: 0x6b4c1e, roughness: .4, metalness: .3 });
+      R.tables.forEach(function(x){ var m = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.8, 40), x.id === t.id ? or : nappe); m.position.set(X(x.x), 1.6, X(x.y)); sc.add(m);
+        var pied = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0x5a4636 })); pied.position.set(X(x.x), 0.8, X(x.y)); sc.add(pied);
+        for (var k = 0; k < 8; k++) { var ch = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.4, 1.1), new THREE.MeshStandardMaterial({ color: 0xe8dccb })); var an = k / 8 * Math.PI * 2; ch.position.set(X(x.x) + Math.cos(an) * 5.8, 0.7, X(x.y) + Math.sin(an) * 5.8); sc.add(ch); } });
+      var pts = tbChemin(a, t, R.tables).filter(function(q, i, L){ return !i || Math.hypot(q[0] - L[i - 1][0], q[1] - L[i - 1][1]) > 0.5; }).map(function(p){ return new THREE.Vector3(X(p[0]), 0.15, X(p[1])); });
+      var courbe = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.05), tube = new THREE.TubeGeometry(courbe, 200, 0.35, 8, false), chem = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: 0xe8c98f }));
+      sc.add(chem); var total = tube.index.count;
+      var halo = new THREE.Mesh(new THREE.RingGeometry(5.6, 6.6, 64), new THREE.MeshBasicMaterial({ color: 0xffd99a, transparent: true, opacity: 0, side: THREE.DoubleSide })); halo.rotation.x = -Math.PI / 2; halo.position.set(X(t.x), 0.2, X(t.y)); sc.add(halo);
+      var t0 = performance.now(), D = 5200;
+      ov.querySelector(".tab-3d-r").onclick = function(){ t0 = performance.now(); };
+      var boucle = function(now){ if (arret) { r.dispose(); return; }
+        var k = Math.min(1, (now - t0) / D), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        tube.setDrawRange(0, Math.floor(total * e / 3) * 3);
+        var p = courbe.getPointAt(Math.min(.999, e)), q = courbe.getPointAt(Math.min(1, e + .02));
+        cam.position.lerp(new THREE.Vector3(p.x - (q.x - p.x) * 6, 30, p.z - (q.z - p.z) * 6 + 18), .06); cam.lookAt(new THREE.Vector3(q.x, 0, q.z));
+        halo.material.opacity = k >= 1 ? .5 + .4 * Math.sin(now / 300) : 0; halo.scale.setScalar(k >= 1 ? 1 + .06 * Math.sin(now / 300) : 1);
+        r.render(sc, cam); requestAnimationFrame(boucle); };
+      requestAnimationFrame(boucle);
+    }).catch(function(){ var mm = ov.querySelector(".tab-3d-msg"); if (mm) mm.textContent = "La vue 3D n'a pas pu se charger sur cet appareil. Le plan vu du dessus reste disponible."; });
+  }
+
 
   /* ---------- étape 5 : séjour et logistique ---------- */
   function logistiqueEtape(m, pane){

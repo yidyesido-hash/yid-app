@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.15.0, base locale");
+  console.log("Recette yid-app v1.16.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -612,6 +612,28 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("plan : supprimer une table libère ses invités", r.json.foyers.find(x => x.id === f[0].id).table === null);
     const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 20 }, H)).json.journal || [];
     check("jour J : l'accueil est au journal", j.some(x => x.operation === "Jour J"));
+  }
+
+  /* 1.16.0 : la tablette du jour J, pass et scan */
+  {
+    const P = (b) => call("POST", "/api/forms?action=admin-plan&w=AC27", b || {}, H);
+    let r = await P();
+    const f = r.json.foyers.find(x => !x.arrive), jt = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === f.id).jeton;
+    let pg = await call("GET", "/api/forms?action=pass&yid=" + jt);
+    check("pass : un invité présent a son QR code", pg.status === 200);
+    pg = await call("GET", "/api/forms?action=pass&yid=abcdefghjkmn");
+    check("pass : un jeton inconnu n'a pas de pass", pg.status === 404);
+    r = await P({ op: "scan", texte: "https://exemple.squarespace.com/?yid=" + jt });
+    check("scan : le pass d'un invité présent l'accueille", r.json.scan.statut === "ok" && r.json.foyers.find(x => x.id === f.id).arrive);
+    r = await P({ op: "scan", texte: "YID:" + jt });
+    check("scan : un pass scanné deux fois le signale, avec l'heure et l'employé", r.json.scan.statut === "deja" && r.json.scan.par);
+    r = await P({ op: "scan", texte: "n'importe quoi" });
+    check("scan : un code inconnu est refusé", r.json.scan.statut === "inconnu");
+    r = await P({ op: "tables", tables: [{ nom: "Table A", places: 8 }, { nom: "Table B", places: 8 }] });
+    const tA = r.json.tables[0];
+    check("plan : chaque table reçoit une place dans la salle", r.json.tables.every(t => typeof t.x === "number" && typeof t.y === "number"));
+    r = await P({ op: "disposer", positions: { [tA.id]: { x: 30, y: 40 } }, accueil: { x: 50, y: 96 } });
+    check("plan : la salle se dispose, point d'accueil compris", r.json.tables[0].x === 30 && r.json.accueil.y === 96);
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

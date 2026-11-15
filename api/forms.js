@@ -39,6 +39,7 @@
      ?action=photos-equipe   POST  les photos de profil de l'équipe (nom : image)
      ?action=admin-photo     POST  changer sa photo de profil : photo (data URL), vide pour la retirer
      ?action=photo           GET   la photo d'un mariage : k (clé publique)
+     ?action=pass            GET   le pass QR (PNG) d'un invité présent : yid=JETON ; le QR porte son lien personnel
      ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
      ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
@@ -66,7 +67,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.12.1";
+const VERSION = "1.16.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -196,7 +197,7 @@ module.exports = async (req, res) => {
   const action = q.action || "";
   cors(req, res);
   /* le lien personnel est lu depuis le site du mariage, quel qu'il soit : seul le jeton ouvre la fiche */
-  if (action === "invite" || action === "invite-repondre") res.setHeader("Access-Control-Allow-Origin", "*");
+  if (action === "invite" || action === "invite-repondre" || action === "pass") res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   try {
     await store.migrate();
@@ -246,6 +247,16 @@ module.exports = async (req, res) => {
       if (!ph) { res.statusCode = 404; return res.end(); }
       res.statusCode = 200; res.setHeader("Content-Type", ph.type); res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); return res.end(ph.buffer);
     }
+    if (action === "pass") {
+      /* le pass de l'invité présent : son QR code, qui porte son lien personnel */
+      if (!(await store.rateLimit(ip(req) + ":pass", 120))) return send(res, 429, { ok: false, error: "slow down" });
+      const jt = String(q.yid || "").toLowerCase();
+      const c = /^[a-z0-9]{12}$/.test(jt) ? (await require("../lib/db").query("SELECT c.reponse, c.reponse_le, c.jeton, c.desactive, m.site FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
+      if (!c || c.desactive || !plan.present(c)) return send(res, 404, { ok: false, error: "pass" });
+      const contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
+      const png = await require("qrcode").toBuffer(contenu, { type: "png", margin: 2, width: 480, color: { dark: "#141210", light: "#FFFFFF" } });
+      res.statusCode = 200; res.setHeader("Content-Type", "image/png"); res.setHeader("Cache-Control", "public, max-age=3600"); return res.end(png);
+    }
     if (action === "invite" || action === "invite-repondre") {
       if (!(await store.rateLimit(ip(req) + (action === "invite" ? ":lien" : ":reponse"), action === "invite" ? 90 : 20))) return send(res, 429, { ok: false, error: "slow down" });
       const jt = String(q.yid || b.yid || "");
@@ -257,7 +268,7 @@ module.exports = async (req, res) => {
     if (action === "admin-plan") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const w = q.w || b.w;
-      try { if (b.op) await plan.agir(w, b.op, b, u); return send(res, 200, Object.assign({ ok: true }, await plan.vue(w))); }
+      try { const x = b.op ? await plan.agir(w, b.op, b, u) : null; return send(res, 200, Object.assign({ ok: true }, x || {}, await plan.vue(w))); }
       catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-logistique") {
