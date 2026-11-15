@@ -102,6 +102,7 @@
         if (q.type === "choix") h += '<div class="yi-opts">' + q.o.map(function(o){ return '<button type="button" class="yi-opt" data-k="' + q.k + '" data-v="' + esc(o) + '" aria-pressed="' + (R[q.k] === o) + '">' + esc(o) + '</button>'; }).join("") + '</div>';
         else if (q.type === "fixe") h += '<span class="yi-fixe">' + esc(q.v) + '</span>';
         else if (q.type === "texte") h += '<input type="text" data-t="' + q.k + '" value="' + esc(R[q.k] || "") + '" autocomplete="name">';
+        else if (q.type === "email") h += '<input type="email" inputmode="email" data-t="' + q.k + '" value="' + esc(R[q.k] || "") + '" autocomplete="email" placeholder="prenom@exemple.com">';
         else if (q.type === "long") h += '<textarea data-t="' + q.k + '">' + esc(R[q.k] || "") + '</textarea>';
         else if (q.type === "enfants") { var E = R.enfants || []; for (var i = 0; i < q.n; i++) h += '<div class="yi-enf"><input type="text" placeholder="Prénom" data-ep="' + i + '" value="' + esc((E[i] || {}).prenom || "") + '"><input type="number" min="0" max="25" placeholder="Âge" data-ea="' + i + '" value="' + esc((E[i] || {}).age == null ? "" : E[i].age) + '"></div>'; }
         h += '</div>'; });

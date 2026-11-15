@@ -122,6 +122,7 @@
   .pile-inv .sub{ color:inherit !important; opacity:.72; }
   .pile-inv .suivi{ background:rgba(255,255,255,.14); color:inherit; } .pile-inv .suivi.oui::before{ content:"● "; color:#7FC394; } .pile-inv .suivi.non::before{ content:"● "; color:#E08C7E; }
   .pile-inv .k{ opacity:.7; }
+  .exemple-acc{ margin:16px 0 6px; padding:16px 18px; border-radius:22px; background:rgba(255,255,255,.6); border:1px solid var(--line); }
   .acc-c{ font:italic 400 18px/1.4 "Cormorant Garamond",Georgia,serif; margin:8px 0 0; }
   .etat-c{ display:inline-block; font:600 11px Inter,sans-serif; letter-spacing:.08em; padding:6px 12px; border-radius:14px; background:rgba(255,255,255,.14); }
   .etat-c.rouge{ background:rgba(196,84,68,.22); } .etat-c.vert{ background:rgba(95,158,115,.25); } .etat-c.orange{ background:rgba(212,176,122,.28); }
@@ -132,9 +133,9 @@
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
-<link rel="stylesheet" href="/espace-habillage.css?v=1.11.2">
-<link rel="stylesheet" href="/cartes.css?v=1.11.2">
-<script src="/cartes.js?v=1.11.2"></script>
+<link rel="stylesheet" href="/espace-habillage.css?v=1.12.0">
+<link rel="stylesheet" href="/cartes.css?v=1.12.0">
+<script src="/cartes.js?v=1.12.0"></script>
 </head>
 <body>
 <div class="page">
@@ -309,11 +310,12 @@
       IDX_C = Math.max(0, Math.min(IDX_C, list.length - 1));
       var tons = ["t-espresso", "t-sable", "t-cacao", "t-ivoire", "t-champagne"];
       var IC_T = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>', IC_W = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>';
-      $("invites").innerHTML = '<div class="metap"><span class="hint">↔ Glissez pour passer d\'un invité à l\'autre</span><span id="icnt" style="opacity:.6"></span></div><div class="pile2 pile-inv" id="ipile">' +
+      var exemple = list.filter(function(x){ return x.accueil; })[0];
+      $("invites").innerHTML = (exemple ? '<div class="exemple-acc"><div class="k">Vos invités seront accueillis ainsi</div><p class="acc-c">« ' + esc(exemple.accueil) + ' »</p><p class="small muted" style="margin:6px 0 0">Avec le prénom de chacun, ou « Chère Madame » selon la formule convenue avec vous.</p></div>' : '') + '<div class="metap"><span class="hint">↔ Glissez pour passer d\'un invité à l\'autre</span><span id="icnt" style="opacity:.6"></span></div><div class="pile2 pile-inv" id="ipile">' +
         list.map(function(c, k){
           var nom = c.nom || "Sans nom", ini = nom.split(/\s+/).filter(Boolean).slice(0, 2).map(function(x){ return x.charAt(0).toUpperCase(); }).join(""), num = String(c.numero || "").replace(/[^\d+]/g, "");
           var sous = [c.cercle && c.cercle.rang < 8 ? c.cercle.l : "", c.cote ? "côté " + c.cote.toLowerCase() : "côté à préciser", c.lien, c.invitation].filter(Boolean).join(" · ");
-          var milieu = c.reponse || c.contact ? suivi(c) : c.accueil ? '<div class="k" style="margin-top:6px">Accueil sur son lien</div><p class="acc-c">' + esc(c.accueil) + '</p>' : '';
+          var milieu = c.reponse || c.contact ? suivi(c) : '';
           return '<div class="sc ' + tons[k % tons.length] + '" data-id="' + c.id + '">' +
             '<div style="display:flex;align-items:center;gap:12px"><span class="ini">' + esc(ini || "·") + '</span><div style="min-width:0;flex:1"><div class="nomc">' + esc(nom) + '</div><div class="sub" style="font-size:12px;margin-top:4px">' + esc(sous) + '</div></div></div>' +
             '<div style="margin-top:12px"><span class="etat-c ' + couleur(c.etat) + '">' + libelleEtat(c.etat) + '</span></div>' +

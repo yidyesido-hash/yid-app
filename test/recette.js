@@ -1,6 +1,7 @@
 /* Recette automatique de la v1.0 en local (PGlite) : connexion, voyants, mariages, import, profil,
    formulaire, envoi versionné, suivi, journal. Lancer : npm test */
 process.env.ADMIN_PASSWORD = "test";
+process.env.YID_MAIL_FAKE = "1";
 process.env.PGLITE_DIR = require("path").join(__dirname, "data-recette");
 const fs = require("fs"); fs.rmSync(process.env.PGLITE_DIR, { recursive: true, force: true });
 const handler = require("../api/forms");
@@ -16,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.11.0, base locale");
+  console.log("Recette yid-app v1.12.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -428,7 +429,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("lien personnel : sans réponse à la présence, rien n'est enregistré", r.status === 422);
     const qs = (await call("GET", "/api/forms?action=invite&yid=" + c0.jeton)).json.questions;
     const rep = { presence: qs[0].o[0], mot: "Avec plaisir" };
-    for (const q of qs) { if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
+    for (const q of qs) { if (q.type === "email") rep.email = "amy@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
     r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: rep });
     check("lien personnel : la réponse est enregistrée", r.json.ok && r.json.present === true, JSON.stringify(r.json));
     const apres = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === c0.id);
@@ -490,6 +491,52 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("en direct : la réponse d'un invité s'affiche chez le couple, sans rien de l'administration", rep && typeof rep.reponse.present === "boolean" && !JSON.stringify(v).includes("jeton\""));
     const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts;
     check("cercles : l'outil connaît aussi le cercle de chaque fiche", l.every(c => c.cercle && c.cercle.l));
+  }
+
+  /* 1.12.0 : les emails aux invités, par le sas */
+  {
+    const E = (b) => call("POST", "/api/forms?action=admin-emails&w=AC27", b || { op: "lire" }, H);
+    const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.filter(c => c.etat === "complète" && !c.desactive);
+    /* deux invités confirment, dont un par son lien avec une adresse email */
+    const [g1, g2] = l.filter(c => !c.reponse_le);
+    let q = (await call("GET", "/api/forms?action=invite&yid=" + g1.jeton)).json.questions;
+    check("emails : le formulaire de l'invité demande son adresse quand on ne l'a pas", q.some(x => x.k === "email" && x.requis));
+    const rep = (qs, mail) => { const o = { presence: qs[0].o[0] }; for (const x of qs) { if (x.k === "accompagnant" && x.type === "texte") o.accompagnant = "Paul Martin"; if (x.k === "vient_accompagne") o.vient_accompagne = x.o[1]; if (x.type === "enfants") o.enfants = Array.from({ length: x.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (x.k === "nb_enfants") o.nb_enfants = "Non"; } if (mail) o.email = mail; return o; };
+    let r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "pas-une-adresse") });
+    check("emails : une adresse incomplète est refusée", r.status === 422);
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "Invite.Un@exemple.fr") });
+    check("emails : l'adresse donnée par l'invité rejoint sa fiche", r.json.ok);
+    q = (await call("GET", "/api/forms?action=invite&yid=" + g2.jeton)).json.questions;
+    await call("POST", "/api/forms?action=invite-repondre", { yid: g2.jeton, reponses: rep(q, "invite.deux@exemple.fr") });
+    r = await E({ op: "creer", modele: "programme" });
+    const id = r.json.id, camp = r.json.campagnes.find(c => c.id === id);
+    check("emails : un message se prépare depuis un modèle, vers les présents", camp && camp.audience === "presents" && camp.destinataires >= 2, JSON.stringify(camp && { d: camp.destinataires, e: camp.ecartes }));
+    check("emails : le contrôle écarte les présents sans adresse, en disant pourquoi", camp.ecartes.every(x => x.motif));
+    r = await E({ op: "apercu", id, k: 0 });
+    check("emails : l'aperçu montre l'email de l'invité, salutation remplie, aucun lien en clair", r.json.apercu && !/\{salutation\}/.test(r.json.apercu.html) && /Bonjour|Cher|Chère/.test(r.json.apercu.html) && !/>https?:/.test(r.json.apercu.html), r.json.detail);
+    r = await E({ op: "envoyer", id, confirme: camp.destinataires });
+    check("emails : rien ne part sans email test", r.status === 422 && /test/.test(r.json.detail));
+    global.__YID_MAILS = [];
+    r = await E({ op: "test", id, a: "regis@yidyesido.info" });
+    check("emails : l'email test part à la personne qui valide, et lui seul", r.json.ok && global.__YID_MAILS.length === 1 && global.__YID_MAILS[0].a === "regis@yidyesido.info" && /^\[Test\]/.test(global.__YID_MAILS[0].objet));
+    r = await E({ op: "envoyer", id, confirme: 999 });
+    check("emails : l'envoi exige de confirmer le nombre exact (ou refuse un mariage Test)", r.status === 422 && /nombre exact|Test/.test(r.json.detail));
+    const fiche = (await call("POST", "/api/forms?action=admin-mariage&w=AC27", {}, H)).json.mariage;
+    r = await E({ op: "envoyer", id, confirme: camp.destinataires });
+    check("emails : un mariage en statut Test n'envoie jamais aux invités", fiche.statut !== "Test" || (r.status === 422 && /Test/.test(r.json.detail)));
+    /* pour éprouver l'envoi réel, le mariage de recette passe le temps du contrôle en préparation, avec une boîte */
+    await require("../lib/db").query("UPDATE mariage SET statut = 'En préparation', boite_email = 'ac27@yidyesido.info' WHERE code = 'AC27'");
+    const fiche2 = (await call("POST", "/api/forms?action=admin-mariage&w=AC27", {}, H)).json.mariage;
+    r = await E({ op: "envoyer", id, confirme: camp.destinataires });
+    {
+      const fiche = fiche2;
+      check("emails : l'envoi part depuis la boîte du mariage, lot suivi au journal", r.json.ok && r.json.reste === 0 && r.json.lot.ok >= 2 && global.__YID_MAILS.length === 1 + r.json.lot.ok && global.__YID_MAILS.slice(1).every(x => x.de === fiche.boite_email), JSON.stringify(r.json.detail || r.json.lot));
+      const c2 = r.json.campagnes.find(c => c.id === id);
+      check("emails : un message ne repart jamais à qui l'a reçu", c2.statut === "termine" && c2.destinataires === 0 && c2.deja === r.json.lot.ok);
+      r = await E({ op: "supprimer", id });
+      check("emails : un message envoyé ne se supprime pas", r.status === 422);
+      await require("../lib/db").query("UPDATE mariage SET statut = 'Test', boite_email = '' WHERE code = 'AC27'");
+    }
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
