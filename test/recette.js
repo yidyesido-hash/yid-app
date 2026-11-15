@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.8.3, base locale");
+  console.log("Recette yid-app v1.9.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -435,6 +435,27 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("lien personnel : la fiche porte la réponse et sa date", apres.reponse && apres.reponse.presence === qs[0].o[0] && apres.reponse_le);
     const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 10 }, H)).json.journal || [];
     check("lien personnel : la réponse est au journal, signée invité", j.some(x => x.operation === "Réponse de l'invité" && x.operateur === "invité"));
+  }
+
+  /* 1.9.0 : la file de premier contact */
+  {
+    const C = (b) => call("POST", "/api/forms?action=admin-premier-contact&w=AC27", b || {}, H);
+    let r = await C();
+    check("premier contact : la file ne présente que des fiches complètes, avec message et WhatsApp", r.json.ok && r.json.file.length > 0 && r.json.file.every(c => c.texte && /Yes I Do/.test(c.texte)), JSON.stringify(r.json).slice(0, 200));
+    check("premier contact : le mode 3 par défaut, ou celui de l'appel guidé", [1, 2, 3].includes(r.json.mode));
+    check("premier contact : le message de départ ne contient pas le lien en mode 3", r.json.mode !== 3 || r.json.file.filter(c => c.etape === "accueil").every(c => !/yid=/.test(c.texte)));
+    const [a, b2] = r.json.file;
+    r = await C({ op: "noter", id: a.id, etat: "envoyé" });
+    check("premier contact : l'issue se note, la cadence compte l'envoi", r.json.ok && r.json.cadence.envoyes_jour >= 1);
+    r = await C({ op: "noter", id: b2.id, etat: "envoyé" });
+    check("premier contact : le délai minimum entre deux envois protège le numéro", r.status === 422 && /Laissez/.test(r.json.detail));
+    r = await C({ op: "noter", id: a.id, etat: "a répondu" });
+    const ra = r.json.file.find(c => c.id === a.id);
+    check("premier contact : quand l'invité a répondu, il remonte en tête et son accès est prêt à partir", r.json.ok && r.json.file[0].id === a.id && ra.etape === "lien");
+    r = await C({ op: "noter", id: a.id, etat: "inventé" });
+    check("premier contact : une issue inconnue est refusée", r.status === 422);
+    const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 10 }, H)).json.journal || [];
+    check("premier contact : chaque issue est au journal, signée", j.filter(x => x.operation === "Premier contact").length >= 2);
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

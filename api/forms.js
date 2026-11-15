@@ -41,6 +41,7 @@
      ?action=photo           GET   la photo d'un mariage : k (clé publique)
      ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
      ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
+     ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
      ?action=admin-appel     POST  l'appel guidé de qualification (w=CODE) : op lire | demarrer | donnee (k, v) | note (texte) | valider (n) | rouvrir (n) | terminer | abandonner ; renvoie toujours l'état de l'appel
      ?action=admin-photo-mariage POST  changer la photo d'un mariage : photo (data URL), vide pour revenir à la photo par défaut (w=CODE)
      ?action=admin-valider   POST  valider une fiche complète ou retirer la validation : id, valide (true | false)
@@ -61,7 +62,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.8.3";
+const VERSION = "1.9.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -69,6 +70,7 @@ const checklist = require("../lib/checklist");
 const espace = require("../lib/espace");
 const appel = require("../lib/appel");
 const invite = require("../lib/invite");
+const contact = require("../lib/contact");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -242,6 +244,12 @@ module.exports = async (req, res) => {
         if (action === "invite") { const v = await invite.lire(jt); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
         return send(res, 200, await invite.repondre(jt, b));
       } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-premier-contact") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w;
+      try { if (b.op === "noter") await contact.noter(w, b.id, b.etat, u.nom); return send(res, 200, Object.assign({ ok: true }, await contact.file(w, u.nom))); }
+      catch (e) { let f = null; try { f = await contact.file(w, u.nom); } catch (_) {} return send(res, 422, Object.assign({ ok: false, detail: e.message }, f || {})); }
     }
     if (action === "admin-appel") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
