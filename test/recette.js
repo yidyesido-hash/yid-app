@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.12.0, base locale");
+  console.log("Recette yid-app v1.13.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -537,6 +537,33 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
       check("emails : un message envoyé ne se supprime pas", r.status === 422);
       await require("../lib/db").query("UPDATE mariage SET statut = 'Test', boite_email = '' WHERE code = 'AC27'");
     }
+  }
+
+  /* 1.13.0 : la messagerie du mariage */
+  {
+    const M = (b) => call("POST", "/api/forms?action=admin-messagerie&w=AC27", b, H);
+    let r = await M({ op: "recus" });
+    check("messagerie : sans boîte, l'outil le dit clairement", r.status === 422 && /boîte/.test(r.json.detail));
+    await require("../lib/db").query("UPDATE mariage SET boite_email = 'ac27@yidyesido.info' WHERE code = 'AC27'");
+    global.__YID_INBOX = [{ id: "m1", subject: "Question sur l'hôtel", from: { emailAddress: { address: "Invite.Un@exemple.fr", name: "Invité Un" } }, receivedDateTime: new Date().toISOString(), bodyPreview: "Bonjour, est il possible…", isRead: false }];
+    r = await M({ op: "recus" });
+    check("messagerie : les reçus reconnaissent l'invité de la liste par son adresse", r.json.ok && r.json.messages[0].fiche && r.json.messages[0].fiche.id && !r.json.messages[0].lu, JSON.stringify(r.json).slice(0, 200));
+    r = await M({ op: "lire", id: "m1" });
+    check("messagerie : un message s'ouvre", r.json.ok && r.json.message.objet === "Question sur l'hôtel");
+    global.__YID_MAILS = [];
+    r = await M({ op: "repondre", id: "m1", texte: "Bien sûr, nous nous en occupons." });
+    check("messagerie : on répond depuis l'outil", r.json.ok && global.__YID_MAILS.length === 1);
+    const d = (await M({ op: "destinataires" })).json.destinataires;
+    check("messagerie : les invités ayant une adresse sont proposés comme destinataires", d.length >= 2 && d.every(x => x.email));
+    r = await M({ op: "apercu", a: d[0].email, contact: d[0].id, objet: "{couple} · une précision", corps: "{salutation}\n\nUne précision pour vous." });
+    check("messagerie : l'aperçu d'un email individuel, personnalisé, ne fait rien partir", r.json.ok && /Bonjour|Cher|Chère/.test(r.json.apercu.html) && global.__YID_MAILS.length === 1, r.json.detail);
+    r = await M({ op: "ecrire", a: d[0].email, contact: d[0].id, objet: "Test", corps: "Bonjour" });
+    check("messagerie : un mariage en statut Test n'écrit pas aux invités", r.status === 422 && /Test/.test(r.json.detail));
+    r = await M({ op: "ecrire", a: "regis@yidyesido.info", objet: "Essai", corps: "Bonjour" });
+    check("messagerie : il peut écrire à l'équipe", r.json.ok && global.__YID_MAILS.length === 2, r.json.detail);
+    r = await M({ op: "envoyes" });
+    check("messagerie : les envoyés montrent ce qui est parti de la boîte", r.json.ok && r.json.messages.some(x => x.adresse === "regis@yidyesido.info"));
+    await require("../lib/db").query("UPDATE mariage SET boite_email = '' WHERE code = 'AC27'");
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.12.0">
-<link rel="stylesheet" href="/cartes.css?v=1.12.0">
-<script src="/cartes.js?v=1.12.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.12.1">
+<link rel="stylesheet" href="/cartes.css?v=1.12.1">
+<script src="/cartes.js?v=1.12.1"></script>
 </head>
 <body>
 <header>
@@ -184,6 +184,7 @@
     document.querySelectorAll("#nav a[data-v]").forEach(function(a){ a.classList.toggle("on", (h === "#/" && a.dataset.v === "accueil") || h.indexOf("#/" + a.dataset.v) === 0); });
     var ap = h.match(/^#\/m\/([A-Za-z0-9]+)\/appel/); if (ap) return appelGuide(ap[1].toUpperCase());
     var pc = h.match(/^#\/m\/([A-Za-z0-9]+)\/contact/); if (pc) return premierContact(pc[1].toUpperCase());
+    var ms = h.match(/^#\/m\/([A-Za-z0-9]+)\/messagerie(?:\/(\w+))?/); if (ms) return messagerie(ms[1].toUpperCase(), ms[2]);
     var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal|espace))?/);
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
@@ -307,69 +308,121 @@
   }
 
   /* ---------- mariage : les huit étapes ---------- */
-  /* ---------- étape 5 : les emails aux invités, par le sas ---------- */
-  var EM_OUVERT = null, EM_K = 0, EM_STOP = false;
+  /* ---------- la messagerie du mariage (M39), hors des étapes ---------- */
+  var MS_ONGLET = "recus", EM_OUVERT = null, EM_K = 0, EM_STOP = false, EM_ETAPE = 1;
+  function messagerie(code, onglet){
+    if (onglet) MS_ONGLET = onglet;
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-mariage", {}, code).then(function(r){ dessinerMessagerie(r.mariage); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function dessinerMessagerie(m){
+    var ONG = [["recus", "Reçus"], ["envoyes", "Envoyés"], ["brouillons", "Envois groupés"], ["ecrire", "Écrire"]];
+    V.innerHTML = '<div class="msgr"><a href="#/m/' + m.code + '" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a>' +
+      '<h2 style="margin:12px 0 2px">Messagerie</h2><p class="muted small" style="margin:0">' + (m.boite_email ? esc(m.boite_email) : "Aucune boîte pour ce mariage : renseignez la sur la fiche du mariage.") + '</p>' +
+      '<div class="vues" style="margin-top:14px">' + ONG.map(function(o){ return '<button type="button" data-ms="' + o[0] + '" class="' + (MS_ONGLET === o[0] ? "on" : "") + '">' + o[1] + '</button>'; }).join("") + '</div><div id="mscorps" style="margin-top:14px"><p class="muted">Chargement</p></div></div>';
+    V.querySelectorAll("[data-ms]").forEach(function(b){ b.onclick = function(){ MS_ONGLET = b.dataset.ms; EM_OUVERT = null; dessinerMessagerie(m); }; });
+    var C = $("mscorps");
+    if (MS_ONGLET === "brouillons") { emailsEtape(m, C); return; }
+    if (MS_ONGLET === "ecrire") { ecrireUn(m, C); return; }
+    api("admin-messagerie", { op: MS_ONGLET }, m.code).then(function(r){
+      if (!r.ok) { C.innerHTML = '<div class="card"><p>' + esc(r.detail) + '</p></div>'; return; }
+      if (!r.messages.length) { C.innerHTML = '<div class="card"><p class="muted">' + (MS_ONGLET === "recus" ? "Aucun message reçu pour l'instant." : "Rien n'est encore parti de cette boîte.") + '</p></div>'; return; }
+      C.innerHTML = r.messages.map(function(x){ var qui = x.fiche ? (x.fiche.couple ? "Le couple" : x.fiche.nom) : (x.nom || x.adresse);
+        return '<div class="card ms-l' + (x.lu ? '' : ' nonlu') + '" data-msid="' + esc(x.id) + '"><div style="display:flex;gap:10px;align-items:baseline"><b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (MS_ONGLET === "envoyes" ? "À " : "") + esc(qui) + '</b><span class="small muted">' + fmt(x.le) + '</span></div><div style="margin-top:4px">' + esc(x.objet) + '</div>' + (x.apercu ? '<div class="small muted" style="margin-top:4px">' + esc(x.apercu) + '</div>' : '') + (x.fiche && !x.fiche.couple ? '<div style="margin-top:6px"><span class="pill gold">invité de la liste</span></div>' : '') + '</div>'; }).join("");
+      if (MS_ONGLET === "recus") C.querySelectorAll("[data-msid]").forEach(function(el){ el.onclick = function(){ ouvrirMessage(m, C, el.dataset.msid); }; });
+    });
+  }
+  function ouvrirMessage(m, C, id){
+    C.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-messagerie", { op: "lire", id: id }, m.code).then(function(r){
+      if (!r.ok) { C.innerHTML = '<p class="err">' + esc(r.detail) + '</p>'; return; }
+      var x = r.message;
+      C.innerHTML = '<p><a href="#" class="muted small" id="msret" style="text-decoration:none">‹ Retour aux messages</a></p><div class="card"><b>' + esc(x.objet) + '</b><div class="small muted">De ' + esc(x.de) + (x.le ? ' · ' + fmt(x.le) : '') + '</div><iframe class="em-ap" sandbox="" title="Message"></iframe>' +
+        '<div class="k" style="margin-top:18px">Répondre</div><textarea id="msrep" rows="5" style="width:100%;margin-top:8px;box-sizing:border-box" placeholder="Votre réponse, elle partira dans la conversation, depuis la boîte du mariage"></textarea><p class="err" id="msmsg"></p><button type="button" class="cta or" id="msenv"><span>Relire puis envoyer</span></button></div>';
+      C.querySelector("iframe").srcdoc = x.html;
+      $("msret").onclick = function(e){ e.preventDefault(); dessinerMessagerie(m); };
+      $("msenv").onclick = function(){ var t = $("msrep").value.trim(); if (!t) { $("msmsg").textContent = "La réponse est vide."; return; }
+        if (!window.confirm("Envoyer cette réponse à " + x.de + " ?\n\n" + t)) return;
+        api("admin-messagerie", { op: "repondre", id: id, texte: t }, m.code).then(function(rr){ $("msmsg").textContent = rr.ok ? "Réponse envoyée." : rr.detail; if (rr.ok) $("msrep").value = ""; }); };
+    });
+  }
+  function ecrireUn(m, C){
+    api("admin-messagerie", { op: "destinataires" }, m.code).then(function(r){
+      var D = r.destinataires || [];
+      C.innerHTML = '<div class="card"><h3 style="margin-top:0">Écrire à un invité</h3><datalist id="msdest">' + D.map(function(d){ return '<option value="' + esc(d.email) + '">' + esc(d.nom) + '</option>'; }).join("") + '</datalist>' +
+        '<label class="small muted">Destinataire</label><input id="msa" list="msdest" placeholder="Nom ou adresse de l\'invité" style="width:100%;box-sizing:border-box">' +
+        '<label class="small muted" style="display:block;margin-top:10px">Objet</label><input id="mso" style="width:100%;box-sizing:border-box" value="{couple} · ">' +
+        '<label class="small muted" style="display:block;margin-top:10px">Message</label><textarea id="msc" rows="8" style="width:100%;box-sizing:border-box">{salutation}\n\n</textarea>' +
+        '<p class="small muted" style="margin:6px 0 0">{salutation} devient « Bonjour Hélène, » pour un invité de la liste. Pour un envoi à plusieurs invités, passez par Envois groupés.</p><p class="err" id="msmsg"></p>' +
+        '<button type="button" class="cta or" id="msap"><span>Voir l\'aperçu</span></button><div id="msvue"></div></div>';
+      var corps = function(){ var a = $("msa").value.trim(), d = D.filter(function(x){ return x.email.toLowerCase() === a.toLowerCase(); })[0]; return { a: a, contact: d ? d.id : null, objet: $("mso").value, corps: $("msc").value }; };
+      $("msap").onclick = function(){ var b = corps(); api("admin-messagerie", Object.assign({ op: "apercu" }, b), m.code).then(function(rr){
+        if (!rr.ok) { $("msmsg").textContent = rr.detail; return; } $("msmsg").textContent = "";
+        $("msvue").innerHTML = '<div class="k" style="margin-top:18px">Aperçu</div><div class="small" style="margin-top:6px"><b>À :</b> ' + esc(rr.apercu.a) + ' · <b>Objet :</b> ' + esc(rr.apercu.objet) + '</div><iframe class="em-ap" sandbox="" title="Aperçu"></iframe><button type="button" class="cta or" id="msgo" style="margin-top:12px"><span>Envoyer maintenant</span></button>';
+        $("msvue").querySelector("iframe").srcdoc = rr.apercu.html;
+        $("msgo").onclick = function(){ this.disabled = true; api("admin-messagerie", Object.assign({ op: "ecrire" }, b), m.code).then(function(x){ $("msmsg").textContent = x.ok ? "Envoyé. Vous le retrouvez dans l'onglet Envoyés." : x.detail; if (x.ok) $("msvue").innerHTML = ""; }); };
+      }); };
+    });
+  }
+
+  /* ---------- les envois groupés, par le sas, en trois écrans ---------- */
   function emailsEtape(m, pane){
     pane.innerHTML = '<p class="muted">Chargement</p>';
     api("admin-emails", { op: "lire" }, m.code).then(function(r){ dessinerEmails(m, pane, r); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
   function dessinerEmails(m, pane, R, msg){
-    var STAT = { brouillon: ["Brouillon", ""], validation: ["À valider par un administrateur", "warn"], pret: ["Test envoyé, prêt à partir", "gold"], envoi: ["Envoi en cours", "gold"], suspendu: ["Suspendu", "warn"], termine: ["Envoyé", "ok"] };
-    var h = '<div class="card"><h3>5. Emails aux invités</h3><p class="muted" style="margin:6px 0 0">Depuis la boîte du mariage' + (R.boite ? ' (' + esc(R.boite) + ')' : '') + '. Chaque envoi passe par le sas : aperçu, contrôle, email test, puis confirmation du nombre exact.</p>' +
-      (R.test_mariage ? '<p class="alerte" style="margin-top:12px">Mariage en statut Test : seul l\'email test peut partir, jamais vers les invités.</p>' : '') +
-      (R.site ? '' : '<p class="alerte" style="margin-top:12px">L\'adresse du site du mariage n\'est pas renseignée sur sa fiche : les emails partiraient sans le bouton vers l\'accès personnel.</p>') +
-      (R.envoi_possible ? '' : '<p class="alerte" style="margin-top:12px">La connexion Microsoft n\'est pas active sur ce serveur : la préparation fonctionne, l\'envoi non.</p>') +
-      '<div class="k" style="margin-top:16px">Nouveau message</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + R.modeles.map(function(x){ return '<button type="button" class="ch" data-emnew="' + x.cle + '">' + esc(x.nom) + '</button>'; }).join("") + '</div>' +
-      '<p class="small muted" style="margin:14px 0 0">' + R.audiences.map(function(a){ return esc(a.l) + ' : ' + a.n; }).join(" · ") + '</p></div><p class="err" id="emsg">' + esc(msg || "") + '</p>';
-    h += R.campagnes.map(function(c){
-      var st = STAT[c.statut] || [c.statut, ""], ouvert = EM_OUVERT === c.id;
-      var s = '<div class="card em" data-emid="' + c.id + '"><div style="display:flex;align-items:center;gap:10px;cursor:pointer" data-emouvre="' + c.id + '"><div style="flex:1;min-width:0"><b>' + esc(c.nom) + '</b><div class="small muted">' + esc(c.audience_l || "") + '</div></div>' + pill(st[0], st[1]) + '</div>' +
-        '<div class="cases" style="margin-top:12px"><div><b>' + c.destinataires + '</b><span>à envoyer</span></div><div><b>' + c.deja + '</b><span>déjà reçu</span></div><div><b' + (c.ecartes.length ? ' style="color:var(--bad)"' : '') + '>' + c.ecartes.length + '</b><span>écartés</span></div></div>';
-      if (!ouvert) return s + '</div>';
-      var fige = c.statut === "envoi" || c.statut === "termine";
-      s += '<div class="k" style="margin-top:18px">1. Le message</div>' +
-        '<label class="small muted" style="display:block;margin-top:8px">Nom interne</label><input data-emf="nom" value="' + esc(c.nom) + '"' + (fige ? ' disabled' : '') + '>' +
-        '<label class="small muted" style="display:block;margin-top:8px">Destinataires</label><select data-emf="audience"' + (fige ? ' disabled' : '') + '>' + R.audiences.map(function(a){ return '<option value="' + a.k + '"' + (a.k === c.audience ? ' selected' : '') + '>' + esc(a.l) + ' (' + a.n + ')</option>'; }).join("") + '</select>' +
-        '<label class="small muted" style="display:block;margin-top:8px">Objet</label><input data-emf="objet" value="' + esc(c.objet) + '"' + (fige ? ' disabled' : '') + '>' +
-        '<label class="small muted" style="display:block;margin-top:8px">Message</label><textarea data-emf="corps" rows="10"' + (fige ? ' disabled' : '') + '>' + esc(c.corps) + '</textarea>' +
-        '<p class="small muted" style="margin:6px 0 0">Mots remplis pour chaque invité : {salutation} {prenom} {couple} {date} {lieu} {lieu_phrase}. Le bouton vers l\'accès personnel s\'ajoute de lui même.</p>' +
-        (fige ? '' : '<p style="margin:10px 0 0"><button type="button" class="petit" data-emsave="' + c.id + '">Enregistrer</button></p>') +
-        '<div class="k" style="margin-top:22px">2. Le contrôle</div>' +
-        (c.ecartes.length ? '<details style="margin-top:8px"><summary class="small">' + c.ecartes.length + ' invité(s) écarté(s), voir pourquoi</summary><ul class="small" style="margin:8px 0 0;padding-left:18px">' + c.ecartes.map(function(x){ return '<li>' + esc(x.nom) + ' · ' + esc(x.motif) + '</li>'; }).join("") + '</ul></details>' : '<p class="small muted" style="margin:6px 0 0">Aucun invité écarté.</p>') +
-        '<div class="k" style="margin-top:22px">3. L\'aperçu, invité par invité</div><div id="emap"><p class="small muted">Chargement de l\'aperçu</p></div>' +
-        '<div class="k" style="margin-top:22px">4. L\'email test</div><div style="display:flex;gap:8px;margin-top:8px"><input id="emtest" type="email" placeholder="Votre adresse" value="' + esc((c.test && c.test.a) || localStorage.getItem("yid_email_test") || "") + '" style="flex:1"><button type="button" class="petit" data-emtest="' + c.id + '">Envoyer le test</button></div>' +
-        (c.test ? '<p class="small muted" style="margin:6px 0 0">Test envoyé à ' + esc(c.test.a) + ' le ' + fmt(c.test.le) + ' par ' + esc(c.test.par) + '.</p>' : '') +
-        '<div class="k" style="margin-top:22px">5. L\'envoi</div>' +
-        (c.lots.length ? '<ul class="small" style="margin:8px 0 0;padding-left:18px">' + c.lots.map(function(l){ return '<li>Lot ' + l.n + ' · ' + fmt(l.le) + ' · ' + l.ok + ' envoyé(s)' + (l.ko ? ', ' + l.ko + ' en échec' : '') + ' · ' + esc(l.par) + '</li>'; }).join("") + '</ul>' : '') +
-        (c.statut === "termine" ? '<p class="small" style="margin:8px 0 0">Tout est parti.</p>' :
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="cta or" style="flex:1" data-emgo="' + c.id + '" data-n="' + c.destinataires + '"' + (!c.test || !c.destinataires || R.test_mariage ? ' disabled' : '') + '><span>' + (c.statut === "suspendu" ? "Reprendre l'envoi" : "Envoyer à " + c.destinataires + " invité(s)") + '</span></button>' + (c.statut === "envoi" ? '<button type="button" class="petit ghost" data-emstop="' + c.id + '">Suspendre</button>' : '') + '</div>' +
-          (!c.test ? '<p class="small muted" style="margin:6px 0 0">L\'envoi s\'ouvre une fois l\'email test parti et relu.</p>' : '')) +
-        (c.deja ? '' : '<p style="margin:16px 0 0"><button type="button" class="lienbas" data-emdel="' + c.id + '" style="background:none;border:0;box-shadow:none;color:var(--bad);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer">Supprimer ce brouillon</button></p>');
-      return s + '</div>';
-    }).join("");
-    pane.innerHTML = h;
+    var STAT = { brouillon: ["Brouillon", ""], validation: ["À valider par un administrateur", "warn"], pret: ["Prêt à partir", "gold"], envoi: ["Envoi en cours", "gold"], suspendu: ["Suspendu", "warn"], termine: ["Envoyé", "ok"] };
     var agir = function(corps, ensuite){ return api("admin-emails", corps, m.code).then(function(r){ dessinerEmails(m, pane, r, r.ok ? "" : r.detail); if (ensuite && r.ok) ensuite(r); return r; }); };
-    pane.querySelectorAll("[data-emnew]").forEach(function(b){ b.onclick = function(){ agir({ op: "creer", modele: b.dataset.emnew }, function(r){ EM_OUVERT = r.id; EM_K = 0; emailsEtape(m, pane); }); }; });
-    pane.querySelectorAll("[data-emouvre]").forEach(function(b){ b.onclick = function(){ EM_OUVERT = EM_OUVERT === b.dataset.emouvre ? null : b.dataset.emouvre; EM_K = 0; dessinerEmails(m, pane, R); }; });
-    pane.querySelectorAll("[data-emsave]").forEach(function(b){ b.onclick = function(){ var c = {}; pane.querySelectorAll('[data-emid="' + b.dataset.emsave + '"] [data-emf]').forEach(function(f){ c[f.dataset.emf] = f.value; }); agir(Object.assign({ op: "modifier", id: b.dataset.emsave }, c)); }; });
-    pane.querySelectorAll("[data-emtest]").forEach(function(b){ b.onclick = function(){ var a = $("emtest").value.trim(); try { localStorage.setItem("yid_email_test", a); } catch (e) {} b.disabled = true; agir({ op: "test", id: b.dataset.emtest, a: a }); }; });
-    pane.querySelectorAll("[data-emdel]").forEach(function(b){ b.onclick = function(){ if (window.confirm("Supprimer ce brouillon ?")) agir({ op: "supprimer", id: b.dataset.emdel }); }; });
-    pane.querySelectorAll("[data-emstop]").forEach(function(b){ b.onclick = function(){ EM_STOP = true; agir({ op: "suspendre", id: b.dataset.emstop }); }; });
-    pane.querySelectorAll("[data-emgo]").forEach(function(b){ b.onclick = function(){
-      var id = b.dataset.emgo, n = +b.dataset.n;
-      if (!window.confirm("Envoyer ce message à " + n + " invité(s), depuis la boîte du mariage ? Il partira par lots de 50.")) return;
-      EM_STOP = false; b.disabled = true;
-      var lot = function(premier){ api("admin-emails", { op: "envoyer", id: id, confirme: premier ? n : undefined, reprendre: true }, m.code).then(function(r){ dessinerEmails(m, pane, r, r.ok ? (r.reste ? "Lot parti, " + r.reste + " restant(s)…" : "Envoi terminé.") : r.detail); if (r.ok && r.reste > 0 && !EM_STOP) setTimeout(function(){ lot(false); }, 1500); }); };
-      lot(true);
-    }; });
-    if (EM_OUVERT && $("emap")) {
-      var voir = function(){ api("admin-emails", { op: "apercu", id: EM_OUVERT, k: EM_K }, m.code).then(function(r){ var el = $("emap"); if (!el) return;
+    var c = EM_OUVERT && R.campagnes.filter(function(x){ return x.id === EM_OUVERT; })[0];
+    if (!c) {
+      pane.innerHTML = (R.test_mariage ? '<p class="alerte">Mariage en statut Test : seul l\'email test part, jamais vers les invités.</p>' : '') + (R.site ? '' : '<p class="alerte">L\'adresse du site n\'est pas renseignée sur la fiche du mariage : les emails partiraient sans le bouton vers l\'accès personnel.</p>') +
+        '<div class="card"><h3 style="margin-top:0">Nouvel envoi groupé</h3><div style="display:flex;gap:6px;flex-wrap:wrap">' + R.modeles.map(function(x){ return '<button type="button" class="ch" data-emnew="' + x.cle + '">' + esc(x.nom) + '</button>'; }).join("") + '</div></div><p class="err">' + esc(msg || "") + '</p>' +
+        (R.campagnes.length ? R.campagnes.map(function(x){ var st = STAT[x.statut] || [x.statut, ""]; return '<div class="card ms-l" data-emouvre="' + x.id + '"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + esc(x.nom) + '</b>' + pill(st[0], st[1]) + '</div><div class="small muted" style="margin-top:4px">' + esc(x.audience_l || "") + ' · ' + x.destinataires + ' à envoyer · ' + x.deja + ' déjà reçu</div></div>'; }).join("") : '<p class="muted small">Aucun envoi groupé pour ce mariage.</p>');
+      pane.querySelectorAll("[data-emnew]").forEach(function(b){ b.onclick = function(){ agir({ op: "creer", modele: b.dataset.emnew }, function(r){ EM_OUVERT = r.id; EM_ETAPE = 1; EM_K = 0; emailsEtape(m, pane); }); }; });
+      pane.querySelectorAll("[data-emouvre]").forEach(function(b){ b.onclick = function(){ EM_OUVERT = b.dataset.emouvre; EM_ETAPE = 1; EM_K = 0; dessinerEmails(m, pane, R); }; });
+      return;
+    }
+    var fige = c.statut === "envoi" || c.statut === "termine"; if (fige && EM_ETAPE < 3) EM_ETAPE = 3;
+    var etapes = ["Rédiger", "Vérifier", "Envoyer"];
+    var h = '<p><a href="#" class="muted small" id="emret" style="text-decoration:none">‹ Tous les envois groupés</a></p><div class="card"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + esc(c.nom) + '</b>' + pill((STAT[c.statut] || [c.statut])[0], (STAT[c.statut] || ["", ""])[1]) + '</div>' +
+      '<div class="frise-em">' + etapes.map(function(t, i){ return '<button type="button" data-emet="' + (i + 1) + '" class="' + (EM_ETAPE === i + 1 ? "on" : "") + '"><i>' + (i + 1) + '</i>' + t + '</button>'; }).join("") + '</div>';
+    if (EM_ETAPE === 1) h += '<label class="small muted">Destinataires</label><select data-emf="audience"' + (fige ? ' disabled' : '') + '>' + R.audiences.map(function(a){ return '<option value="' + a.k + '"' + (a.k === c.audience ? ' selected' : '') + '>' + esc(a.l) + ' (' + a.n + ')</option>'; }).join("") + '</select>' +
+      '<label class="small muted" style="display:block;margin-top:10px">Objet</label><input data-emf="objet" value="' + esc(c.objet) + '"' + (fige ? ' disabled' : '') + '>' +
+      '<label class="small muted" style="display:block;margin-top:10px">Message</label><textarea data-emf="corps" rows="10"' + (fige ? ' disabled' : '') + '>' + esc(c.corps) + '</textarea>' +
+      '<p class="small muted" style="margin:6px 0 0">{salutation}, {couple}, {date} se remplissent pour chaque invité. Le bouton vers son accès personnel s\'ajoute de lui même.</p>' +
+      '<button type="button" class="cta or" id="emsuite" style="margin-top:14px"><span>Enregistrer et vérifier</span></button>' + (c.deja ? '' : '<p style="margin:12px 0 0"><button type="button" class="lienbas" id="emdel" style="color:var(--bad);font-size:12px">Supprimer ce brouillon</button></p>');
+    if (EM_ETAPE === 2) h += '<p style="margin:0 0 8px"><b>' + c.destinataires + '</b> invité(s) le recevront.' + (c.ecartes.length ? ' ' + c.ecartes.length + ' écarté(s) :' : '') + '</p>' +
+      (c.ecartes.length ? '<ul class="small" style="margin:0 0 10px;padding-left:18px">' + c.ecartes.map(function(x){ return '<li>' + esc(x.nom) + ' · ' + esc(x.motif) + '</li>'; }).join("") + '</ul>' : '') +
+      '<div id="emap"><p class="small muted">Chargement de l\'aperçu</p></div>' +
+      '<div class="k" style="margin-top:18px">Email test</div><div style="display:flex;gap:8px;margin-top:8px"><input id="emtest" type="email" placeholder="Votre adresse" value="' + esc((c.test && c.test.a) || (function(){ try { return localStorage.getItem("yid_email_test") || ""; } catch (e) { return ""; } })()) + '" style="flex:1"><button type="button" class="petit" id="emtestb">M\'envoyer le test</button></div>' +
+      (c.test ? '<p class="small muted" style="margin:6px 0 0">Test envoyé à ' + esc(c.test.a) + ' le ' + fmt(c.test.le) + '. Relisez le dans votre boîte avant l\'envoi.</p>' : '') +
+      '<button type="button" class="cta or" id="emsuite" style="margin-top:14px"' + (c.test ? '' : ' disabled') + '><span>' + (c.test ? "Passer à l'envoi" : "Envoyez d'abord le test") + '</span></button>';
+    if (EM_ETAPE === 3) h += (c.lots.length ? '<ul class="small" style="margin:0 0 10px;padding-left:18px">' + c.lots.map(function(l){ return '<li>Lot ' + l.n + ' · ' + fmt(l.le) + ' · ' + l.ok + ' envoyé(s)' + (l.ko ? ', ' + l.ko + ' en échec' : '') + '</li>'; }).join("") + '</ul>' : '') +
+      (c.statut === "termine" ? '<p>Tout est parti. Vous retrouvez chaque email dans l\'onglet Envoyés.</p>' :
+        '<p style="margin:0 0 10px">Depuis ' + esc(R.boite || "la boîte du mariage") + ', par lots de 50.</p><button type="button" class="cta or" id="emgo"' + (!c.test || !c.destinataires || R.test_mariage ? ' disabled' : '') + '><span>' + (c.statut === "suspendu" ? "Reprendre l'envoi" : "Envoyer à " + c.destinataires + " invité(s)") + '</span></button>' + (c.statut === "envoi" ? '<p style="text-align:center;margin:10px 0 0"><button type="button" class="lienbas" id="emstop">Suspendre</button></p>' : ''));
+    pane.innerHTML = h + '<p class="err" id="emmsg">' + esc(msg || "") + '</p></div>';
+    $("emret").onclick = function(e){ e.preventDefault(); EM_OUVERT = null; dessinerEmails(m, pane, R); };
+    pane.querySelectorAll("[data-emet]").forEach(function(b){ b.onclick = function(){ EM_ETAPE = +b.dataset.emet; dessinerEmails(m, pane, R); }; });
+    var enregistrer = function(){ var x = {}; pane.querySelectorAll("[data-emf]").forEach(function(f){ x[f.dataset.emf] = f.value; }); return agir(Object.assign({ op: "modifier", id: c.id }, x)); };
+    if (EM_ETAPE === 1) { $("emsuite").onclick = function(){ if (fige) { EM_ETAPE = 2; dessinerEmails(m, pane, R); return; } enregistrer().then(function(r){ if (r.ok) { EM_ETAPE = 2; dessinerEmails(m, pane, r); } }); }; if ($("emdel")) $("emdel").onclick = function(){ if (window.confirm("Supprimer ce brouillon ?")) agir({ op: "supprimer", id: c.id }, function(){ EM_OUVERT = null; }); }; }
+    if (EM_ETAPE === 2) {
+      $("emtestb").onclick = function(){ var a = $("emtest").value.trim(); try { localStorage.setItem("yid_email_test", a); } catch (e) {} this.disabled = true; agir({ op: "test", id: c.id, a: a }); };
+      $("emsuite").onclick = function(){ EM_ETAPE = 3; dessinerEmails(m, pane, R); };
+      var voir = function(){ api("admin-emails", { op: "apercu", id: c.id, k: EM_K }, m.code).then(function(r){ var el = $("emap"); if (!el) return;
         if (!r.apercu) { el.innerHTML = '<p class="small muted">Aucun destinataire pour l\'instant.</p>'; return; }
         el.innerHTML = '<div class="small" style="display:flex;align-items:center;gap:8px;margin:8px 0"><button type="button" class="petit ghost" id="emprev">‹</button><span style="flex:1">' + (r.k + 1) + ' / ' + r.total + ' · ' + esc(r.apercu.nom) + ' · ' + esc(r.apercu.a) + '</span><button type="button" class="petit ghost" id="emnext">›</button></div><div class="small"><b>Objet :</b> ' + esc(r.apercu.objet) + '</div><iframe class="em-ap" sandbox="" title="Aperçu"></iframe>';
         el.querySelector("iframe").srcdoc = r.apercu.html;
         $("emprev").onclick = function(){ if (EM_K > 0) { EM_K--; voir(); } }; $("emnext").onclick = function(){ if (EM_K < r.total - 1) { EM_K++; voir(); } };
       }); };
       voir();
+    }
+    if (EM_ETAPE === 3) {
+      if ($("emstop")) $("emstop").onclick = function(){ EM_STOP = true; agir({ op: "suspendre", id: c.id }); };
+      if ($("emgo")) $("emgo").onclick = function(){ var n = c.destinataires, b = this;
+        if (!window.confirm("Envoyer ce message à " + n + " invité(s), depuis la boîte du mariage ?")) return;
+        EM_STOP = false; b.disabled = true;
+        var lot = function(premier){ api("admin-emails", { op: "envoyer", id: c.id, confirme: premier ? n : undefined, reprendre: true }, m.code).then(function(r){ dessinerEmails(m, pane, r, r.ok ? (r.reste ? "Lot parti, " + r.reste + " restant(s)…" : "Envoi terminé.") : r.detail); if (r.ok && r.reste > 0 && !EM_STOP) setTimeout(function(){ lot(false); }, 1500); }); };
+        lot(true); };
     }
   }
 
@@ -554,7 +607,7 @@
         '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.liste ? m.liste.fiches : (m.foyers || 0)) + '</b><span>' + (m.liste ? 'fiches' : 'foyers') + '</span></div>' + (m.liste ? '<div><b' + (m.liste.a_completer ? ' style="color:var(--bad)"' : '') + '>' + m.liste.a_completer + '</b><span>à compléter</span></div>' : '<div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div>') + '<div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' +
         '<div class="tuiles-m"><a class="solide tm" href="#/m/' + m.code + '/2"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E4CDA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><b>Invités</b>' + (m.liste ? '<span class="chiffre-t">' + m.liste.fiches + '</span><span class="sm">fiches' + (m.liste.attente ? ', ' + m.liste.attente + ' en attente' : '') + '</span><span class="sm" style="margin-top:6px">' + (m.liste.a_completer ? m.liste.a_completer + ' à compléter' : 'toutes complètes') + '</span><span class="sm">' + (m.liste.reponses ? m.liste.reponses + ' réponse' + (m.liste.reponses > 1 ? 's' : '') + ', ' + m.liste.presents + ' présent' + (m.liste.presents > 1 ? 's' : '') : 'aucune réponse encore') + '</span>' : '<span class="sm">' + (m.foyers || 0) + ' foyers</span>') + '</a>' +
         '<a class="verre tm" href="#/m/' + m.code + '/espace"><span class="ic clair"><img src="/img/logo-noir.png" alt="" class="logo-noir" style="width:20px"><img src="/img/logo-blanc.png" alt="" class="logo-blanc" style="width:20px"></span><b>Espace mariés</b><span class="sm">lien, suivi en direct</span></a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a><a class="verre tm large" href="#/m/' + m.code + '/contact"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><b>Premier contact</b><span class="sm">' + (m.liste ? m.liste.fiches - m.liste.a_completer + ' fiche(s) prêtes, message rédigé, WhatsApp en un geste' : 'la file WhatsApp des invités') + '</span></a></div>' +
+        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/contact"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><b>Premier contact</b><span class="sm">' + (m.liste ? m.liste.fiches - m.liste.a_completer + ' fiche(s) prêtes, WhatsApp' : 'la file WhatsApp') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/messagerie"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><b>Messagerie</b><span class="sm">reçus, envoyés, envois groupés</span></a></div>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       $("mphoto").onclick = function(){ YID.choisirPhoto(1600, function(d){ $("mphmsg").textContent = "Envoi"; api("admin-photo-mariage", { photo: d }, m.code).then(function(r){ if (!r.ok) throw new Error(r.detail || "Envoi impossible"); V.querySelector(".bandeau > img").src = "/api/forms?action=photo&k=" + r.photo_cle; $("mphmsg").textContent = "Photo enregistrée."; setTimeout(function(){ $("mphmsg").textContent = ""; }, 2500); }).catch(function(e){ $("mphmsg").textContent = e.message; }); }); };
       var pane = $("pane");
@@ -563,7 +616,6 @@
       if (cur === 1) { cadrage(m, pane); return; }
       if (cur === 2) { listeInvites(m, pane, j.releve); return; }
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
-      if (cur === 5) { emailsEtape(m, pane); return; }
       var titles = m.etapes_libelles, L = m.liste || {};
       if (cur === 3) {
         pane.innerHTML = '<div class="card"><h3>3. ' + esc(titles[2]) + '</h3><p class="muted">D\'abord l\'appel guidé avec le couple, puis le premier message à chaque invité, puis son accès personnel.</p></div>' +
@@ -573,10 +625,11 @@
         return;
       }
       if (cur === 4) {
-        pane.innerHTML = '<div class="card"><h3>4. ' + esc(titles[3]) + '</h3><p class="muted">Les réponses arrivent par le lien personnel de chaque invité.</p><div class="cases" style="margin-top:12px"><div><b>' + (L.reponses || 0) + '</b><span>réponses</span></div><div><b>' + (L.presents || 0) + '</b><span>présents</span></div><div><b>' + ((L.reponses || 0) - (L.presents || 0)) + '</b><span>absents</span></div></div><p style="margin-top:14px"><a class="lienbas" href="#/m/' + m.code + '/2">Voir le détail dans la liste (vue Tableau, colonne Réponse)</a></p></div>';
+        pane.innerHTML = '<div class="card"><h3>4. ' + esc(titles[3]) + '</h3><p class="muted">Les réponses arrivent par le lien personnel de chaque invité.</p><div class="cases" style="margin-top:12px"><div><b>' + (L.reponses || 0) + '</b><span>réponses</span></div><div><b>' + (L.presents || 0) + '</b><span>présents</span></div><div><b>' + ((L.reponses || 0) - (L.presents || 0)) + '</b><span>absents</span></div></div><p style="margin-top:14px"><a class="lienbas" href="#/m/' + m.code + '/2">Voir le détail dans la liste (vue Tableau, colonne Réponse)</a></p></div><div id="em-zone" style="margin-top:14px"></div>';
+        emailsEtape(m, $("em-zone"));
         return;
       }
-      pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape n\'est pas encore construite. ' + "Elle viendra après les emails." + '</p></div>';
+      pane.innerHTML = '<div class="card"><h3>' + cur + '. ' + esc(titles[cur - 1]) + '</h3><p>Cette étape n\'est pas encore construite. ' + (cur === 5 ? "Elle accueillera l'hébergement, les transferts et la logistique des invités confirmés." : "Elle viendra ensuite.") + '</p></div>';
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
 

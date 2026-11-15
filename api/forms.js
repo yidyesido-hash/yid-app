@@ -42,6 +42,7 @@
      ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
      ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
+     ?action=admin-messagerie POST la boîte du mariage (w=CODE) : op recus | envoyes | lire (id) | repondre (id, texte) | apercu | ecrire (a, contact, objet, corps) | destinataires
      ?action=admin-emails    POST  les emails aux invités, par le sas (w=CODE) : op lire | creer (modele) | modifier | apercu (id, k) | test (id, a) | envoyer (id, confirme) | suspendre | supprimer
      ?action=admin-appel     POST  l'appel guidé de qualification (w=CODE) : op lire | demarrer | donnee (k, v) | note (texte) | valider (n) | rouvrir (n) | terminer | abandonner ; renvoie toujours l'état de l'appel
      ?action=admin-photo-mariage POST  changer la photo d'un mariage : photo (data URL), vide pour revenir à la photo par défaut (w=CODE)
@@ -63,7 +64,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.12.0";
+const VERSION = "1.12.1";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -74,6 +75,7 @@ const invite = require("../lib/invite");
 const contact = require("../lib/contact");
 const afaire = require("../lib/afaire");
 const emails = require("../lib/emails");
+const messagerie = require("../lib/messagerie");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -247,6 +249,20 @@ module.exports = async (req, res) => {
         if (action === "invite") { const v = await invite.lire(jt); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
         return send(res, 200, await invite.repondre(jt, b));
       } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-messagerie") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w, op = String(b.op || "recus");
+      try {
+        let x;
+        if (op === "recus" || op === "envoyes") x = { messages: await messagerie.dossier(w, op) };
+        else if (op === "lire") x = { message: await messagerie.lire(w, String(b.id || "")) };
+        else if (op === "repondre") { await messagerie.repondre(w, String(b.id || ""), b.texte, u); x = { envoye: true }; }
+        else if (op === "apercu" || op === "ecrire") x = await messagerie.ecrire(w, b, u, op === "ecrire");
+        else if (op === "destinataires") x = { destinataires: await messagerie.destinataires(w) };
+        else throw new Error("opération inconnue");
+        return send(res, 200, Object.assign({ ok: true }, x));
+      } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-emails") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
