@@ -15,7 +15,7 @@
     var cards = [].slice.call(el.children).filter(function(c){ return c.classList.contains("sc"); });
     var i = Math.max(0, Math.min(opts.index || 0, cards.length - 1)), x0 = null, y0 = null, dx = 0, bouge = false, axe = null;
     function lay(){
-      cards.forEach(function(c, k){ var p = k - i; c.style.pointerEvents = p === 0 ? "auto" : "none";
+      cards.forEach(function(c, k){ var p = k - i; c.style.pointerEvents = p === 0 ? "auto" : "none"; c.classList.toggle("dessus", p === 0);
         /* seules les cartes voisines existent pour le moteur graphique : 80 calques à grande ombre saturent la mémoire des téléphones */
         c.style.display = (p < -1 || p > 3) ? "none" : ""; c.style.visibility = p > 2 ? "hidden" : ""; if (p === -1) { clearTimeout(c._cache); c._cache = setTimeout(function(){ if (cards.indexOf(c) < i) c.style.visibility = "hidden"; }, 480); }
         if (p < 0) { c.style.transform = "translateX(-118%) rotate(-7deg)"; c.style.opacity = 0; }

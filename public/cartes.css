@@ -139,3 +139,7 @@ img,svg,video{ max-width:100%; }
 .appel .memo summary{ display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer; list-style:none; }
 .appel .memo summary::-webkit-details-marker{ display:none; }
 .appel .recap > div > .sub{ flex:0 0 42%; } .appel .memo summary > span:last-child{ white-space:nowrap; }
+/* M35 : la carte du dessus est pleine, celles de derrière gardent leur transparence */
+.pile2 > .sc.dessus.t-espresso{ background:#2B2119; } .pile2 > .sc.dessus.t-cacao{ background:#4A3729; }
+.pile2 > .sc.dessus.t-champagne{ background:#CDAE80; } .pile2 > .sc.dessus.t-sable{ background:#EBE0CE; } .pile2 > .sc.dessus.t-ivoire{ background:#FDFAF5; }
+.tuiles-m .tm .chiffre-t{ display:block; font:500 46px/1 "Cormorant Garamond",Georgia,serif; margin:10px 0 2px; color:#E4CDA4; }
