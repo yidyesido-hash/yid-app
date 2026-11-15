@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.14.0, base locale");
+  console.log("Recette yid-app v1.15.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -589,6 +589,29 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("logistique : l'alerte se lève quand le véhicule approche de sa capacité", n.alerte === true);
     check("logistique : les horaires de l'invité remontent pour le chauffeur", r.json.transferts.some(t => /TGV 8541/.test(t.arrivee)));
     await G({ op: "regler", transfert: false, navettes: [] });
+  }
+
+  /* 1.15.0 : plan de table et jour J */
+  {
+    const P = (b) => call("POST", "/api/forms?action=admin-plan&w=AC27", b || {}, H);
+    let r = await P();
+    check("plan : les foyers présents sont à placer, rangés par cercle", r.json.ok && r.json.foyers.length >= 2 && r.json.a_placer === r.json.foyers.length);
+    r = await P({ op: "tables", tables: [{ nom: "Table des mariés", places: 2 }, { nom: "Table 2", places: 10 }] });
+    check("plan : les tables se règlent", r.json.ok && r.json.tables.length === 2, r.json.detail);
+    const [t1] = r.json.tables, f = r.json.foyers.sort((a, b) => b.personnes - a.personnes);
+    r = await P({ op: "placer", contact: f[0].id, table: t1.id });
+    r = await P({ op: "placer", contact: f[1].id, table: t1.id });
+    check("plan : une table trop pleine est signalée", r.json.tables[0].trop === (r.json.tables[0].occupees > 2) && r.json.a_placer === r.json.foyers.length - 2);
+    r = await P({ op: "placer", contact: f[0].id, table: "inconnue" });
+    check("plan : une table inconnue est refusée", r.status === 422);
+    r = await P({ op: "placer", contact: f[1].id, table: null });
+    check("plan : un invité se retire de sa table", r.json.foyers.find(x => x.id === f[1].id).table === null);
+    r = await P({ op: "arrive", contact: f[0].id, on: true });
+    check("jour J : un invité accueilli est compté, avec sa table", r.json.arrives === f[0].personnes && r.json.foyers.find(x => x.id === f[0].id).arrive);
+    r = await P({ op: "tables", tables: [{ nom: "Table 2", places: 10, id: r.json.tables[1].id }] });
+    check("plan : supprimer une table libère ses invités", r.json.foyers.find(x => x.id === f[0].id).table === null);
+    const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 20 }, H)).json.journal || [];
+    check("jour J : l'accueil est au journal", j.some(x => x.operation === "Jour J"));
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

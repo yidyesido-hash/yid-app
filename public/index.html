@@ -185,6 +185,7 @@
     var ap = h.match(/^#\/m\/([A-Za-z0-9]+)\/appel/); if (ap) return appelGuide(ap[1].toUpperCase());
     var pc = h.match(/^#\/m\/([A-Za-z0-9]+)\/contact/); if (pc) return premierContact(pc[1].toUpperCase());
     var ms = h.match(/^#\/m\/([A-Za-z0-9]+)\/messagerie(?:\/(\w+))?/); if (ms) return messagerie(ms[1].toUpperCase(), ms[2]);
+    var jj = h.match(/^#\/m\/([A-Za-z0-9]+)\/accueil/); if (jj) return accueilJourJ(jj[1].toUpperCase());
     var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal|espace))?/);
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
@@ -308,6 +309,52 @@
   }
 
   /* ---------- mariage : les huit étapes ---------- */
+  /* ---------- étape 6 : plan de table et jour J ---------- */
+  var PL_SEL = null, PL_MODE = "plan", PL_Q = "";
+  function planEtape(m, pane){
+    pane.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-plan", {}, m.code).then(function(r){ dessinerPlan(m, pane, r); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function dessinerPlan(m, pane, R, msg){
+    var envoyer = function(corps){ return api("admin-plan", corps, m.code).then(function(r){ if (!r.ok) { $("plmsg").textContent = r.detail; return; } dessinerPlan(m, pane, r); }); };
+    var nomT = {}; R.tables.forEach(function(t){ nomT[t.id] = t.nom; });
+    var h = '<div class="card"><h3>6. Plan de table et jour J</h3><div class="contact"><div class="cases-c" style="grid-template-columns:repeat(4,1fr)"><div class="verre"><b>' + R.foyers.length + '</b><span>foyers présents</span></div><div class="verre"><b>' + R.personnes + '</b><span>personnes</span></div><div class="verre"><b>' + R.tables.length + '</b><span>tables</span></div><div class="verre' + (R.a_placer ? ' plein' : '') + '"><b>' + R.a_placer + '</b><span>à placer</span></div></div></div>' +
+      '<div class="vues" style="margin-top:6px"><button type="button" data-plm="plan" class="' + (PL_MODE === "plan" ? "on" : "") + '">Plan de table</button><button type="button" data-plm="jourj" class="' + (PL_MODE === "jourj" ? "on" : "") + '">Accueil jour J</button></div></div><p class="err" id="plmsg">' + esc(msg || "") + '</p>';
+    if (!R.foyers.length) h += '<div class="card"><p class="muted" style="margin:0">Le plan se construit avec les invités qui ont confirmé leur présence sur leur lien personnel. Aucune confirmation pour l\'instant.</p></div>';
+    if (PL_MODE === "plan") {
+      var aPlacer = R.foyers.filter(function(f){ return !f.table || !nomT[f.table]; }), prec = null;
+      h += '<div class="card"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;flex:1">À placer</h3><span class="small muted">' + (PL_SEL ? "Touchez une table pour l'y placer" : "Touchez un invité, puis sa table") + '</span></div>' +
+        (aPlacer.length ? aPlacer.map(function(f){ var g = f.cercle ? f.cercle.l : ""; var t = g !== prec ? '<div class="k" style="margin:14px 0 6px">' + esc(g) + '</div>' : ''; prec = g; return t + '<button type="button" class="ch pl-f' + (PL_SEL === f.id ? ' sel' : '') + '" data-plf="' + f.id + '">' + esc(f.nom) + (f.personnes > 1 ? ' · ' + f.personnes : '') + '</button>'; }).join("") : '<p class="small muted" style="margin:8px 0 0">Tous les foyers présents ont leur table.</p>') + '</div>';
+      h += '<div class="pl-grille">' + R.tables.map(function(t){ var ici = R.foyers.filter(function(f){ return f.table === t.id; });
+        return '<div class="card pl-t' + (t.trop ? ' trop' : '') + (PL_SEL ? ' cible' : '') + '" data-plt="' + t.id + '"><div style="display:flex;align-items:baseline;gap:8px"><b style="flex:1">' + esc(t.nom) + '</b><span class="small' + (t.trop ? '" style="color:var(--bad)' : ' muted') + '">' + t.occupees + (t.places ? ' / ' + t.places : '') + '</span></div>' + (t.places ? '<div class="pl-jauge"><i style="width:' + Math.min(100, Math.round(t.occupees / t.places * 100)) + '%"></i></div>' : '') +
+          '<div style="margin-top:8px">' + ici.map(function(f){ return '<button type="button" class="ch" data-plrm="' + f.id + '" title="Retirer de la table">' + esc(f.nom) + (f.personnes > 1 ? ' · ' + f.personnes : '') + ' ×</button>'; }).join("") + '</div></div>'; }).join("") + '</div>';
+      h += '<details class="card"' + (R.tables.length ? '' : ' open') + '><summary><b>Régler les tables</b></summary><div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end"><label class="small muted" style="flex:1">Nombre de tables<input type="number" min="1" max="120" id="pln" value="' + (R.tables.length || 10) + '"></label><label class="small muted" style="flex:1">Places par table<input type="number" min="1" max="40" id="plp" value="' + ((R.tables[0] && R.tables[0].places) || 10) + '"></label><button type="button" class="petit" id="plgen">Générer</button></div>' +
+        (R.tables.length ? '<div class="small muted" style="margin:12px 0 6px">Ou ajustez chaque table : nom et places.</div>' + R.tables.map(function(t, i){ return '<div class="pl-ed" style="display:flex;gap:6px;margin-top:6px"><input data-tid="' + t.id + '" data-k="nom" value="' + esc(t.nom) + '" style="flex:1"><input data-tid="' + t.id + '" data-k="places" type="number" min="0" value="' + (t.places || "") + '" style="max-width:80px"></div>'; }).join("") + '<button type="button" class="petit" id="plsave" style="margin-top:10px">Enregistrer les tables</button>' : '') +
+        '<p class="small muted" style="margin:10px 0 0">Régénérer les tables retire les placements des tables qui disparaissent.</p></details>';
+    } else {
+      var q = PL_Q.toLowerCase(), L = R.foyers.filter(function(f){ return !q || f.nom.toLowerCase().indexOf(q) >= 0 || (f.accompagnant || "").toLowerCase().indexOf(q) >= 0; });
+      h += '<div class="card"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + R.arrives + ' / ' + R.personnes + ' personnes accueillies</b><a class="lienbas" href="#/m/' + m.code + '/accueil">Plein écran</a></div><input id="plq" placeholder="Rechercher un invité ou son accompagnant" value="' + esc(PL_Q) + '" style="width:100%;box-sizing:border-box;margin-top:12px" autocomplete="off"></div>' +
+        L.map(function(f){ return '<div class="card pl-a' + (f.arrive ? ' ok' : '') + '"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><b>' + esc(f.nom) + '</b><div class="small muted">' + (f.personnes > 1 ? f.personnes + ' personnes' + (f.accompagnant ? ', avec ' + esc(f.accompagnant) : '') + (f.enfants.length ? ', ' + esc(f.enfants.join(", ")) : '') : '1 personne') + '</div></div><div class="pl-tab">' + esc(nomT[f.table] || "sans table") + '</div><button type="button" class="ch' + (f.arrive ? ' sel' : '') + '" data-plar="' + f.id + '" data-on="' + (f.arrive ? 0 : 1) + '">' + (f.arrive ? "✓ Arrivé" : "Accueillir") + '</button></div></div>'; }).join("");
+    }
+    pane.innerHTML = h;
+    pane.querySelectorAll("[data-plm]").forEach(function(b){ b.onclick = function(){ PL_MODE = b.dataset.plm; dessinerPlan(m, pane, R); }; });
+    pane.querySelectorAll("[data-plf]").forEach(function(b){ b.onclick = function(){ PL_SEL = PL_SEL === +b.dataset.plf ? null : +b.dataset.plf; dessinerPlan(m, pane, R); }; });
+    pane.querySelectorAll("[data-plt]").forEach(function(c){ c.onclick = function(e){ if (!PL_SEL || e.target.closest("[data-plrm]")) return; var id = PL_SEL; PL_SEL = null; envoyer({ op: "placer", contact: id, table: c.dataset.plt }); }; });
+    pane.querySelectorAll("[data-plrm]").forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); envoyer({ op: "placer", contact: +b.dataset.plrm, table: null }); }; });
+    pane.querySelectorAll("[data-plar]").forEach(function(b){ b.onclick = function(){ b.disabled = true; envoyer({ op: "arrive", contact: +b.dataset.plar, on: b.dataset.on === "1" }); }; });
+    if ($("plq")) { $("plq").oninput = function(){ PL_Q = this.value; var pos = this.selectionStart; dessinerPlan(m, pane, R); var i = $("plq"); i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }; }
+    if ($("plgen")) $("plgen").onclick = function(){ var n = Math.max(1, Math.min(120, +$("pln").value || 1)), p = +$("plp").value || 10, t = [];
+      if (R.tables.length && !window.confirm("Remplacer les " + R.tables.length + " tables actuelles par " + n + " tables de " + p + " places ?")) return;
+      for (var i = 0; i < n; i++) t.push({ id: R.tables[i] ? R.tables[i].id : "", nom: R.tables[i] ? R.tables[i].nom : "Table " + (i + 1), places: p });
+      envoyer({ op: "tables", tables: t }); };
+    if ($("plsave")) $("plsave").onclick = function(){ var t = R.tables.map(function(x){ return { id: x.id, nom: (pane.querySelector('[data-tid="' + x.id + '"][data-k="nom"]') || {}).value, places: (pane.querySelector('[data-tid="' + x.id + '"][data-k="places"]') || {}).value }; }); envoyer({ op: "tables", tables: t }); };
+  }
+  /* l'accueil jour J en plein écran, pour l'équipe sur place */
+  function accueilJourJ(code){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-mariage", {}, code).then(function(r){ var m = r.mariage; PL_MODE = "jourj"; V.innerHTML = '<div class="msgr"><a href="#/m/' + code + '/6" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><div id="jjpane" style="margin-top:10px"></div></div>'; planEtape(m, $("jjpane")); });
+  }
+
   /* ---------- étape 5 : séjour et logistique ---------- */
   function logistiqueEtape(m, pane){
     pane.innerHTML = '<p class="muted">Chargement</p>';
@@ -660,6 +707,7 @@
       if (cur === 2) { listeInvites(m, pane, j.releve); return; }
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
       if (cur === 5) { logistiqueEtape(m, pane); return; }
+      if (cur === 6) { planEtape(m, pane); return; }
       var titles = m.etapes_libelles, L = m.liste || {};
       if (cur === 3) {
         pane.innerHTML = '<div class="card"><h3>3. ' + esc(titles[2]) + '</h3><p class="muted">D\'abord l\'appel guidé avec le couple, puis le premier message à chaque invité, puis son accès personnel.</p></div>' +

@@ -181,3 +181,16 @@ tr.cercle-r td{ font:600 10.5px Inter,sans-serif; letter-spacing:.18em; text-tra
 .ligne-c{ display:flex; gap:10px; align-items:center; margin-top:10px; font-size:14px; } .ligne-c input{ width:auto; }
 .card .cases{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .card .cases > div{ padding:12px; border-radius:18px; background:rgba(255,255,255,.55); border:1px solid rgba(127,112,98,.15); }
 .card .cases b{ display:block; font:500 26px/1 "Cormorant Garamond",Georgia,serif; } .card .cases span{ font-size:11px; opacity:.7; }
+/* plan de table */
+.pl-grille{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+.pl-t{ margin:0 !important; } .pl-t.cible{ cursor:pointer; outline:2px dashed #C9A26B; outline-offset:-6px; } .pl-t.trop{ border-color:var(--bad) !important; }
+.pl-jauge{ height:5px; border-radius:3px; background:rgba(127,112,98,.18); margin-top:8px; overflow:hidden; } .pl-jauge i{ display:block; height:100%; background:linear-gradient(90deg,#CDAE7E,#E8D3AE); }
+.pl-t .ch{ margin:3px 3px 0 0; font-size:12px; }
+.pl-f{ margin:3px 3px 0 0; }
+.pl-a.ok{ opacity:.72; } .pl-tab{ font:500 20px/1 "Cormorant Garamond",Georgia,serif; white-space:nowrap; }
+details.card summary{ cursor:pointer; } details.card input{ width:100%; box-sizing:border-box; }
+.pl-t .ch, .pl-f, .pl-a .ch{ text-transform:none !important; letter-spacing:0 !important; font:500 13px Inter,sans-serif !important; min-height:34px; padding:6px 12px; }
+.pl-t .ch{ background:rgba(201,162,107,.16) !important; color:inherit !important; border:1px solid rgba(201,162,107,.4) !important; box-shadow:none !important; }
+.pl-a .ch{ background:#1D1813; color:#fff; } .pl-a .ch.sel{ background:#5F9E73 !important; color:#fff !important; }
+.contact .cases-c span{ display:block; overflow-wrap:normal; word-break:keep-all; font-size:10.5px; line-height:1.3; }
+@media (max-width:420px){ .card .contact .cases-c[style*="repeat(4"]{ grid-template-columns:repeat(2,1fr) !important; } }

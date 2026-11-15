@@ -42,6 +42,7 @@
      ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
      ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
+     ?action=admin-plan      POST  étape 6 (w=CODE) : sans op, le plan ; op tables (tables) | placer (contact, table) | arrive (contact, on)
      ?action=admin-logistique POST étape 5 (w=CODE) : sans op, la synthèse (hôtels, transferts, navettes) ; op regler (chambres, transfert, transfert_offert, navettes)
      ?action=admin-messagerie POST la boîte du mariage (w=CODE) : op recus | envoyes | lire (id) | repondre (id, texte) | apercu | ecrire (a, contact, objet, corps) | destinataires
      ?action=admin-emails    POST  les emails aux invités, par le sas (w=CODE) : op lire | creer (modele) | modifier | apercu (id, k) | test (id, a) | envoyer (id, confirme) | suspendre | supprimer
@@ -78,6 +79,7 @@ const afaire = require("../lib/afaire");
 const emails = require("../lib/emails");
 const messagerie = require("../lib/messagerie");
 const logistique = require("../lib/logistique");
+const plan = require("../lib/plan");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -251,6 +253,12 @@ module.exports = async (req, res) => {
         if (action === "invite") { const v = await invite.lire(jt); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
         return send(res, 200, await invite.repondre(jt, b));
       } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-plan") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w;
+      try { if (b.op) await plan.agir(w, b.op, b, u); return send(res, 200, Object.assign({ ok: true }, await plan.vue(w))); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-logistique") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
