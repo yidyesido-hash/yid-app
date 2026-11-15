@@ -62,7 +62,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.9.0";
+const VERSION = "1.10.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -71,6 +71,7 @@ const espace = require("../lib/espace");
 const appel = require("../lib/appel");
 const invite = require("../lib/invite");
 const contact = require("../lib/contact");
+const afaire = require("../lib/afaire");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -248,7 +249,7 @@ module.exports = async (req, res) => {
     if (action === "admin-premier-contact") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const w = q.w || b.w;
-      try { if (b.op === "noter") await contact.noter(w, b.id, b.etat, u.nom); return send(res, 200, Object.assign({ ok: true }, await contact.file(w, u.nom))); }
+      try { if (b.op === "noter") await contact.noter(w, b.id, b.etat, u.nom, b.quand); return send(res, 200, Object.assign({ ok: true }, await contact.file(w, u.nom))); }
       catch (e) { let f = null; try { f = await contact.file(w, u.nom); } catch (_) {} return send(res, 422, Object.assign({ ok: false, detail: e.message }, f || {})); }
     }
     if (action === "admin-appel") {
@@ -284,7 +285,7 @@ module.exports = async (req, res) => {
     if (action === "admin-accueil") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
-      const acc = await mariages.accueil(); acc.reglages = await mariages.reglages(u.role);
+      const acc = await mariages.accueil(); acc.reglages = await mariages.reglages(u.role); acc.afaire = await afaire.tout();
       return send(res, 200, Object.assign({ ok: true, version: VERSION }, acc));
     }
     if (action === "admin-checklist") {

@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.9.0, base locale");
+  console.log("Recette yid-app v1.10.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -456,6 +456,25 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("premier contact : une issue inconnue est refusée", r.status === 422);
     const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 10 }, H)).json.journal || [];
     check("premier contact : chaque issue est au journal, signée", j.filter(x => x.operation === "Premier contact").length >= 2);
+  }
+
+  /* 1.10.0 : à faire aujourd'hui, et le parcours de vive voix des proches */
+  {
+    let acc = (await call("POST", "/api/forms?action=admin-accueil", {}, H)).json;
+    check("à faire : l'accueil remonte les invités qui attendent leur accès", (acc.afaire || []).some(x => x.code === "AC27" && /ont répondu/.test(x.t) && x.h.endsWith("/contact")), JSON.stringify(acc.afaire));
+    check("à faire : les mariages comptent leurs fiches, non plus les foyers", acc.mariages.some(m => m.code === "AC27" && m.fiches > 0));
+    const C = (b) => call("POST", "/api/forms?action=admin-premier-contact&w=AC27", b || {}, H);
+    const f = (await C()).json.file, pr = f.find(c => !c.assistance && c.etat === "à contacter");
+    await call("POST", "/api/forms?action=admin-qualifier&w=AC27", { id: pr.id, champs: { assistance: true } }, H);
+    let r = await C(); const p2 = r.json.file.find(c => c.id === pr.id);
+    check("proche accompagné : un message qui propose un appel, sans lien, et ses issues propres", p2.assistance && /appel/.test(p2.texte) && !/yid=/.test(p2.texte) && p2.issues.includes("rendez-vous fixé"));
+    r = await C({ op: "noter", id: pr.id, etat: "rendez-vous fixé" });
+    check("proche accompagné : un rendez vous fixé exige sa date", r.status === 422);
+    const dans1h = new Date(Date.now() + 3600e3); if (dans1h.toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" }) !== new Date().toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" })) dans1h.setTime(Date.now() + 60e3);
+    r = await C({ op: "noter", id: pr.id, etat: "rendez-vous fixé", quand: dans1h.toISOString() });
+    check("proche accompagné : le rendez vous est noté", r.json.ok && r.json.file.find(c => c.id === pr.id).rdv);
+    acc = (await call("POST", "/api/forms?action=admin-accueil", {}, H)).json;
+    check("à faire : le rendez vous du jour remonte, en priorité", acc.afaire.some(x => /Rendez vous avec/.test(x.t) && x.urgent));
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
