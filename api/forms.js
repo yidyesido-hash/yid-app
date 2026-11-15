@@ -44,6 +44,9 @@
      ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
      ?action=admin-plan      POST  étape 6 (w=CODE) : sans op, le plan ; op tables (tables) | placer (contact, table) | arrive (contact, on)
+     ?action=admin-partenaires POST le répertoire : op liste | fiche (id) | enregistrer (fiche) | importer (texte JSON de la cartographie, administrateur)
+     ?action=admin-mariage-partenaires POST (w=CODE) la sélection du mariage : op ajouter (ids) | retirer | regler (statut, accord, publie, notes, relance_le) | echange (canal, issue, resume, reponses, duree_min, relance_le)
+     ?action=admin-site      POST  (w=CODE) le site des invités : op page (k, etat) | adresse (site)
      ?action=admin-cloture   POST  étape 7 (w=CODE) : sans op, le bilan et les cases ; op noter (rdv, retours, notes) | cocher (k, on) | purger (confirme = code, administrateur, le lendemain du mariage) | clore
      ?action=admin-logistique POST étape 5 (w=CODE) : sans op, la synthèse (hôtels, transferts, navettes) ; op regler (chambres, transfert, transfert_offert, navettes)
      ?action=admin-messagerie POST la boîte du mariage (w=CODE) : op recus | envoyes | lire (id) | repondre (id, texte) | apercu | ecrire (a, contact, objet, corps) | destinataires
@@ -68,7 +71,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.17.0";
+const VERSION = "1.18.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -83,6 +86,8 @@ const messagerie = require("../lib/messagerie");
 const logistique = require("../lib/logistique");
 const plan = require("../lib/plan");
 const cloture = require("../lib/cloture");
+const partenaires = require("../lib/partenaires");
+const site = require("../lib/site");
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(s => s.trim()).filter(Boolean);
 
 function cors(req, res) {
@@ -263,7 +268,7 @@ module.exports = async (req, res) => {
       if (!(await store.rateLimit(ip(req) + (action === "invite" ? ":lien" : ":reponse"), action === "invite" ? 90 : 20))) return send(res, 429, { ok: false, error: "slow down" });
       const jt = String(q.yid || b.yid || "");
       try {
-        if (action === "invite") { const v = await invite.lire(jt); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
+        if (action === "invite") { const v = await invite.lire(jt, req.headers.origin || req.headers.referer || ""); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
         return send(res, 200, await invite.repondre(jt, b));
       } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
     }
@@ -271,6 +276,29 @@ module.exports = async (req, res) => {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const w = q.w || b.w;
       try { const x = b.op ? await plan.agir(w, b.op, b, u) : null; return send(res, 200, Object.assign({ ok: true }, x || {}, await plan.vue(w))); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-partenaires") {
+      /* le répertoire, hors mariage : op liste | fiche (id) | enregistrer (fiche) | importer (texte, administrateur) */
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const op = String(b.op || "liste");
+      try {
+        if (op === "fiche") return send(res, 200, Object.assign({ ok: true }, await partenaires.fiche(b.id)));
+        if (op === "enregistrer") { const id = await partenaires.enregistrer(b.fiche || {}, u); return send(res, 200, Object.assign({ ok: true, id }, await partenaires.fiche(id))); }
+        if (op === "importer") { if (u.role !== "administrateur") return send(res, 403, { ok: false, detail: "L'import est réservé à un administrateur." }); return send(res, 200, Object.assign({ ok: true, import: await partenaires.importer(b.texte, u) }, await partenaires.repertoire())); }
+        return send(res, 200, Object.assign({ ok: true }, await partenaires.repertoire()));
+      } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-mariage-partenaires") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w;
+      try { if (b.op) await partenaires.agir(w, b.op, b, u); return send(res, 200, Object.assign({ ok: true }, await partenaires.suivi(w, u))); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-site") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const w = q.w || b.w;
+      try { if (b.op) await site.agir(w, b.op, b, u); return send(res, 200, Object.assign({ ok: true }, await site.vue(w))); }
       catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-cloture") {

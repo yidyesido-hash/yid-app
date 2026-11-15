@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.17.0">
-<link rel="stylesheet" href="/cartes.css?v=1.17.0">
-<script src="/cartes.js?v=1.17.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.18.0">
+<link rel="stylesheet" href="/cartes.css?v=1.18.0">
+<script src="/cartes.js?v=1.18.0"></script>
 </head>
 <body>
 <header>
@@ -186,6 +186,9 @@
     var pc = h.match(/^#\/m\/([A-Za-z0-9]+)\/contact/); if (pc) return premierContact(pc[1].toUpperCase());
     var ms = h.match(/^#\/m\/([A-Za-z0-9]+)\/messagerie(?:\/(\w+))?/); if (ms) return messagerie(ms[1].toUpperCase(), ms[2]);
     var jj = h.match(/^#\/m\/([A-Za-z0-9]+)\/accueil/); if (jj) return accueilJourJ(jj[1].toUpperCase());
+    var mp = h.match(/^#\/m\/([A-Za-z0-9]+)\/partenaires/); if (mp) return partenairesMariage(mp[1].toUpperCase());
+    var si = h.match(/^#\/m\/([A-Za-z0-9]+)\/site/); if (si) return siteMariage(si[1].toUpperCase());
+    var rp = h.match(/^#\/partenaires(?:\/([A-Za-z0-9]+))?/); if (rp) return repertoire(rp[1] ? rp[1].toUpperCase() : null);
     var m = h.match(/^#\/m\/([A-Za-z0-9]+)(?:\/(\d|journal|espace))?/);
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
@@ -245,6 +248,7 @@
         '<div class="grid">' + tous.map(card).join("") + '</div>';
       V.innerHTML =
         chiffres + '<h2 class="sec">Vos mariages</h2>' + maries + soirHtml +
+        '<h2 class="sec" style="margin-top:28px">Partenaires</h2><a class="verre" href="#/partenaires" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;text-decoration:none;color:inherit;max-width:640px"><span style="flex:1"><b style="display:block">Répertoire des partenaires</b><span class="muted small">Hôtels, transporteurs, conciergerie, lieux et planners, avec chaque échange tracé.</span></span><span style="color:var(--gold)">›</span></a>' +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
         '<h2 class="sec" style="margin-top:26px">Journal récent</h2><p class="lead">Les douze dernières opérations, tous mariages confondus. Le journal maître complet est dans <a href="#/reglages">Réglages</a>, celui d\'un mariage dans sa page.</p>' + journalHtml(j.journal, true);
       $("check").onclick = runCheck;
@@ -827,7 +831,9 @@
         '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.liste ? m.liste.fiches : (m.foyers || 0)) + '</b><span>' + (m.liste ? 'fiches' : 'foyers') + '</span></div>' + (m.liste ? '<div><b' + (m.liste.a_completer ? ' style="color:var(--bad)"' : '') + '>' + m.liste.a_completer + '</b><span>à compléter</span></div>' : '<div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div>') + '<div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' +
         '<div class="tuiles-m"><a class="solide tm" href="#/m/' + m.code + '/2"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E4CDA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><b>Invités</b>' + (m.liste ? '<span class="chiffre-t">' + m.liste.fiches + '</span><span class="sm">fiches' + (m.liste.attente ? ', ' + m.liste.attente + ' en attente' : '') + '</span><span class="sm" style="margin-top:6px">' + (m.liste.a_completer ? m.liste.a_completer + ' à compléter' : 'toutes complètes') + '</span><span class="sm">' + (m.liste.reponses ? m.liste.reponses + ' réponse' + (m.liste.reponses > 1 ? 's' : '') + ', ' + m.liste.presents + ' présent' + (m.liste.presents > 1 ? 's' : '') : 'aucune réponse encore') + '</span>' : '<span class="sm">' + (m.foyers || 0) + ' foyers</span>') + '</a>' +
         '<a class="verre tm" href="#/m/' + m.code + '/espace"><span class="ic clair"><img src="/img/logo-noir.png" alt="" class="logo-noir" style="width:20px"><img src="/img/logo-blanc.png" alt="" class="logo-blanc" style="width:20px"></span><b>Espace mariés</b><span class="sm">lien, suivi en direct</span></a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/contact"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><b>Premier contact</b><span class="sm">' + (m.liste ? m.liste.fiches - m.liste.a_completer + ' fiche(s) prêtes, WhatsApp' : 'la file WhatsApp') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/messagerie"><span class="ic clair" style="position:relative"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="badge-n" id="msbadge" hidden></span></span><b>Messagerie</b><span class="sm">reçus, envoyés, envois groupés</span></a></div>' +
+        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/contact"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><b>Premier contact</b><span class="sm">' + (m.liste ? m.liste.fiches - m.liste.a_completer + ' fiche(s) prêtes, WhatsApp' : 'la file WhatsApp') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/messagerie"><span class="ic clair" style="position:relative"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="badge-n" id="msbadge" hidden></span></span><b>Messagerie</b><span class="sm">reçus, envoyés, envois groupés</span></a>' +
+        '<a class="verre tm" href="#/m/' + m.code + '/site"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><b>Site des invités</b><span class="sm">' + (m.site ? 'pages, script, visites' : 'adresse à renseigner') + '</span></a>' +
+        '<a class="verre tm" href="#/m/' + m.code + '/partenaires"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></span><b>Partenaires</b><span class="sm">hôtels, transport, conciergerie</span></a></div>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       $("mphoto").onclick = function(){ YID.choisirPhoto(1600, function(d){ $("mphmsg").textContent = "Envoi"; api("admin-photo-mariage", { photo: d }, m.code).then(function(r){ if (!r.ok) throw new Error(r.detail || "Envoi impossible"); V.querySelector(".bandeau > img").src = "/api/forms?action=photo&k=" + r.photo_cle; $("mphmsg").textContent = "Photo enregistrée."; setTimeout(function(){ $("mphmsg").textContent = ""; }, 2500); }).catch(function(e){ $("mphmsg").textContent = e.message; }); }); };
       var pane = $("pane"); if (m.boite_email) badgeMessagerie(m.code);
@@ -856,6 +862,175 @@
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
 
+
+  /* ---------- partenaires : le répertoire, la sélection de chaque mariage, l'appel guidé, la trace ---------- */
+  var PR = { R: null, dest: "", cat: "", q: "", carte: false, choix: {}, pour: null };
+  var PR_CAT = { hotel: "Hôtels", venue: "Lieux", autocar: "Autocaristes", chauffeur: "Chauffeurs", spa: "Spas", table: "Tables étoilées", degustation: "Vins et fromages", planner: "Wedding planners", voyage: "Voyage de groupe", jet: "Jets", helico: "Hélicoptères", papeterie: "Invitations", coffret: "Coffrets", coursier: "Coursiers", autre: "Autres" };
+  var PR_DEST = { Bordeaux: "Bordeaux et Saint Émilion", Oise: "Oise et Rouen" };
+  function prTel(t){ return String(t || "").split(" ou ")[0].replace(/[^\d+]/g, ""); }
+  function prContacts(p){
+    var t = prTel(p.whatsapp || p.telephone), w = t.replace(/^\+/, "").replace(/^0(\d{9})$/, "33$1");
+    return '<div class="pr-ct">' + (p.telephone ? '<a class="petit" href="tel:' + prTel(p.telephone) + '">Appeler</a>' : '') + (t ? '<a class="petit ghost" href="https://wa.me/' + w + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + (p.email ? '<a class="petit ghost" href="mailto:' + esc(p.email) + '">Email</a>' : '') + (p.site ? '<a class="petit ghost" href="https://' + esc(p.site) + '" target="_blank" rel="noopener">Site</a>' : '') + '</div>';
+  }
+  /* le répertoire, hors mariage ; « pour » un mariage, il sert à composer sa sélection */
+  function repertoire(pour){
+    PR.pour = pour || null; PR.choix = {};
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-partenaires", { op: "liste" }).then(function(r){ PR.R = r; dessinerRepertoire(); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function dessinerRepertoire(){
+    var R = PR.R, admin = MOI.role === "administrateur";
+    var L = R.partenaires.filter(function(p){ var q = PR.q.toLowerCase(); return (!PR.dest || p.destination === PR.dest) && (!PR.cat || p.categorie === PR.cat) && (!q || (p.nom + " " + (p.ville || "") + " " + (p.note || "")).toLowerCase().indexOf(q) >= 0); });
+    var nsel = Object.keys(PR.choix).length;
+    V.innerHTML = '<div class="card">' + (PR.pour ? '<a class="muted small" href="#/m/' + PR.pour + '/partenaires" style="text-decoration:none">‹ Retour au mariage</a>' : '') + '<h3 style="margin-top:4px">Répertoire des partenaires</h3><p class="muted">' + R.partenaires.length + ' maisons, enrichies à chaque échange. ' + (PR.pour ? 'Cochez celles à ajouter à la sélection du mariage.' : 'Hôtels, transport, conciergerie, lieux et planners.') + '</p>' +
+      '<div class="pr-f"><select id="prdest"><option value="">Toutes destinations</option>' + R.destinations.map(function(d){ return '<option value="' + esc(d) + '"' + (PR.dest === d ? ' selected' : '') + '>' + esc(PR_DEST[d] || d) + '</option>'; }).join("") + '</select><select id="prcat"><option value="">Toutes demandes</option>' + R.categories.map(function(c){ return '<option value="' + c.k + '"' + (PR.cat === c.k ? ' selected' : '') + '>' + esc(c.l) + ' (' + c.n + ')</option>'; }).join("") + '</select></div>' +
+      '<input id="prq" placeholder="Rechercher un nom, une ville" value="' + esc(PR.q) + '" style="width:100%;box-sizing:border-box;margin-top:8px" autocomplete="off">' +
+      '<div class="row" style="margin-top:10px"><button class="petit ghost" id="prcarte">' + (PR.carte ? "Masquer la carte" : "Voir la carte") + '</button><button class="petit ghost" id="prnouv">Ajouter une maison</button>' + (admin ? '<button class="petit ghost" id="primp">Importer la cartographie</button>' : '') + '<span class="muted small">' + L.length + ' affichée(s)</span></div></div>' +
+      (PR.carte ? '<div id="prmap" class="pr-map"></div>' : '') +
+      '<div class="pr-liste">' + (L.slice(0, 300).map(function(p){ return '<div class="pr-l" data-prf="' + p.id + '">' + (PR.pour ? '<input type="checkbox" data-prc="' + p.id + '"' + (PR.choix[p.id] ? ' checked' : '') + '>' : '') + '<span class="pr-n"><b>' + esc(p.nom) + '</b><span class="small muted">' + esc(PR_CAT[p.categorie] || p.categorie) + (p.etoiles ? ' · ' + p.etoiles + ' étoiles' : '') + ' · ' + esc(p.ville || "") + '</span>' + (p.contact_nom ? '<span class="small">' + esc(p.contact_nom) + '</span>' : '') + '</span><span class="pr-m">' + (p.accords ? pill(p.accords + " accord" + (p.accords > 1 ? "s" : ""), "ok") : p.echanges ? pill(p.echanges + " échange" + (p.echanges > 1 ? "s" : ""), "") : '') + '</span></div>'; }).join("") || '<p class="muted">Aucune maison ne correspond.' + (R.partenaires.length ? '' : ' Le répertoire est vide : importez la cartographie.') + '</p>') + (L.length > 300 ? '<p class="muted small">Affinez la recherche pour voir les ' + (L.length - 300) + ' autres.</p>' : '') + '</div>' +
+      (PR.pour ? '<div class="pr-barre"' + (nsel ? '' : ' hidden') + '><b>' + nsel + ' sélectionnée(s)</b><button id="prajout">Ajouter au mariage</button></div>' : '');
+    $("prdest").onchange = function(){ PR.dest = this.value; dessinerRepertoire(); };
+    $("prcat").onchange = function(){ PR.cat = this.value; dessinerRepertoire(); };
+    $("prq").oninput = function(){ PR.q = this.value; clearTimeout(PR.t); PR.t = setTimeout(function(){ dessinerRepertoire(); var i = $("prq"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
+    $("prcarte").onclick = function(){ PR.carte = !PR.carte; dessinerRepertoire(); };
+    $("prnouv").onclick = function(){ prEditer(null); };
+    if ($("primp")) $("primp").onclick = prImporter;
+    V.querySelectorAll("[data-prc]").forEach(function(c){ c.onclick = function(e){ e.stopPropagation(); if (c.checked) PR.choix[c.dataset.prc] = 1; else delete PR.choix[c.dataset.prc]; var b = V.querySelector(".pr-barre"); b.hidden = !Object.keys(PR.choix).length; b.querySelector("b").textContent = Object.keys(PR.choix).length + " sélectionnée(s)"; }; });
+    V.querySelectorAll("[data-prf]").forEach(function(d){ d.onclick = function(e){ if (e.target.tagName === "INPUT") return; prFiche(+d.dataset.prf); }; });
+    if ($("prajout")) $("prajout").onclick = function(){ this.disabled = true; api("admin-mariage-partenaires", { op: "ajouter", ids: Object.keys(PR.choix).map(Number) }, PR.pour).then(function(){ location.hash = "#/m/" + PR.pour + "/partenaires"; }); };
+    if (PR.carte) prCarte(L);
+  }
+  function prCarte(L){
+    var go = function(){ var pts = L.filter(function(p){ return p.lat != null && p.lng != null; }); var mp = window.L.map("prmap", { scrollWheelZoom: false });
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 18 }).addTo(mp);
+      var b = []; pts.forEach(function(p){ var mk = window.L.circleMarker([p.lat, p.lng], { radius: 7, color: p.accords ? "#2F6B45" : p.categorie === "hotel" ? "#141210" : "#B8956A", fillOpacity: .85, weight: 1.5 }).addTo(mp); mk.bindTooltip(p.nom); mk.on("click", function(){ prFiche(p.id); }); b.push([p.lat, p.lng]); });
+      if (b.length) mp.fitBounds(b, { padding: [24, 24], maxZoom: 12 }); else mp.setView([46.6, 2.4], 5); };
+    if (window.L && window.L.map) return go();
+    var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "/vendor/leaflet/leaflet.css"; document.head.appendChild(c);
+    var s = document.createElement("script"); s.src = "/vendor/leaflet/leaflet.js"; s.onload = go; document.head.appendChild(s);
+  }
+  function prImporter(){
+    var F = document.createElement("div"); F.className = "tab-voile"; F.innerHTML = '<div class="tab-feuille"><button type="button" class="tab-x">×</button><h3>Importer la cartographie</h3><p class="small">Dans la cartographie, touchez « Copier pour l\'application », puis collez ici. Une maison déjà connue n\'est jamais dupliquée : l\'import complète seulement ce qui manque, sans toucher à ce que l\'équipe a appris.</p><textarea id="primpt" rows="8" style="width:100%;box-sizing:border-box" placeholder="Collez ici"></textarea><div class="row" style="margin-top:12px"><button id="primpgo">Importer</button><span class="muted small" id="primpm"></span></div></div>';
+    document.body.appendChild(F); F.querySelector(".tab-x").onclick = function(){ F.remove(); };
+    $("primpgo").onclick = function(){ $("primpm").textContent = "Import en cours"; api("admin-partenaires", { op: "importer", texte: $("primpt").value }).then(function(r){ if (!r.ok) { $("primpm").textContent = r.detail; return; } $("primpm").textContent = r.import.ajoutes + " ajoutée(s), " + r.import.completes + " complétée(s)."; PR.R = r; setTimeout(function(){ F.remove(); dessinerRepertoire(); }, 1400); }); };
+  }
+  function prEditer(p){
+    p = p || { categorie: PR.cat || "hotel", destination: PR.dest || "" };
+    var F = document.createElement("div"); F.className = "tab-voile";
+    var ch = function(k, l, v, t){ return '<label class="small muted" style="display:block;margin-top:10px">' + l + '</label><input data-pe="' + k + '" value="' + esc(v == null ? "" : v) + '"' + (t ? ' type="' + t + '"' : '') + ' style="width:100%;box-sizing:border-box">'; };
+    F.innerHTML = '<div class="tab-feuille"><button type="button" class="tab-x">×</button><h3>' + (p.id ? "Modifier la fiche" : "Ajouter une maison") + '</h3>' +
+      '<label class="small muted" style="display:block;margin-top:10px">Demande</label><select data-pe="categorie" style="width:100%">' + Object.keys(PR_CAT).map(function(k){ return '<option value="' + k + '"' + (p.categorie === k ? ' selected' : '') + '>' + PR_CAT[k] + '</option>'; }).join("") + '</select>' +
+      ch("nom", "Nom", p.nom) + ch("ville", "Ville", p.ville) + ch("destination", "Destination", p.destination) + ch("etoiles", "Étoiles", p.etoiles, "number") + ch("contact_nom", "Interlocuteur", p.contact_nom) + ch("telephone", "Téléphone", p.telephone, "tel") + ch("whatsapp", "WhatsApp, si différent", p.whatsapp, "tel") + ch("email", "Email", p.email, "email") + ch("site", "Site", p.site) + ch("prix", "Repère de prix", p.prix) + ch("lat", "Latitude", p.lat) + ch("lng", "Longitude", p.lng) +
+      '<label class="small muted" style="display:block;margin-top:10px">Note</label><textarea data-pe="note" rows="3" style="width:100%;box-sizing:border-box">' + esc(p.note || "") + '</textarea><div class="row" style="margin-top:14px"><button id="pesave">Enregistrer</button><span class="err" id="pemsg"></span></div></div>';
+    document.body.appendChild(F); F.querySelector(".tab-x").onclick = function(){ F.remove(); };
+    $("pesave").onclick = function(){ var f = { id: p.id }; F.querySelectorAll("[data-pe]").forEach(function(i){ f[i.dataset.pe] = i.value; });
+      api("admin-partenaires", { op: "enregistrer", fiche: f }).then(function(r){ if (!r.ok) { $("pemsg").textContent = r.detail; return; } F.remove(); api("admin-partenaires", { op: "liste" }).then(function(x){ PR.R = x; if (location.hash.indexOf("partenaires") >= 0 && PR.R && $("prq")) dessinerRepertoire(); prFiche(r.id); }); }); };
+  }
+  function prFiche(id){
+    api("admin-partenaires", { op: "fiche", id: id }).then(function(r){
+      var p = r.partenaire, F = document.createElement("div"); F.className = "tab-voile";
+      F.innerHTML = '<div class="tab-feuille"><button type="button" class="tab-x">×</button><div class="k">' + esc(PR_CAT[p.categorie] || p.categorie) + (p.etoiles ? ' · ' + p.etoiles + ' étoiles' : '') + '</div><h2 style="margin:6px 0 2px">' + esc(p.nom) + '</h2><p class="muted small" style="margin:0">' + esc(p.ville || "") + (p.destination ? ' · ' + esc(PR_DEST[p.destination] || p.destination) : '') + '</p>' +
+        (p.contact_nom ? '<p style="margin:10px 0 0"><b>' + esc(p.contact_nom) + '</b></p>' : '') + prContacts(p) +
+        (p.note ? '<p class="small" style="margin-top:12px">' + esc(p.note) + '</p>' : '') + (p.prix ? '<p class="small muted">Repère prix : ' + esc(p.prix) + '</p>' : '') +
+        (r.mariages.length ? '<h3 style="margin-top:16px">Mariages</h3>' + r.mariages.map(function(x){ return '<a class="pr-l" href="#/m/' + x.code + '/partenaires" style="text-decoration:none;color:inherit"><span class="pr-n"><b>' + esc(x.prenoms) + '</b><span class="small muted">' + (x.date_mariage ? fdate(x.date_mariage) : "") + '</span></span>' + pill(x.statut, x.statut === "accord" ? "ok" : x.statut === "décliné" ? "" : "gold") + '</a>'; }).join("") : '') +
+        '<h3 style="margin-top:16px">Échanges</h3>' + (r.echanges.length ? r.echanges.map(prEchangeHtml).join("") : '<p class="muted small">Aucun échange tracé pour l\'instant.</p>') +
+        '<div class="row" style="margin-top:14px"><button class="petit ghost" id="pfmod">Modifier la fiche</button></div></div>';
+      document.body.appendChild(F); F.querySelector(".tab-x").onclick = function(){ F.remove(); }; F.onclick = function(e){ if (e.target === F) F.remove(); };
+      $("pfmod").onclick = function(){ F.remove(); prEditer(p); };
+    });
+  }
+  function prEchangeHtml(e){
+    var rep = Object.keys(e.reponses || {}).map(function(k){ return '<div><span class="sub">' + esc(k) + '</span> ' + esc(e.reponses[k]) + '</div>'; }).join("");
+    return '<details class="memo"><summary><span><b>' + esc(e.canal) + (e.issue ? ' · ' + esc(e.issue) : '') + '</b><span class="muted small"> · ' + fmt(e.le) + ' · ' + esc(e.par || "") + (e.mariage ? ' · ' + esc(e.mariage) : '') + (e.nom ? ' · ' + esc(e.nom) : '') + '</span></span></summary>' + (e.resume ? '<p class="small">' + esc(e.resume) + '</p>' : '') + (rep ? '<div class="small pr-rep">' + rep + '</div>' : '') + (e.duree_min ? '<p class="small muted">' + e.duree_min + ' min</p>' : '') + (e.relance_le ? '<p class="small muted">Relance prévue le ' + fdate(e.relance_le) + '</p>' : '') + '</details>';
+  }
+
+  /* la sélection d'un mariage : où en est chaque maison, les accords, les relances */
+  var MP = { S: null, code: null, fam: "" };
+  function partenairesMariage(code){
+    MP.code = code; V.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-mariage-partenaires", {}, code).then(function(r){ if (!r.ok) throw new Error(r.detail); MP.S = r; dessinerMP(); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function dessinerMP(){
+    var S = MP.S, m = S.mariage, FL = { hotel: "Hôtels", transport: "Transport", conciergerie: "Conciergerie", lieu: "Lieux et planners", autre: "Autres" };
+    var L = S.selection.filter(function(l){ return !MP.fam || S.familles_cat[l.categorie] === MP.fam; });
+    var cpt = function(st){ return S.selection.filter(function(l){ return l.statut === st; }).length; };
+    V.innerHTML = '<div class="card"><a class="muted small" href="#/m/' + m.code + '" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><h3 style="margin-top:4px">Partenaires du mariage</h3><p class="muted">Les maisons sollicitées pour les invités, leur avancement et chaque échange. On ne nomme jamais le couple à un prestataire.</p>' +
+      '<div class="cases" style="margin-top:10px"><div><b>' + S.selection.length + '</b><span>maisons</span></div><div><b>' + (cpt("contacté") + cpt("en discussion") + cpt("proposition reçue")) + '</b><span>en cours</span></div><div><b>' + cpt("accord") + '</b><span>accords</span></div><div><b>' + S.chambres_accord + '</b><span>chambres en accord</span></div><div><b' + (S.a_relancer ? ' style="color:var(--bad)"' : '') + '>' + S.a_relancer + '</b><span>à relancer</span></div></div>' +
+      '<div class="row" style="margin-top:12px"><a class="petit" href="#/partenaires/' + m.code + '" style="text-decoration:none">Ajouter depuis le répertoire</a></div></div>' +
+      '<div class="vues" style="margin:12px 0"><button type="button" data-mpf="" class="' + (!MP.fam ? "on" : "") + '">Tout</button>' + S.familles.map(function(f){ return '<button type="button" data-mpf="' + f.f + '" class="' + (MP.fam === f.f ? "on" : "") + '">' + esc(FL[f.f] || f.f) + ' ' + f.n + '</button>'; }).join("") + '</div>' +
+      S.statuts.map(function(st){ var ici = L.filter(function(l){ return l.statut === st; }); if (!ici.length) return ""; return '<h2 class="sec" style="margin-top:14px">' + esc(st[0].toUpperCase() + st.slice(1)) + ' <span class="muted small">' + ici.length + '</span></h2>' + ici.map(function(l){ var a = l.accord || {}, rel = l.relance_le && String(l.relance_le).slice(0, 10) <= new Date().toISOString().slice(0, 10);
+        return '<div class="pr-l" data-mpo="' + l.partenaire_id + '"><span class="pr-n"><b>' + esc(l.nom) + '</b><span class="small muted">' + esc(PR_CAT[l.categorie] || l.categorie) + ' · ' + esc(l.ville || "") + (l.echanges ? ' · ' + l.echanges + ' échange(s)' : '') + '</span>' + (st === "accord" ? '<span class="small">' + [a.chambres ? a.chambres + " chambres" : "", a.tarif || "", a.butoir ? "jusqu'au " + fdate(a.butoir) : ""].filter(Boolean).map(esc).join(" · ") + (l.publie ? ' · <b>sur le site</b>' : '') + '</span>' : '') + (l.relance_le ? '<span class="small" style="' + (rel ? 'color:var(--bad)' : '') + '">Relance le ' + fdate(l.relance_le) + '</span>' : '') + '</span><span style="color:var(--gold)">›</span></div>'; }).join(""); }).join("") +
+      (S.selection.length ? '' : '<div class="card"><p>Aucune maison dans la sélection. Ajoutez depuis le répertoire les hôtels, transporteurs et adresses de conciergerie autour du lieu.</p></div>') +
+      (S.echanges.length ? '<h2 class="sec" style="margin-top:18px">Derniers échanges</h2>' + S.echanges.slice(0, 15).map(prEchangeHtml).join("") : '');
+    V.querySelectorAll("[data-mpf]").forEach(function(b){ b.onclick = function(){ MP.fam = b.dataset.mpf; dessinerMP(); }; });
+    V.querySelectorAll("[data-mpo]").forEach(function(d){ d.onclick = function(){ mpOuvrir(+d.dataset.mpo); }; });
+  }
+  function mpEnvoyer(corps){ return api("admin-mariage-partenaires", corps, MP.code).then(function(r){ if (!r.ok) { window.alert(r.detail || "Action impossible"); return r; } MP.S = r; return r; }); }
+  function mpOuvrir(pid){
+    var S = MP.S, l = S.selection.filter(function(x){ return x.partenaire_id === pid; })[0]; if (!l) return; var a = l.accord || {};
+    var F = document.createElement("div"); F.className = "tab-voile";
+    F.innerHTML = '<div class="tab-feuille"><button type="button" class="tab-x">×</button><div class="k">' + esc(PR_CAT[l.categorie] || l.categorie) + '</div><h2 style="margin:6px 0 2px">' + esc(l.nom) + '</h2><p class="muted small" style="margin:0">' + esc(l.ville || "") + (l.contact_nom ? ' · ' + esc(l.contact_nom) : '') + '</p>' + prContacts(l) +
+      '<button class="cta or" id="mpappel" style="width:100%;margin-top:14px"><span>Démarrer l\'appel guidé</span></button>' +
+      '<div class="row" style="margin-top:8px"><button class="petit ghost" id="mpnote">Tracer un échange</button><button class="petit ghost" id="mpfiche">Fiche et historique</button></div>' +
+      '<label class="small muted" style="display:block;margin-top:16px">Où en est on</label><select id="mpst" style="width:100%">' + S.statuts.map(function(s){ return '<option' + (s === l.statut ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join("") + '</select>' +
+      '<div class="pr-acc"><div><label class="small muted">Chambres ou places</label><input id="mpch" type="number" min="0" value="' + esc(a.chambres || "") + '"></div><div><label class="small muted">Tarif invités</label><input id="mpta" value="' + esc(a.tarif || "") + '"></div><div><label class="small muted">Date butoir</label><input id="mpbu" type="date" value="' + esc(a.butoir || "") + '"></div><div><label class="small muted">Relance le</label><input id="mprel" type="date" value="' + esc(l.relance_le ? String(l.relance_le).slice(0, 10) : "") + '"></div></div>' +
+      '<label class="small muted" style="display:block;margin-top:10px">Circuit de réservation et conditions</label><input id="mpre" value="' + esc(a.reservation || "") + '" style="width:100%;box-sizing:border-box">' +
+      '<label class="small muted" style="display:block;margin-top:10px">Notes</label><textarea id="mpno" rows="3" style="width:100%;box-sizing:border-box">' + esc(l.notes || "") + '</textarea>' +
+      (l.categorie === "hotel" || S.familles_cat[l.categorie] === "conciergerie" ? '<label class="cl-c" style="border:0;padding-top:12px"><input type="checkbox" id="mppub"' + (l.publie ? ' checked' : '') + '><span><b>Montrer aux invités sur le site</b><span class="small muted">Seulement une fois l\'accord obtenu : nom, ville, tarif et date butoir.</span></span></label>' : '') +
+      '<div class="row" style="margin-top:12px"><button id="mpsave">Enregistrer</button><button class="petit ghost" id="mpret" style="color:var(--bad)">Retirer du mariage</button></div></div>';
+    document.body.appendChild(F); var fermer = function(){ F.remove(); }; F.querySelector(".tab-x").onclick = fermer; F.onclick = function(e){ if (e.target === F) fermer(); };
+    $("mpsave").onclick = function(){ mpEnvoyer({ op: "regler", partenaire: pid, statut: $("mpst").value, relance_le: $("mprel").value, notes: $("mpno").value, publie: $("mppub") ? $("mppub").checked : undefined, accord: { chambres: $("mpch").value, tarif: $("mpta").value, butoir: $("mpbu").value, reservation: $("mpre").value } }).then(function(r){ if (r.ok) { fermer(); dessinerMP(); } }); };
+    $("mpret").onclick = function(){ if (!window.confirm("Retirer " + l.nom + " de la sélection ? Les échanges restent tracés.")) return; mpEnvoyer({ op: "retirer", partenaire: pid }).then(function(){ fermer(); dessinerMP(); }); };
+    $("mpappel").onclick = function(){ fermer(); mpAppel(l); };
+    $("mpnote").onclick = function(){ fermer(); mpAppel(l, true); };
+    $("mpfiche").onclick = function(){ fermer(); prFiche(pid); };
+  }
+  /* l'appel guidé partenaire : le texte d'ouverture, les questions de la famille, l'issue et la prochaine relance */
+  function mpAppel(l, simple){
+    var S = MP.S, fam = S.familles_cat[l.categorie] || "autre", G = S.guides[fam] || S.guides.autre, debut = Date.now(), R = {};
+    var F = document.createElement("div"); F.className = "tab-voile pr-appel";
+    var q = function(x){ var id = "mq_" + x.k, v = "";
+      var champ = x.t === "choix" ? '<div class="pr-ch">' + x.o.map(function(o){ return '<button type="button" class="ch" data-mq="' + x.k + '" data-v="' + esc(o) + '">' + esc(o) + '</button>'; }).join("") + '</div>' : '<input id="' + id + '" data-mk="' + x.k + '"' + (x.t === "nombre" ? ' type="number" min="0"' : x.t === "date" ? ' type="date"' : '') + ' style="width:100%;box-sizing:border-box">';
+      return '<div class="pr-q"><b>' + esc(x.l) + '</b>' + (x.aide ? '<span class="small muted">' + esc(x.aide) + '</span>' : '') + champ + '</div>'; };
+    F.innerHTML = '<div class="tab-feuille" style="max-height:94vh"><button type="button" class="tab-x">×</button><div class="k">' + (simple ? "Tracer un échange" : esc(G.titre)) + '</div><h2 style="margin:6px 0 2px">' + esc(l.nom) + '</h2>' + prContacts(l) +
+      (simple ? '<label class="small muted" style="display:block;margin-top:12px">Canal</label><select id="mqcanal" style="width:100%">' + S.canaux.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join("") + '</select>' :
+        '<div class="pr-ouv"><span class="small muted">Pour ouvrir</span><p>' + esc(G.ouverture) + '</p></div>' + G.questions.map(q).join("")) +
+      '<label class="small muted" style="display:block;margin-top:14px">Ce qu\'il faut retenir</label><textarea id="mqres" rows="3" style="width:100%;box-sizing:border-box"></textarea>' +
+      '<label class="small muted" style="display:block;margin-top:12px">Issue</label><div class="pr-ch">' + S.issues.map(function(o){ return '<button type="button" class="ch" data-mqi="' + esc(o) + '">' + esc(o) + '</button>'; }).join("") + '</div>' +
+      '<label class="small muted" style="display:block;margin-top:12px">Prochaine relance</label><input id="mqrel" type="date" style="width:100%;box-sizing:border-box">' +
+      '<button class="cta or" id="mqfin" style="width:100%;margin-top:16px"><span>Clore et tracer l\'échange</span></button><p class="err" id="mqerr"></p></div>';
+    document.body.appendChild(F); F.querySelector(".tab-x").onclick = function(){ if (window.confirm("Quitter sans tracer cet échange ?")) F.remove(); };
+    var issue = null;
+    F.querySelectorAll("[data-mq]").forEach(function(b){ b.onclick = function(){ F.querySelectorAll('[data-mq="' + b.dataset.mq + '"]').forEach(function(x){ x.classList.remove("sel"); }); b.classList.add("sel"); R[b.dataset.mq] = b.dataset.v; }; });
+    F.querySelectorAll("[data-mqi]").forEach(function(b){ b.onclick = function(){ F.querySelectorAll("[data-mqi]").forEach(function(x){ x.classList.remove("sel"); }); b.classList.add("sel"); issue = b.dataset.mqi;
+      if (!$("mqrel").value && /rappeler|attendue/.test(issue)) { var d = new Date(Date.now() + (/messagerie/.test(issue) ? 1 : 3) * 864e5); $("mqrel").value = d.toISOString().slice(0, 10); } }; });
+    $("mqfin").onclick = function(){
+      F.querySelectorAll("[data-mk]").forEach(function(i){ if (i.value) R[i.dataset.mk] = i.value; });
+      if (!issue) { $("mqerr").textContent = "Choisissez l'issue de l'échange."; return; }
+      this.disabled = true;
+      mpEnvoyer({ op: "echange", partenaire: l.partenaire_id, canal: simple ? $("mqcanal").value : "appel", issue: issue, resume: $("mqres").value, reponses: R, relance_le: $("mqrel").value, duree_min: simple ? null : Math.max(1, Math.round((Date.now() - debut) / 60000)) }).then(function(r){ if (r.ok) { F.remove(); dessinerMP(); } });
+    };
+  }
+
+  /* ---------- le site des invités du mariage ---------- */
+  function siteMariage(code){
+    V.innerHTML = '<p class="muted">Chargement</p>';
+    var dessiner = function(S){
+      var st = S.stats || {}, pct = function(a, b){ return b ? Math.round(a / b * 100) + " %" : "·"; };
+      V.innerHTML = '<div class="card"><a class="muted small" href="#/m/' + code + '" style="text-decoration:none">‹ Retour au mariage</a><h3 style="margin-top:4px">Le site des invités</h3><p class="muted">L\'espace des invités sur Squarespace. Chacun y entre par son lien personnel : la salutation, le formulaire, le pass et les maisons partenaires y sont posés par l\'outil.</p>' +
+        '<label class="small muted" style="display:block;margin-top:10px">Adresse du site</label><div class="row"><input id="siadr" value="' + esc(S.site || "") + '" placeholder="https://" style="flex:1;min-width:0"><button class="petit ghost" id="siadrok">Enregistrer</button>' + (S.site ? '<a class="petit ghost" href="' + esc(S.site) + '" target="_blank" rel="noopener">Ouvrir</a>' : '') + '</div>' +
+        '<div class="si-v ' + (S.detecte_le ? "ok" : "") + '"><b>' + (S.detecte_le ? "Script installé" : "Script pas encore détecté") + '</b><span class="small">' + (S.detecte_le ? "Vu le " + fmt(S.detecte_le) + " depuis " + esc(S.origine || "") : "Il se détecte à la première ouverture d'un lien personnel depuis le site.") + '</span></div>' +
+        '<details class="memo"><summary><span><b>Le code à poser dans Squarespace</b></span></summary><p class="small">Réglages, Avancé, Injection de code, Pied de page : collez cette ligne une seule fois.</p><div class="row"><input id="sicode" readonly value="' + esc(S.script) + '" style="flex:1;min-width:0"><button class="petit ghost" id="sicop">Copier</button></div></details>' +
+        '<div class="cases" style="margin-top:12px"><div><b>' + (st.liens || 0) + '</b><span>liens personnels</span></div><div><b>' + (st.ouverts || 0) + '</b><span>ouverts, ' + pct(st.ouverts, st.liens) + '</span></div><div><b>' + (st.reponses || 0) + '</b><span>réponses, ' + pct(st.reponses, st.liens) + '</span></div><div><b>' + S.maisons.length + '</b><span>maisons publiées</span></div></div></div>' +
+        '<div class="card"><h3>Les pages</h3>' + S.pages.map(function(p){ return '<div class="si-p"><span class="pr-n"><b>' + esc(p.l) + '</b>' + (p.h ? '<span class="small muted">' + esc(p.h) + '</span>' : '') + (p.le ? '<span class="small muted">' + esc(p.etat) + ' le ' + fmt(p.le) + ', ' + esc(p.par) + '</span>' : '') + '</span><select data-sip="' + p.k + '">' + S.etats.map(function(e){ return '<option' + (e === p.etat ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join("") + '</select></div>'; }).join("") + '</div>' +
+        '<div class="card"><h3>Ce que voient les invités, page Hébergement</h3>' + (S.maisons.length ? S.maisons.map(function(x){ return '<div class="si-p"><span class="pr-n"><b>' + esc(x.nom) + '</b><span class="small muted">' + esc(x.ville || "") + (x.tarif ? ' · ' + esc(x.tarif) : '') + (x.butoir ? ' · avant le ' + fdate(x.butoir) : '') + '</span></span></div>'; }).join("") : '<p class="muted small">Aucune maison publiée. Dans Partenaires, une maison en accord peut être montrée aux invités.</p>') + '<p style="margin-top:10px"><a class="lienbas" href="#/m/' + code + '/partenaires">Partenaires du mariage</a></p></div><p class="err" id="sierr"></p>';
+      var envoyer = function(c){ api("admin-site", c, code).then(function(r){ if (!r.ok) { $("sierr").textContent = r.detail; return; } dessiner(r); }); };
+      $("siadrok").onclick = function(){ envoyer({ op: "adresse", site: $("siadr").value }); };
+      $("sicop").onclick = function(){ var i = $("sicode"); i.select(); try { navigator.clipboard.writeText(i.value); } catch (e) { document.execCommand("copy"); } this.textContent = "Copié"; };
+      V.querySelectorAll("[data-sip]").forEach(function(s){ s.onchange = function(){ envoyer({ op: "page", k: s.dataset.sip, etat: s.value }); }; });
+    };
+    api("admin-site", {}, code).then(function(r){ if (!r.ok) throw new Error(r.detail); dessiner(r); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
 
   /* ---------- étape 7 : clôture (remerciement, bilan avec le couple, suppression des données des invités) ---------- */
   function clotureEtape(m, pane){

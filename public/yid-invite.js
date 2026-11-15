@@ -41,7 +41,7 @@
 .yi-err{color:#9B3B2E;font:400 14px/1.5 Inter,sans-serif;margin:12px 0 0;min-height:1em}\
 .yi-merci{font:italic 400 22px/1.45 "Cormorant Garamond",Georgia,serif;margin:22px 0 0}\
 .yi-lien{background:none;border:0;padding:0;margin-top:14px;font:500 13px Inter,sans-serif;color:var(--doux);text-decoration:underline;text-underline-offset:3px;cursor:pointer}\
-.yi-plein{position:fixed;inset:0;z-index:10001;background:rgba(20,16,12,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);overflow-y:auto;padding:24px 14px}.yi-plein .yi-carte{position:relative;margin:4vh auto}.yi-plein .yi-k{padding-right:48px}.yi-fermer{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:20px;border:1px solid var(--trait);background:#fff;font:400 22px/1 Inter,sans-serif;color:var(--encre);cursor:pointer;padding:0}.yi-phrase{display:block;margin:14px auto 0;font-style:italic;font-weight:400;letter-spacing:.02em!important;text-transform:none!important;line-height:1.35}.yi-pass{margin:24px 0 6px;padding:20px;border:1px solid var(--trait);border-radius:22px;text-align:center}.yi-pass img{display:block;margin:12px auto 0;width:200px;height:200px;image-rendering:pixelated}\
+.yi-plein{position:fixed;inset:0;z-index:10001;background:rgba(20,16,12,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);overflow-y:auto;padding:24px 14px}.yi-plein .yi-carte{position:relative;margin:4vh auto}.yi-plein .yi-k{padding-right:48px}.yi-fermer{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:20px;border:1px solid var(--trait);background:#fff;font:400 22px/1 Inter,sans-serif;color:var(--encre);cursor:pointer;padding:0}.yi-phrase{display:block;margin:14px auto 0;font-style:italic;font-weight:400;letter-spacing:.02em!important;text-transform:none!important;line-height:1.35}.yi-maisons{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}.yi-maison{padding:20px 22px;border:1px solid var(--trait);border-radius:22px;background:rgba(255,255,255,.6)}.yi-mnom{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;line-height:1.15;margin-top:6px}.yi-pass{margin:24px 0 6px;padding:20px;border:1px solid var(--trait);border-radius:22px;text-align:center}.yi-pass img{display:block;margin:12px auto 0;width:200px;height:200px;image-rendering:pixelated}\
 .yi-bulle{position:fixed;left:18px;bottom:18px;z-index:9999;width:58px;height:58px;border-radius:29px;border:0;background:#141210;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}\
 .yi-bulle img{width:30px}\
 .yi-voile{position:fixed;inset:0;z-index:10000;background:rgba(20,18,16,.4);display:flex;align-items:flex-end;justify-content:center}\
@@ -83,8 +83,14 @@
     document.querySelectorAll("a, button").forEach(function(b){ if (!/confirm|rsvp|r\.s\.v\.p/i.test(b.textContent || "")) return; if (b.closest(".yi")) return;
       b.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); ouvrir(); }, true); });
   }
+  /* les maisons partenaires en accord, posées dans le bloc <div data-yid="hebergement"></div> de la page Hébergement */
+  function maisons(d){
+    var zones = document.querySelectorAll('[data-yid="hebergement"]'); if (!zones.length || !d.maisons || !d.maisons.length) return;
+    var html = d.maisons.map(function(x){ return '<div class="yi-maison"><div class="yi-k">' + esc(x.ville || "") + (x.etoiles ? ' · ' + x.etoiles + ' étoiles' : '') + '</div><div class="yi-mnom">' + esc(x.nom) + '</div>' + (x.tarif ? '<p class="yi-aide" style="margin:6px 0 0">Tarif réservé aux invités : ' + esc(x.tarif) + '</p>' : '') + (x.butoir ? '<p class="yi-aide" style="margin:2px 0 0">À réserver avant le ' + esc(new Date(x.butoir + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })) + '</p>' : '') + '</div>'; }).join("");
+    for (var i = 0; i < zones.length; i++) { zones[i].classList.add("yi"); zones[i].innerHTML = '<div class="yi-maisons">' + html + '</div><p class="yi-aide" style="margin-top:14px">Pour réserver, indiquez votre choix dans votre réponse : nous transmettons votre demande à la maison, qui revient vers vous directement.</p>'; }
+  }
   function poser(d){
-    accueillir(d);
+    accueillir(d); maisons(d);
     var sec = el("div", "yi yi-plein"); sec.id = "yid-accueil"; sec.hidden = true; document.body.appendChild(sec);
     var ouvrir = function(){ sec.hidden = false; document.documentElement.style.overflow = "hidden"; dessiner(false); };
     var fermer = function(){ sec.hidden = true; document.documentElement.style.overflow = ""; };

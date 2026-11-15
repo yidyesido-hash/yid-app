@@ -220,3 +220,19 @@ details.card summary{ cursor:pointer; } details.card input{ width:100%; box-sizi
 @media (min-width:900px){ .tab-voile{ align-items:center; } .tab-feuille{ border-radius:28px; } }
 /* étape 7 */
 .cl-c{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--line,rgba(127,112,98,.2)); cursor:pointer; } .cl-c input{ margin-top:3px; width:20px; height:20px; flex:none; } .cl-c span{ display:flex; flex-direction:column; gap:2px; }
+/* partenaires et site */
+.pr-f{ display:flex; gap:8px; margin-top:10px; } .pr-f select{ flex:1; min-width:0; }
+.pr-liste{ margin-top:12px; } .pr-l{ display:flex; gap:12px; align-items:center; margin-top:8px; padding:14px 16px; border-radius:20px; border:1px solid rgba(127,112,98,.2); background:rgba(255,255,255,.6); cursor:pointer; }
+.pr-l input[type=checkbox]{ width:22px; height:22px; flex:none; } .pr-n{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; } .pr-m{ flex:none; }
+.pr-ct{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; } .pr-ct a{ text-decoration:none; }
+.pr-map{ height:380px; border-radius:22px; overflow:hidden; margin-top:12px; border:1px solid rgba(127,112,98,.2); }
+.pr-barre{ position:sticky; bottom:96px; display:flex; gap:12px; align-items:center; justify-content:space-between; margin-top:14px; padding:12px 16px; border-radius:24px; background:#1D1813; color:#fff; z-index:5; }
+.pr-acc{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; } .pr-acc input{ width:100%; box-sizing:border-box; }
+.pr-ouv{ margin-top:14px; padding:14px 16px; border-radius:18px; background:rgba(212,176,122,.14); } .pr-ouv p{ margin:4px 0 0; font-style:italic; }
+.pr-q{ display:flex; flex-direction:column; gap:4px; padding:12px 0; border-top:1px solid rgba(127,112,98,.2); margin-top:10px; } .pr-ch{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.pr-rep > div{ padding:3px 0; } .pr-rep .sub{ color:var(--gold); }
+.si-v{ margin-top:12px; padding:12px 16px; border-radius:18px; background:rgba(180,71,58,.1); display:flex; flex-direction:column; gap:2px; } .si-v.ok{ background:rgba(95,158,115,.16); }
+.si-p{ display:flex; gap:12px; align-items:center; padding:12px 0; border-top:1px solid rgba(127,112,98,.2); } .si-p select{ flex:none; width:auto; }
+.tab-feuille .ch.sel, .pr-appel .ch.sel{ background:#1D1813; color:#fff; }
+.pr-ct a{ display:inline-flex; align-items:center; min-height:38px; padding:0 16px; border-radius:19px; border:1px solid rgba(127,112,98,.3); font:600 11px/1 Inter,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:inherit; background:rgba(255,255,255,.7); }
+.pr-ct a:first-child{ background:#1D1813; color:#fff; border-color:#1D1813; }

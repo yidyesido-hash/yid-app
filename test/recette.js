@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.17.0, base locale");
+  console.log("Recette yid-app v1.18.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -634,6 +634,55 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("plan : chaque table reçoit une place dans la salle", r.json.tables.every(t => typeof t.x === "number" && typeof t.y === "number"));
     r = await P({ op: "disposer", positions: { [tA.id]: { x: 30, y: 40 } }, accueil: { x: 50, y: 96 } });
     check("plan : la salle se dispose, point d'accueil compris", r.json.tables[0].x === 30 && r.json.accueil.y === 96);
+  }
+
+  /* 1.18.0 : partenaires et site des invités, hors des étapes */
+  {
+    const PA = (b, h) => call("POST", "/api/forms?action=admin-partenaires", b, h || H);
+    const MPx = (b) => call("POST", "/api/forms?action=admin-mariage-partenaires&w=AC27", b || {}, H);
+    const carto = JSON.stringify({ version: "v5", data: [
+      { cat: "hotel", dest: "Oise", nom: "Mercure Beauvais Centre Cathédrale", ville: "Beauvais", lat: 49.43, lng: 2.08, etoiles: 4, note: "83 chambres", web: "all.accor.com", email: "", tel: "" },
+      { cat: "autocar", dest: "Oise", nom: "Cars de l'Oise", ville: "Beauvais", lat: 49.44, lng: 2.09, note: "Autocariste", web: "exemple.fr", email: "", tel: "03 44 00 00 00" },
+      { cat: "spa", dest: "Oise", nom: "Spa du Domaine", ville: "Chantilly", lat: 49.19, lng: 2.47, note: "", web: "exemple.com", email: "spa@exemple.com", tel: "" } ] });
+    let r = await PA({ op: "importer", texte: carto }, HI);
+    check("partenaires : l'import est réservé à un administrateur", r.status === 403);
+    r = await PA({ op: "importer", texte: carto });
+    check("partenaires : la cartographie s'importe", r.json.ok && r.json.import.ajoutes === 3 && r.json.partenaires.length === 3);
+    r = await PA({ op: "importer", texte: carto });
+    check("partenaires : un second import ne crée aucun doublon", r.json.import.ajoutes === 0 && r.json.partenaires.length === 3);
+    r = await PA({ op: "importer", texte: "pas du json" });
+    check("partenaires : un collage illisible est refusé proprement", !r.json.ok && /lisible/.test(r.json.detail));
+    r = await PA({ op: "enregistrer", fiche: { categorie: "chauffeur", nom: "Chauffeur Privé Rouen", ville: "Rouen", telephone: "06 11 22 33 44" } }, HI);
+    check("partenaires : l'équipe ajoute une maison", r.json.ok && r.json.partenaire.nom === "Chauffeur Privé Rouen");
+    r = await PA({ op: "enregistrer", fiche: { categorie: "chauffeur", nom: "Chauffeur privé rouen", ville: "ROUEN" } });
+    check("partenaires : un doublon est refusé, accents et majuscules compris", !r.json.ok);
+    const L = (await PA({ op: "liste" })).json.partenaires, hotel = L.find(p => p.categorie === "hotel"), car = L.find(p => p.categorie === "autocar");
+    r = await MPx({ op: "ajouter", ids: L.map(p => p.id) });
+    check("partenaires : la sélection du mariage se compose depuis le répertoire", r.json.selection.length === 4 && r.json.selection.every(l => l.statut === "à contacter"));
+    check("partenaires : le guide hôtel s'ouvre sur la date et le lieu, sans nommer le couple", /Yes I Do/.test(r.json.guides.hotel.ouverture) && !/Alexander|Clarisse/.test(r.json.guides.hotel.ouverture));
+    r = await MPx({ op: "echange", partenaire: hotel.id, canal: "appel", issue: "accord", resume: "Tarif groupe obtenu", reponses: { interlocuteur: "Mme Durand, commerciale", chambres: "20", tarif: "139 € petit déjeuner inclus", butoir: "2027-04-30" }, duree_min: 9 });
+    const lh = r.json.selection.find(l => l.partenaire_id === hotel.id);
+    check("partenaires : un appel guidé en accord met la maison en accord avec ses chambres", lh.statut === "accord" && lh.accord.chambres === 20 && r.json.chambres_accord === 20);
+    const fh = (await PA({ op: "fiche", id: hotel.id })).json;
+    check("partenaires : l'appel enrichit la fiche (interlocuteur) et reste tracé", fh.partenaire.contact_nom === "Mme Durand, commerciale" && fh.echanges.length === 1 && fh.echanges[0].duree_min === 9);
+    const hier = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    r = await MPx({ op: "echange", partenaire: car.id, canal: "appel", issue: "à rappeler", relance_le: hier });
+    check("partenaires : un premier appel passe la maison en contacté avec sa relance", r.json.selection.find(l => l.partenaire_id === car.id).statut === "contacté" && r.json.a_relancer === 1);
+    const A = await call("POST", "/api/forms?action=admin-accueil", {}, H);
+    check("partenaires : les relances dues remontent dans À faire", JSON.stringify(A.json.afaire).indexOf("relance(s) partenaires dues") >= 0);
+    r = await MPx({ op: "regler", partenaire: hotel.id, publie: true });
+    const li = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.jeton && c.reponse_le);
+    let iv = await call("GET", "/api/forms?action=invite&yid=" + li.jeton, undefined, { origin: "https://alexander-clarisse.squarespace.com" });
+    check("site : les maisons en accord et publiées arrivent sur le site des invités", iv.json.maisons.length === 1 && /139/.test(iv.json.maisons[0].tarif));
+    const SI = (b) => call("POST", "/api/forms?action=admin-site&w=AC27", b || {}, H);
+    r = await SI({ op: "adresse", site: "alexander-clarisse.squarespace.com" });
+    check("site : une adresse sans https est refusée", !r.json.ok);
+    r = await SI({ op: "adresse", site: "https://alexander-clarisse.squarespace.com/" });
+    iv = await call("GET", "/api/forms?action=invite&yid=" + li.jeton, undefined, { origin: "https://alexander-clarisse.squarespace.com" });
+    r = await SI();
+    check("site : le script est détecté à la première visite depuis le site", !!r.json.detecte_le && r.json.stats.ouverts >= 1 && r.json.maisons.length === 1);
+    r = await SI({ op: "page", k: "hebergement", etat: "prête" });
+    check("site : l'état d'une page se suit, avec qui et quand", r.json.pages.find(p => p.k === "hebergement").etat === "prête" && r.json.pages.find(p => p.k === "hebergement").par);
   }
 
   /* 1.17.0 : étape 7, clôture (en dernier : la suppression vide la liste d'AC27) */
