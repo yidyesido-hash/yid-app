@@ -16,7 +16,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.10.0, base locale");
+  console.log("Recette yid-app v1.11.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -475,6 +475,21 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("proche accompagné : le rendez vous est noté", r.json.ok && r.json.file.find(c => c.id === pr.id).rdv);
     acc = (await call("POST", "/api/forms?action=admin-accueil", {}, H)).json;
     check("à faire : le rendez vous du jour remonte, en priorité", acc.afaire.some(x => /Rendez vous avec/.test(x.t) && x.urgent));
+  }
+
+  /* 1.11.0 : cercles, et l'espace mariés suit les réponses en direct */
+  {
+    const e = await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "lire" }, H);
+    const J2 = (e.json.espace && e.json.espace.jeton) || (await call("POST", "/api/forms?action=admin-espace&w=AC27", { op: "creer" }, H)).json.espace.jeton;
+    const v = (await call("POST", "/api/forms?action=espace-voir", { j: J2 }, {})).json;
+    check("cercles : chaque invité du couple porte son cercle", v.contacts.every(c => c.cercle && c.cercle.rang >= 1 && c.cercle.l));
+    const pere = v.contacts.find(c => c.lien === "Père / Mère"), ami = v.contacts.find(c => c.lien === "Ami(e)");
+    check("cercles : la famille proche passe avant les amis", !pere || !ami || pere.cercle.rang < ami.cercle.rang);
+    check("en direct : le couple voit les réponses reçues et les contacts engagés", v.tuiles.reponses && v.tuiles.reponses.n >= 1 && v.tuiles.reponses.contactes >= 1, JSON.stringify(v.tuiles.reponses));
+    const rep = v.contacts.find(c => c.reponse);
+    check("en direct : la réponse d'un invité s'affiche chez le couple, sans rien de l'administration", rep && typeof rep.reponse.present === "boolean" && !JSON.stringify(v).includes("jeton\""));
+    const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts;
+    check("cercles : l'outil connaît aussi le cercle de chaque fiche", l.every(c => c.cercle && c.cercle.l));
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

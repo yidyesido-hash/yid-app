@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.10.0">
-<link rel="stylesheet" href="/cartes.css?v=1.10.0">
-<script src="/cartes.js?v=1.10.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.11.0">
+<link rel="stylesheet" href="/cartes.css?v=1.11.0">
+<script src="/cartes.js?v=1.11.0"></script>
 </head>
 <body>
 <header>
@@ -712,7 +712,7 @@
     var IC_TEL = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>', IC_WA = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></svg>', IC_OK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-10"/></svg>';
     function carte(c, k){
       var ini = String(c.nom_repertoire || "?").split(/\s+/).map(function(x){ return x.charAt(0); }).join("").slice(0, 2).toUpperCase();
-      var sous = [c.cote ? "côté " + c.cote.toLowerCase() : "côté à préciser", c.lien, c.invitation, c.reponse_le ? (c.reponse && /regret/.test(c.reponse.presence || "") ? "a répondu : absent" : "a répondu : présent") : ""].filter(Boolean).join(" · ");
+      var sous = [c.cercle && c.cercle.rang < 8 ? c.cercle.l : "", c.cote ? "côté " + c.cote.toLowerCase() : "côté à préciser", c.lien, c.invitation, c.reponse_le ? (c.reponse && /regret/.test(c.reponse.presence || "") ? "a répondu : absent" : "a répondu : présent") : ""].filter(Boolean).join(" · ");
       var mq = (c.manque || []), q0 = null; for (var x = 0; x < mq.length; x++) if (QUESTIONS[mq[x]]) { q0 = QUESTIONS[mq[x]]; break; }
       var milieu = "";
       if (c.desactive) milieu = '<p class="sub" style="margin:0">Fiche désactivée' + (c.motif_desactivation ? " : " + esc(c.motif_desactivation) : "") + '</p>';
@@ -740,6 +740,9 @@
     function fiches(){
       var s = ($("csearch").value || "").toLowerCase();
       var list = j.contacts.filter(function(c){ return (FILTRES_TUILES[FILTRE] ? (!c.desactive && c.etat !== "à voir" && FILTRES_TUILES[FILTRE].f(c)) : FILTRE === "toutes" ? !c.desactive : FILTRE === "doublon" || FILTRE === "numéro" ? (!c.desactive && c.famille === FILTRE) : c.etat === FILTRE) && (!s || (c.nom_repertoire + " " + (c.numero || "") + " " + (c.numero_2 || "") + " " + (c.cle || "") + " " + (c.prenom || "")).toLowerCase().indexOf(s) >= 0); });
+      /* hiérarchie par cercle : famille proche, famille, témoins, cortège, amis, invités des proches, collègues */
+      var rangC = function(c){ return (c.cercle && c.cercle.rang) || 9; }; list = list.map(function(c, k){ return [c, k]; }).sort(function(a, b){ return (rangC(a[0]) - rangC(b[0])) || (a[1] - b[1]); }).map(function(x){ return x[0]; });
+      var parCercle = function(arr, rendu, entete){ var out = "", prec = null; arr.forEach(function(c){ var g = c.cercle ? c.cercle.l : "Lien à préciser"; if (g !== prec) { out += entete(g, arr.filter(function(x){ return (x.cercle ? x.cercle.l : "Lien à préciser") === g; }).length); prec = g; } out += rendu(c); }); return out; };
       var bandeau = FILTRES_TUILES[FILTRE] ? '<div class="row" style="margin:0 0 12px"><span class="pill gold">' + esc(FILTRES_TUILES[FILTRE].l) + ' · ' + list.length + ' fiche(s)</span><button class="petit ghost" id="tout-voir">Tout afficher</button></div>' : '';
       var vide = '<div class="card"><p>' + (j.contacts.length ? "Aucune ligne pour ce filtre." : "Aucune ligne pour l'instant : déposez un fichier ou relevez la boîte.") + '</p></div>';
       var vues = '<div class="vues">' + [["une", "Une à une"], ["tableau", "Tableau"], ["toutes", "Toutes"]].map(function(v){ return '<button type="button" data-vue="' + v[0] + '" class="' + (VUE === v[0] ? "on" : "") + '">' + v[1] + '</button>'; }).join("") + '</div>';
@@ -752,8 +755,8 @@
           '<div style="margin-top:16px"><button type="button" class="cta or" id="valider"><span>Valider la fiche</span></button></div>' +
           '<div class="voile" id="pleine" hidden><div class="feuille" style="max-height:86vh;overflow:auto"><div class="grip"></div><div id="pleine-c"></div><button class="ghost" type="button" data-fermerp style="width:100%;margin-top:12px">Fermer</button></div></div>';
       } else if (VUE === "tableau") {
-        corps = '<div class="tableau verre"><table><thead><tr><th>Invité</th><th>État</th><th>Clé</th><th>Côté</th><th>Lien</th><th>Invitation</th><th>Accompagnant</th><th>Enfants</th><th>Il manque</th><th>Réponse</th><th>Lien</th></tr></thead><tbody>' + list.map(function(c, k){ var a = c.accueil && c.accueil.accompagnant; return '<tr data-ix="' + k + '"><td><b>' + esc(c.nom_repertoire) + '</b></td><td>' + pill(c.etat, c.etat === "complète" ? "ok" : c.etat === "à voir" ? "warn" : c.etat === "désactivée" ? "" : "bad") + '</td><td>' + esc(c.cle || "") + '</td><td>' + esc(c.cote || "") + '</td><td>' + esc(c.lien || "") + '</td><td>' + esc(c.invitation || "") + '</td><td>' + esc(a ? (a.etat === "connu" ? a.libelle : a.etat) : "") + '</td><td>' + (Number.isInteger(c.nb_enfants) ? c.nb_enfants : "") + '</td><td class="muted">' + esc((c.manque || []).join(", ")) + '</td><td>' + (reponseDe(c) ? pill(reponseDe(c), reponseDe(c) === "présent" ? "ok" : "") : "") + '</td><td>' + boutonLien(c) + '</td></tr>'; }).join("") + '</tbody></table></div><p class="small muted" style="margin-top:8px">Toucher une ligne ouvre la fiche.</p>';
-      } else corps = list.map(fiche).join("");
+        corps = '<div class="tableau verre"><table><thead><tr><th>Invité</th><th>État</th><th>Clé</th><th>Côté</th><th>Lien</th><th>Invitation</th><th>Accompagnant</th><th>Enfants</th><th>Il manque</th><th>Réponse</th><th>Lien</th></tr></thead><tbody>' + list.map(function(c, k){ var a = c.accueil && c.accueil.accompagnant; var g = c.cercle ? c.cercle.l : "Lien à préciser", gp = k ? (list[k - 1].cercle ? list[k - 1].cercle.l : "Lien à préciser") : null; return (g !== gp ? '<tr class="cercle-r"><td colspan="12">' + esc(g) + '</td></tr>' : '') + '<tr data-ix="' + k + '"><td><b>' + esc(c.nom_repertoire) + '</b></td><td>' + pill(c.etat, c.etat === "complète" ? "ok" : c.etat === "à voir" ? "warn" : c.etat === "désactivée" ? "" : "bad") + '</td><td>' + esc(c.cle || "") + '</td><td>' + esc(c.cote || "") + '</td><td>' + esc(c.lien || "") + '</td><td>' + esc(c.invitation || "") + '</td><td>' + esc(a ? (a.etat === "connu" ? a.libelle : a.etat) : "") + '</td><td>' + (Number.isInteger(c.nb_enfants) ? c.nb_enfants : "") + '</td><td class="muted">' + esc((c.manque || []).join(", ")) + '</td><td>' + (reponseDe(c) ? pill(reponseDe(c), reponseDe(c) === "présent" ? "ok" : "") : "") + '</td><td>' + boutonLien(c) + '</td></tr>'; }).join("") + '</tbody></table></div><p class="small muted" style="margin-top:8px">Toucher une ligne ouvre la fiche.</p>';
+      } else corps = parCercle(list, fiche, function(g, n){ return '<h3 class="cercle-t">' + esc(g) + ' <span>' + n + '</span></h3>'; });
       $("fiches").innerHTML = bandeau + vues + '<datalist id="dl-proches">' + r.precisions.map(function(p){ return '<option value="' + esc(p) + '">'; }).join("") + '</datalist>' + corps;
       pane.querySelectorAll("[data-vue]").forEach(function(b){ b.onclick = function(){ VUE = b.dataset.vue; fiches(); }; });
       /* une à une : les actions groupées (lignes cochées) n'ont pas de sens, on les range */

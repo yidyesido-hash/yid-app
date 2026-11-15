@@ -113,12 +113,22 @@
   .recu b{ font:500 26px/1.2 var(--h); }
   footer{ text-align:center; color:var(--muted); font-size:12px; letter-spacing:.08em; margin-top:40px; }
   .vide{ text-align:center; color:var(--muted); padding:30px 10px; }
+  .vues-c{ display:inline-flex; gap:4px; padding:4px; border-radius:24px; background:rgba(255,255,255,.7); border:1px solid var(--line); margin:16px 0 4px; }
+  .vues-c button{ border:0; background:none; border-radius:20px; padding:9px 18px; font:500 13px Inter,sans-serif; color:inherit; cursor:pointer; }
+  .vues-c button.on{ background:#1D1813; color:#fff; }
+  .pile-inv{ height:max(560px, calc(100dvh - 240px)); margin-top:12px; }
+  .pile-inv > .sc{ overflow-y:auto; overscroll-behavior:contain; text-align:left; }
+  .pile-inv > .sc.inv{ border:0; }
+  .pile-inv .form{ margin-top:14px; }
+  .suivi{ margin-top:8px; font-size:13px; padding:8px 12px; border-radius:14px; background:rgba(184,149,106,.12); display:inline-block; }
+  .suivi.oui{ background:rgba(95,158,115,.14); color:#2F6B45; } .suivi.non{ background:rgba(155,59,46,.1); color:#8A3328; }
+  .cercle-c{ font:500 22px/1.2 "Cormorant Garamond",Georgia,serif; margin:26px 0 10px; } .cercle-c span{ font:500 12px Inter,sans-serif; opacity:.55; margin-left:6px; }
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
-<link rel="stylesheet" href="/espace-habillage.css?v=1.10.0">
-<link rel="stylesheet" href="/cartes.css?v=1.10.0">
-<script src="/cartes.js?v=1.10.0"></script>
+<link rel="stylesheet" href="/espace-habillage.css?v=1.11.0">
+<link rel="stylesheet" href="/cartes.css?v=1.11.0">
+<script src="/cartes.js?v=1.11.0"></script>
 </head>
 <body>
 <div class="page">
@@ -218,8 +228,12 @@
     "retiré": { l: "Retirés", f: function(c){ return c.etat === "retiré"; } },
     "attendus": { l: "Invités attendus", cache: true, f: function(c){ return c.etat !== "retiré" && (c.invitation === "Invitation unique" || c.invitation === "Invitation pour deux"); } },
     "à confirmer": { l: "Invitations à confirmer", cache: true, f: function(c){ return c.etat !== "retiré" && c.invitation === "Ne sait pas encore"; } },
-    "enfants": { l: "Foyers avec enfants", cache: true, f: function(c){ return c.etat !== "retiré" && c.nb_enfants > 0; } }
+    "enfants": { l: "Foyers avec enfants", cache: true, f: function(c){ return c.etat !== "retiré" && c.nb_enfants > 0; } },
+    "répondu": { l: "Ont répondu", f: function(c){ return !!c.reponse; } },
+    "présents": { l: "Présents", cache: true, f: function(c){ return c.reponse && c.reponse.present; } },
+    "absents": { l: "Absents", cache: true, f: function(c){ return c.reponse && !c.reponse.present; } }
   };
+  var VUE_C = "une", IDX_C = 0;
   function listeVue(){
     var t = D.tuiles, m = D.mariage, total = t.completees.sur || 0, p = total ? t.completees.n / total : 0;
     var ep = (t.attendus.cotes || {}).epouse || 0, ex = (t.attendus.cotes || {}).epoux || 0, tot = Math.max(1, ep + ex);
@@ -230,6 +244,7 @@
         '<button class="chiffre" data-f="à confirmer"><b>' + t.a_confirmer.n + '</b><span>À confirmer</span><em>' + t.estimation_haute.n + ' places réservées</em></button>' +
         (m.enfants !== "sans" ? '<button class="chiffre" data-f="enfants"><b>' + t.enfants.n + '</b><span>Enfants attendus</span></button>' : '') +
         '<button class="chiffre" data-f="tous"><b>' + t.convives.n + '</b><span>Convives au total</span>' + (m.plafond ? '<em>au plus ' + m.plafond + '</em>' + barre(t.convives.n, m.plafond) : '') + '</button>' +
+        (t.reponses && (t.reponses.n || t.reponses.contactes) ? '<button class="chiffre" data-f="répondu"><b>' + t.reponses.n + '</b><span>Réponses reçues</span><em>' + t.reponses.presents + ' présent' + (t.reponses.presents > 1 ? 's' : '') + ', ' + t.reponses.absents + ' absent' + (t.reponses.absents > 1 ? 's' : '') + ' · ' + t.reponses.contactes + ' contacté' + (t.reponses.contactes > 1 ? 's' : '') + '</em></button>' : '') +
       '</div></div>' +
       '<div style="margin-top:22px"><div class="small muted" style="display:flex;justify-content:space-between"><span>Côté épouse · ' + ep + ' attendus</span><span>Côté époux · ' + ex + ' attendus</span></div><div class="cotes"><i style="width:' + (ep / tot * 100) + '%;background:#C9B08A"></i><i style="width:' + (ex / tot * 100) + '%;background:#8C8378"></i></div></div></div>' +
       '<details class="regles"><summary>Les règles d\'or</summary><ol>' + D.regles_or.map(function(r){ return '<li>' + esc(r) + '</li>'; }).join("") + '</ol></details>' +
@@ -237,16 +252,18 @@
       '<div class="filtres" id="filtres"></div>' +
       '<div class="recherche"><input id="cherche" placeholder="Rechercher un invité" autocomplete="off"><select id="cote" style="width:auto"><option value="">Les deux côtés</option>' + D.cotes.map(function(c){ return '<option' + (c === COTE ? " selected" : "") + '>' + esc(c) + '</option>'; }).join("") + '</select></div>' +
       (m.modifiable ? '' : '<div class="bandeau">Votre liste est tenue par Yes I Do. Une correction ? Écrivez nous, elle sera faite dans l\'instant.</div>') +
+      '<div class="vues-c" id="vues-c"><button type="button" data-vc="une">Une à une</button><button type="button" data-vc="liste">Liste</button></div>' +
       '<div class="invites" id="invites"></div>' +
       (D.attente && D.attente.length ? '<h2 style="margin-top:40px">Votre liste d\'attente</h2><p class="intro">Ils rejoindront votre liste, dans cet ordre, si des places se libèrent. Nous vous le proposerons à chaque fois.</p><div class="surface"><ol style="margin:0;padding-left:22px">' + D.attente.map(function(a){ return '<li style="margin-bottom:8px"><b style="font:600 18px/1.3 var(--h)">' + esc(a.nom) + '</b>' + (a.cote ? ' <span class="small muted">· ' + esc(a.cote) + '</span>' : '') + '</li>'; }).join("") + '</ol></div>' : '');
     $("t-liste").innerHTML = html;
     $("t-liste").querySelectorAll("[data-f]").forEach(function(b){ b.onclick = function(){ FILTRE = b.dataset.f; filtres(); invites(); $("filtres").scrollIntoView({ behavior: "smooth", block: "start" }); }; });
-    $("cherche").oninput = invites; $("cote").onchange = function(){ COTE = $("cote").value; invites(); };
+    $("t-liste").querySelectorAll("[data-vc]").forEach(function(b){ b.onclick = function(){ VUE_C = b.dataset.vc; invites(); }; });
+    $("cherche").oninput = function(){ IDX_C = 0; invites(); }; $("cote").onchange = function(){ COTE = $("cote").value; invites(); };
     filtres(); invites();
   }
   function filtres(){
     var n = function(k){ return D.contacts.filter(FILTRES[k].f).length; };
-    var keys = ["tous", "à compléter", "complet", "avec Yes I Do", "retiré"]; if (FILTRES[FILTRE].cache) keys.push(FILTRE);
+    var keys = ["tous", "à compléter", "complet", "avec Yes I Do", "répondu", "retiré"]; if (FILTRES[FILTRE].cache) keys.push(FILTRE);
     $("filtres").innerHTML = keys.map(function(k){ return '<button data-k="' + esc(k) + '" class="' + (k === FILTRE ? "on" : "") + '">' + esc(FILTRES[k].l) + ' · ' + n(k) + '</button>'; }).join("");
     $("filtres").querySelectorAll("[data-k]").forEach(function(b){ b.onclick = function(){ FILTRE = b.dataset.k; filtres(); invites(); }; });
   }
@@ -271,17 +288,31 @@
   function invites(){
     var s = ($("cherche").value || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     var list = D.contacts.filter(FILTRES[FILTRE].f).filter(function(c){ return (!COTE || c.cote === COTE) && (!s || (c.nom + " " + c.prenom + " " + c.nom_famille + " " + c.numero).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").indexOf(s) >= 0); });
-    var ordre = { "à compléter": 0, "avec Yes I Do": 1, "complet": 2, "retiré": 3 };
-    list.sort(function(a, b){ return (ordre[a.etat] - ordre[b.etat]) || a.nom.localeCompare(b.nom, "fr"); });
-    $("invites").innerHTML = list.length ? list.map(function(c){
-      var col = couleur(c.etat), ouvert = !!OUVERT[c.id];
-      return '<div class="inv ' + col + '" data-id="' + c.id + '"><div class="tete" data-ouvre="' + c.id + '"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' +
-        (resume(c) ? '<div class="resume">' + esc(resume(c)) + '</div>' : '') +
+    var ordre = { "à compléter": 0, "avec Yes I Do": 1, "complet": 2, "retiré": 3 }, rc = function(c){ return (c.cercle && c.cercle.rang) || 9; };
+    list.sort(function(a, b){ return (rc(a) - rc(b)) || (ordre[a.etat] - ordre[b.etat]) || a.nom.localeCompare(b.nom, "fr"); });
+    document.querySelectorAll("#vues-c [data-vc]").forEach(function(b){ b.classList.toggle("on", b.dataset.vc === VUE_C); });
+    var suivi = function(c){ var x = []; if (c.reponse) x.push(c.reponse.present ? "Présent" + (c.reponse.accompagnant ? ", accompagné de " + c.reponse.accompagnant : "") + (c.reponse.enfants ? ", " + c.reponse.enfants + " enfant" + (c.reponse.enfants > 1 ? "s" : "") : "") : "Ne pourra pas venir"); else if (c.contact) x.push(c.contact.charAt(0).toUpperCase() + c.contact.slice(1)); return x.length ? '<div class="suivi' + (c.reponse ? (c.reponse.present ? " oui" : " non") : "") + '">' + esc(x.join("")) + '</div>' : ''; };
+    var corps = function(c, plein){ var col = couleur(c.etat);
+      return (resume(c) ? '<div class="resume">' + esc(resume(c)) + '</div>' : '') + suivi(c) +
         (c.manque.length ? '<div class="manque">Il manque : ' + esc(c.manque.join(", ")) + '</div>' : '') +
         (c.a_demander && c.a_demander.length ? '<div class="resume" style="color:var(--goldink)">Nous le demanderons à l\'invité : ' + esc(c.a_demander.join(", ")) + '</div>' : '') +
         (c.etat === "avec Yes I Do" ? '<div class="resume">Nous vérifions cette fiche avec vous lors de notre prochain échange.</div>' : '') +
-        (ouvert ? formulaire(c) : '') + '</div>';
-    }).join("") : '<div class="vide">Aucun invité ici.</div>';
+        (plein || OUVERT[c.id] ? formulaire(c) : ''); };
+    if (!list.length) { $("invites").innerHTML = '<div class="vide">Aucun invité ici.</div>'; return; }
+    if (VUE_C === "une") {
+      IDX_C = Math.max(0, Math.min(IDX_C, list.length - 1));
+      var tons = ["t-ivoire", "t-sable", "t-champagne", "t-ivoire"];
+      $("invites").innerHTML = '<div class="metap"><span class="hint">↔ Glissez d\'un invité à l\'autre</span><span id="icnt" style="opacity:.6"></span></div><div class="pile2 pile-inv" id="ipile">' +
+        list.map(function(c, k){ var col = couleur(c.etat); return '<div class="sc ' + tons[k % tons.length] + ' inv ' + col + '" data-id="' + c.id + '"><div class="k">' + esc(c.cercle ? c.cercle.l : "") + (c.cote ? " · côté " + esc(c.cote.toLowerCase()) : "") + '</div><div class="tete" style="margin-top:8px"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' + corps(c, true) + '</div>'; }).join("") +
+        '</div><div class="dots" id="idots"></div>';
+      YID.pileActive = YID.pile($("ipile"), { index: IDX_C, onChange: function(i, n){ IDX_C = i; $("icnt").textContent = (i + 1) + " / " + n; YID.points($("idots"), i, n); } });
+    } else {
+      var prec = null;
+      $("invites").innerHTML = list.map(function(c){
+        var col = couleur(c.etat), g = c.cercle ? c.cercle.l : "", h = g !== prec ? '<h3 class="cercle-c">' + esc(g) + ' <span>' + list.filter(function(x){ return (x.cercle ? x.cercle.l : "") === g; }).length + '</span></h3>' : ''; prec = g;
+        return h + '<div class="inv ' + col + '" data-id="' + c.id + '"><div class="tete" data-ouvre="' + c.id + '"><div><div class="nom">' + esc(c.nom || "Sans nom") + '</div><div class="num">' + esc(c.numero) + '</div></div><span class="etat ' + col + '">' + libelleEtat(c.etat) + '</span></div>' + corps(c, false) + '</div>';
+      }).join("");
+    }
     $("invites").querySelectorAll("[data-ouvre]").forEach(function(el){ el.onclick = function(){ var id = el.dataset.ouvre; OUVERT[id] = !OUVERT[id]; invites(); }; });
     $("invites").querySelectorAll("[data-form]").forEach(function(f){
       var id = +f.dataset.form, msg = f.querySelector("[data-msg]");
