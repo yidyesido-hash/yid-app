@@ -548,8 +548,10 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     global.__YID_INBOX = [{ id: "m1", subject: "Question sur l'hôtel", from: { emailAddress: { address: "Invite.Un@exemple.fr", name: "Invité Un" } }, receivedDateTime: new Date().toISOString(), bodyPreview: "Bonjour, est il possible…", isRead: false }];
     r = await M({ op: "recus" });
     check("messagerie : les reçus reconnaissent l'invité de la liste par son adresse", r.json.ok && r.json.messages[0].fiche && r.json.messages[0].fiche.id && !r.json.messages[0].lu, JSON.stringify(r.json).slice(0, 200));
+    check("messagerie : un message non ouvert compte comme à lire", (await M({ op: "non_lus" })).json.non_lus === 1);
     r = await M({ op: "lire", id: "m1" });
     check("messagerie : un message s'ouvre", r.json.ok && r.json.message.objet === "Question sur l'hôtel");
+    check("messagerie : une fois ouvert, il est lu, sans toucher à la boîte", (await M({ op: "non_lus" })).json.non_lus === 0 && (await M({ op: "recus" })).json.messages[0].lu === true);
     global.__YID_MAILS = [];
     r = await M({ op: "repondre", id: "m1", texte: "Bien sûr, nous nous en occupons." });
     check("messagerie : on répond depuis l'outil", r.json.ok && global.__YID_MAILS.length === 1);

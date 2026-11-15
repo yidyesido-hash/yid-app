@@ -260,6 +260,8 @@ module.exports = async (req, res) => {
         else if (op === "repondre") { await messagerie.repondre(w, String(b.id || ""), b.texte, u); x = { envoye: true }; }
         else if (op === "apercu" || op === "ecrire") x = await messagerie.ecrire(w, b, u, op === "ecrire");
         else if (op === "destinataires") x = { destinataires: await messagerie.destinataires(w) };
+        else if (op === "non_lus") x = { non_lus: await messagerie.nonLus(w) };
+        else if (op === "tout_lu") { await messagerie.toutLu(w); x = { messages: await messagerie.dossier(w, "recus") }; }
         else throw new Error("opération inconnue");
         return send(res, 200, Object.assign({ ok: true }, x));
       } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
