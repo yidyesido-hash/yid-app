@@ -174,3 +174,10 @@ tr.cercle-r td{ font:600 10.5px Inter,sans-serif; letter-spacing:.18em; text-tra
 .pastille-nl{ display:inline-block; width:9px; height:9px; border-radius:5px; background:#C9A26B; flex:0 0 9px; }
 .ms-l.nonlu{ border-left:3px solid #C9A26B !important; } .ms-l.nonlu b{ color:inherit !important; font-weight:700; }
 .ms-l.lu{ opacity:.78; } .ms-l.lu b{ font-weight:500; }
+/* logistique */
+.lg-l{ display:flex; gap:10px; align-items:center; padding:12px 0; border-top:1px solid rgba(127,112,98,.2); }
+.lg-l label input{ width:100%; box-sizing:border-box; margin-top:2px; }
+.lg-reg{ margin-top:12px; } .lg-nav{ display:grid; gap:6px; padding:10px 0; border-top:1px dashed rgba(127,112,98,.3); } .lg-nav input{ width:100%; box-sizing:border-box; min-width:0; }
+.ligne-c{ display:flex; gap:10px; align-items:center; margin-top:10px; font-size:14px; } .ligne-c input{ width:auto; }
+.card .cases{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .card .cases > div{ padding:12px; border-radius:18px; background:rgba(255,255,255,.55); border:1px solid rgba(127,112,98,.15); }
+.card .cases b{ display:block; font:500 26px/1 "Cormorant Garamond",Georgia,serif; } .card .cases span{ font-size:11px; opacity:.7; }

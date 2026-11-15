@@ -17,7 +17,7 @@ let n = 0, ko = 0;
 function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "  ok  " : "  KO  ") + label + (extra ? "  " + extra : "")); }
 
 (async () => {
-  console.log("Recette yid-app v1.13.0, base locale");
+  console.log("Recette yid-app v1.14.0, base locale");
   let r = await call("POST", "/api/forms?action=admin-login", { password: "faux" });
   check("mot de passe refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-login", { password: "test" });
@@ -429,7 +429,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("lien personnel : sans réponse à la présence, rien n'est enregistré", r.status === 422);
     const qs = (await call("GET", "/api/forms?action=invite&yid=" + c0.jeton)).json.questions;
     const rep = { presence: qs[0].o[0], mot: "Avec plaisir" };
-    for (const q of qs) { if (q.type === "email") rep.email = "amy@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
+    for (const q of qs) { if (q.k === "hebergement" && q.type === "choix") rep.hebergement = q.o[0]; if (q.type === "email") rep.email = "amy@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
     r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: rep });
     check("lien personnel : la réponse est enregistrée", r.json.ok && r.json.present === true, JSON.stringify(r.json));
     const apres = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === c0.id);
@@ -501,7 +501,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     const [g1, g2] = l.filter(c => !c.reponse_le);
     let q = (await call("GET", "/api/forms?action=invite&yid=" + g1.jeton)).json.questions;
     check("emails : le formulaire de l'invité demande son adresse quand on ne l'a pas", q.some(x => x.k === "email" && x.requis));
-    const rep = (qs, mail) => { const o = { presence: qs[0].o[0] }; for (const x of qs) { if (x.k === "accompagnant" && x.type === "texte") o.accompagnant = "Paul Martin"; if (x.k === "vient_accompagne") o.vient_accompagne = x.o[1]; if (x.type === "enfants") o.enfants = Array.from({ length: x.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (x.k === "nb_enfants") o.nb_enfants = "Non"; } if (mail) o.email = mail; return o; };
+    const rep = (qs, mail) => { const o = { presence: qs[0].o[0] }; for (const x of qs) { if (x.k === "accompagnant" && x.type === "texte") o.accompagnant = "Paul Martin"; if (x.k === "vient_accompagne") o.vient_accompagne = x.o[1]; if (x.type === "enfants") o.enfants = Array.from({ length: x.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (x.k === "nb_enfants") o.nb_enfants = "Non"; if (x.k === "hebergement" && x.type === "choix") o.hebergement = x.o[0]; } if (mail) o.email = mail; return o; };
     let r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "pas-une-adresse") });
     check("emails : une adresse incomplète est refusée", r.status === 422);
     r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "Invite.Un@exemple.fr") });
@@ -566,6 +566,29 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     r = await M({ op: "envoyes" });
     check("messagerie : les envoyés montrent ce qui est parti de la boîte", r.json.ok && r.json.messages.some(x => x.adresse === "regis@yidyesido.info"));
     await require("../lib/db").query("UPDATE mariage SET boite_email = '' WHERE code = 'AC27'");
+  }
+
+  /* 1.14.0 : séjour et logistique */
+  {
+    const G = (b) => call("POST", "/api/forms?action=admin-logistique&w=AC27", b || {}, H);
+    let r = await G({ op: "regler", transfert: true, navettes: [{ moment: "Samedi soir", de: "Hôtel du Lac", vers: "Château", depart: "18h30", retours: "23h30, 1h", capacite: 4 }] });
+    check("logistique : les réglages s'enregistrent, un trajet de navette avec ses rotations", r.json.ok && r.json.navettes.length === 1 && r.json.navettes[0].retours.length === 2, r.json.detail);
+    r = await G({ op: "regler", navettes: [{ moment: "", de: "x", vers: "y" }, { moment: "Samedi soir", de: "", vers: "Château" }] });
+    check("logistique : un trajet incomplet est refusé", r.status === 422);
+    const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.filter(c => c.etat === "complète" && !c.desactive && !c.reponse_le);
+    const g = l[0], qs = (await call("GET", "/api/forms?action=invite&yid=" + g.jeton)).json.questions;
+    check("logistique : l'invité voit ses questions de venue (horaires, navette, retour)", qs.some(q => q.k === "arrivee") && qs.some(q => /_aller$/.test(q.k)) && qs.some(q => /_retour$/.test(q.k)));
+    const rep = { presence: qs[0].o[0] };
+    for (const q of qs) { if (q.type === "email") rep.email = "venue@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; if (q.k === "hebergement" && q.type === "choix") rep.hebergement = q.o[0];
+      if (q.k === "arrivee") rep.arrivee = "TGV 8541, vendredi 15 h 42"; if (/_aller$/.test(q.k)) rep[q.k] = "4"; if (/_retour$/.test(q.k)) rep[q.k] = "1h"; }
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g.jeton, reponses: rep });
+    check("logistique : la réponse de venue est enregistrée", r.json.ok, r.json.detail);
+    r = await G();
+    const n = r.json.navettes[0];
+    check("logistique : l'outil compte les places par trajet et par rotation", n.aller >= 4 && n.retours.find(x => x.heure === "1h").places >= 4);
+    check("logistique : l'alerte se lève quand le véhicule approche de sa capacité", n.alerte === true);
+    check("logistique : les horaires de l'invité remontent pour le chauffeur", r.json.transferts.some(t => /TGV 8541/.test(t.arrivee)));
+    await G({ op: "regler", transfert: false, navettes: [] });
   }
 
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);

@@ -308,6 +308,46 @@
   }
 
   /* ---------- mariage : les huit étapes ---------- */
+  /* ---------- étape 5 : séjour et logistique ---------- */
+  function logistiqueEtape(m, pane){
+    pane.innerHTML = '<p class="muted">Chargement</p>';
+    api("admin-logistique", {}, m.code).then(function(r){ dessinerLogistique(m, pane, r); }).catch(function(e){ pane.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
+  function csv(nom, lignes){
+    var t = lignes.map(function(l){ return l.map(function(x){ x = String(x == null ? "" : x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; }).join(";"); }).join("\r\n");
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + t], { type: "text/csv;charset=utf-8" })); a.download = nom + ".csv"; document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); }, 500);
+  }
+  function dessinerLogistique(m, pane, R, msg){
+    var L = R.config, nav = L.navettes.slice();
+    var h = '<div class="card"><h3>5. Séjour et logistique</h3><p class="muted" style="margin:6px 0 0">Ce que les invités confirmés indiquent sur leur lien personnel : où ils dorment, quand ils arrivent, et leurs places dans les navettes. Chaque liste se télécharge pour le prestataire.</p>' +
+      '<div class="contact"><div class="cases-c" style="grid-template-columns:repeat(3,1fr)"><div class="verre"><b>' + R.presents + '</b><span>foyers présents</span></div><div class="verre"><b>' + R.personnes + '</b><span>personnes</span></div><div class="verre"><b>' + R.transferts.length + '</b><span>horaires reçus</span></div></div></div></div><p class="small" id="lgmsg" style="color:#2F6B45">' + esc(msg || "") + '</p>';
+    /* hôtels */
+    h += '<div class="card"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;flex:1">Hébergement</h3>' + (R.hotels.length ? '<button type="button" class="petit ghost" id="lgcsvh">Listes hôtels</button>' : '') + '</div>' +
+      (R.hotels.length ? R.hotels.map(function(x){ var plein = x.chambres && x.foyers >= x.chambres; return '<div class="lg-l"><div style="flex:1;min-width:0"><b>' + esc(x.nom) + '</b><div class="small muted">' + x.foyers + ' foyer(s), ' + x.personnes + ' personne(s)' + (x.chambres ? ' · ' + x.chambres + ' chambre(s) réservée(s)' : '') + '</div>' + (plein ? '<div class="small" style="color:var(--bad)">Toutes les chambres réservées sont attribuées.</div>' : '') + '</div><label class="small muted" style="width:96px">Chambres<input type="number" min="0" data-lgch="' + esc(x.nom) + '" value="' + (x.chambres || "") + '"></label></div>'; }).join("")
+        : '<p class="small muted" style="margin:8px 0 0">Aucun hôtel n\'est déclaré pour ce mariage. Les hôtels se renseignent sur la fiche du mariage (étape 1, hébergement) ; ils apparaîtront alors dans le formulaire des invités.</p>') + '</div>';
+    /* transferts */
+    h += '<div class="card"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;flex:1">Chauffeurs</h3>' + (R.transferts.length ? '<button type="button" class="petit ghost" id="lgcsvt">Liste chauffeur</button>' : '') + '</div>' +
+      '<label class="ligne-c"><input type="checkbox" id="lgtr"' + (L.transfert ? ' checked' : '') + '> Demander aux invités leurs horaires d\'arrivée et de départ</label>' +
+      (L.transfert ? '<label class="ligne-c"><input type="checkbox" id="lgtro"' + (L.transfert_offert ? ' checked' : '') + '> Les transferts sont offerts par les mariés</label>' : '') +
+      (R.transferts.length ? R.transferts.map(function(t){ return '<div class="lg-l"><div style="flex:1;min-width:0"><b>' + esc(t.nom) + '</b> <span class="small muted">· ' + t.personnes + ' pers.' + (t.enfants ? ', dont ' + t.enfants + ' enfant(s)' : '') + (t.hotel ? ' · ' + esc(t.hotel) : '') + '</span><div class="small">Arrivée : ' + esc(t.arrivee || "non indiquée") + '</div><div class="small">Départ : ' + esc(t.depart || "non indiqué") + '</div></div></div>'; }).join("") : (L.transfert ? '<p class="small muted" style="margin:8px 0 0">Aucun horaire reçu pour l\'instant.</p>' : '')) + '</div>';
+    /* navettes */
+    h += '<div class="card"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;flex:1">Navettes</h3>' + (R.navettes.some(function(n){ return n.passagers.length; }) ? '<button type="button" class="petit ghost" id="lgcsvn">Liste transporteur</button>' : '') + '</div>' +
+      R.navettes.map(function(n){ return '<div class="lg-l" style="display:block"><b>' + esc(n.moment) + '</b> <span class="small muted">· ' + esc(n.de) + ' vers ' + esc(n.vers) + (n.depart ? ', départ ' + esc(n.depart) : '') + (n.capacite ? ' · ' + n.capacite + ' places' : '') + '</span>' +
+        '<div class="small" style="margin-top:4px' + (n.alerte ? ';color:var(--bad)' : '') + '">Aller : ' + n.aller + ' place(s)' + (n.retours.length ? ' · Retours : ' + n.retours.map(function(r){ return esc(r.heure) + ' (' + r.places + ')'; }).join(", ") : '') + (n.alerte ? ' · le véhicule approche de sa capacité' : '') + '</div></div>'; }).join("") +
+      '<details class="lg-reg"' + (nav.length ? '' : ' open') + '><summary class="small">Régler les trajets</summary><div id="lgnav">' + nav.concat([{}]).map(function(n, i){ return '<div class="lg-nav" data-i="' + i + '"><input data-k="moment" placeholder="Moment (ex. Samedi soir, dîner)" value="' + esc(n.moment || "") + '"><div style="display:flex;gap:6px"><input data-k="de" placeholder="Départ (ex. Hôtel Napoléon)" value="' + esc(n.de || "") + '"><input data-k="vers" placeholder="Arrivée (ex. Château)" value="' + esc(n.vers || "") + '"></div><div style="display:flex;gap:6px"><input data-k="depart" placeholder="Heure aller (18h30)" value="' + esc(n.depart || "") + '"><input data-k="retours" placeholder="Retours (23h30, 1h, 3h)" value="' + esc((n.retours || []).join(", ")) + '"><input data-k="capacite" type="number" min="0" placeholder="Places" value="' + (n.capacite || "") + '" style="max-width:90px"></div><input type="hidden" data-k="id" value="' + esc(n.id || "") + '"></div>'; }).join("") + '</div><p class="small muted" style="margin:6px 0 0">Laissez la dernière ligne vide pour ne rien ajouter ; videz le moment d\'un trajet pour le retirer.</p></details>' +
+      '<button type="button" class="cta or" id="lgsave" style="margin-top:14px"><span>Enregistrer les réglages</span></button></div>';
+    pane.innerHTML = h;
+    var regler = function(){
+      var ch = {}; pane.querySelectorAll("[data-lgch]").forEach(function(i){ ch[i.dataset.lgch] = i.value; });
+      var ns = []; pane.querySelectorAll(".lg-nav").forEach(function(d){ var o = {}; d.querySelectorAll("[data-k]").forEach(function(i){ o[i.dataset.k] = i.value; }); if (String(o.moment || "").trim()) ns.push(o); });
+      return api("admin-logistique", { op: "regler", chambres: ch, transfert: $("lgtr").checked, transfert_offert: $("lgtro") ? $("lgtro").checked : true, navettes: ns }, m.code).then(function(r){ if (r.ok) dessinerLogistique(m, pane, r, "Réglages enregistrés. Les invités voient désormais ces questions sur leur lien personnel."); else { $("lgmsg").style.color = "var(--bad)"; $("lgmsg").textContent = r.detail; } });
+    };
+    $("lgsave").onclick = regler; $("lgtr").onchange = regler;
+    if ($("lgcsvh")) $("lgcsvh").onclick = function(){ var l = [["Hôtel", "Invité", "Personnes", "Téléphone"]]; R.hotels.forEach(function(x){ x.invites.forEach(function(i){ l.push([x.nom, i.nom, i.personnes, i.numero]); }); }); csv("hebergement-" + m.code, l); };
+    if ($("lgcsvt")) $("lgcsvt").onclick = function(){ var l = [["Invité", "Personnes", "Enfants", "Hôtel", "Arrivée", "Départ", "Téléphone"]]; R.transferts.forEach(function(t){ l.push([t.nom, t.personnes, t.enfants, t.hotel, t.arrivee, t.depart, t.numero]); }); csv("chauffeur-" + m.code, l); };
+    if ($("lgcsvn")) $("lgcsvn").onclick = function(){ var l = [["Trajet", "Départ", "Arrivée", "Heure aller", "Invité", "Places", "Retour", "Hôtel"]]; R.navettes.forEach(function(n){ n.passagers.forEach(function(p){ l.push([n.moment, n.de, n.vers, n.depart, p.nom, p.places, p.retour, p.hotel]); }); }); csv("navettes-" + m.code, l); };
+  }
+
   /* ---------- la messagerie du mariage (M39), hors des étapes ---------- */
   var MS_NL = 0, MS_ONGLET = "recus", EM_OUVERT = null, EM_K = 0, EM_STOP = false, EM_ETAPE = 1;
   function messagerie(code, onglet){
@@ -619,6 +659,7 @@
       if (cur === 1) { cadrage(m, pane); return; }
       if (cur === 2) { listeInvites(m, pane, j.releve); return; }
       if (cur === 5 && j.formulaires) { legacy(m, pane); return; }
+      if (cur === 5) { logistiqueEtape(m, pane); return; }
       var titles = m.etapes_libelles, L = m.liste || {};
       if (cur === 3) {
         pane.innerHTML = '<div class="card"><h3>3. ' + esc(titles[2]) + '</h3><p class="muted">D\'abord l\'appel guidé avec le couple, puis le premier message à chaque invité, puis son accès personnel.</p></div>' +
