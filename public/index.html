@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.22.0">
-<link rel="stylesheet" href="/cartes.css?v=1.22.0">
-<script src="/cartes.js?v=1.22.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.23.0">
+<link rel="stylesheet" href="/cartes.css?v=1.23.0">
+<script src="/cartes.js?v=1.23.0"></script>
 </head>
 <body>
 <header>
@@ -610,7 +610,7 @@
     var agir = function(corps, ensuite){ return api("admin-emails", corps, m.code).then(function(r){ dessinerEmails(m, pane, r, r.ok ? "" : r.detail); if (ensuite && r.ok) ensuite(r); return r; }); };
     var c = EM_OUVERT && R.campagnes.filter(function(x){ return x.id === EM_OUVERT; })[0];
     if (!c) {
-      pane.innerHTML = (R.test_mariage ? '<p class="alerte">Mariage en statut Test : seul l\'email test part, jamais vers les invités.</p>' : '') + (R.site ? '' : '<p class="alerte">L\'adresse du site n\'est pas renseignée sur la fiche du mariage : les emails partiraient sans le bouton vers l\'accès personnel.</p>') +
+      pane.innerHTML = (R.test_mariage ? '<p class="alerte">Mariage en statut Test : seul l\'email test part, jamais vers les invités.</p>' : '') + (R.site ? '' : '<p class="muted">Pas de site du mariage sur la fiche : le bouton des emails ouvre la page du formulaire servie par l\'outil.</p>') +
         '<div class="card"><h3 style="margin-top:0">Nouvel envoi groupé</h3><div style="display:flex;gap:6px;flex-wrap:wrap">' + R.modeles.map(function(x){ return '<button type="button" class="ch" data-emnew="' + x.cle + '">' + esc(x.nom) + '</button>'; }).join("") + '</div></div><p class="err">' + esc(msg || "") + '</p>' +
         (R.campagnes.length ? R.campagnes.map(function(x){ var st = STAT[x.statut] || [x.statut, ""]; return '<div class="card ms-l" data-emouvre="' + x.id + '"><div style="display:flex;gap:10px;align-items:center"><b style="flex:1">' + esc(x.nom) + '</b>' + pill(st[0], st[1]) + '</div><div class="small muted" style="margin-top:4px">' + esc(x.audience_l || "") + ' · ' + x.destinataires + ' à envoyer · ' + x.deja + ' déjà reçu</div></div>'; }).join("") : '<p class="muted small">Aucun envoi groupé pour ce mariage.</p>');
       pane.querySelectorAll("[data-emnew]").forEach(function(b){ b.onclick = function(){ agir({ op: "creer", modele: b.dataset.emnew }, function(r){ EM_OUVERT = r.id; EM_ETAPE = 1; EM_K = 0; emailsEtape(m, pane); }); }; });
@@ -866,7 +866,13 @@
         return;
       }
       if (cur === 4) {
-        pane.innerHTML = '<div class="card"><h3>4. ' + esc(titles[3]) + '</h3><p class="muted">Les réponses arrivent par le lien personnel de chaque invité.</p><div class="cases" style="margin-top:12px"><div><b>' + (L.reponses || 0) + '</b><span>réponses</span></div><div><b>' + (L.presents || 0) + '</b><span>présents</span></div><div><b>' + ((L.reponses || 0) - (L.presents || 0)) + '</b><span>absents</span></div></div><p style="margin-top:14px"><a class="lienbas" href="#/m/' + m.code + '/2">Voir le détail dans la liste (vue Tableau, colonne Réponse)</a></p></div><div id="em-zone" style="margin-top:14px"></div>';
+        pane.innerHTML = '<div class="card"><h3>4. ' + esc(titles[3]) + '</h3><p class="muted">Les réponses arrivent par le lien personnel de chaque invité.</p><div class="cases" style="margin-top:12px"><div><b>' + (L.reponses || 0) + '</b><span>réponses</span></div><div><b>' + (L.presents || 0) + '</b><span>présents</span></div><div><b>' + ((L.reponses || 0) - (L.presents || 0)) + '</b><span>absents</span></div></div><p style="margin-top:14px"><a class="lienbas" href="#/m/' + m.code + '/2">Voir le détail dans la liste (vue Tableau, colonne Réponse)</a></p></div><div class="card" id="sig-zone" style="margin-top:14px"><h3>Points à traiter</h3><p class="muted">Chargement</p></div><div id="em-zone" style="margin-top:14px"></div>';
+        api("admin-formulaire-signaux", {}, m.code).then(function(r){
+          var F = r.foyers || [], z = $("sig-zone"); if (!z) return;
+          var prio = function(t){ return /Allergie sévère|soumettre|décliné|Nom à obtenir|Nourrisson|Présence à confirmer/.test(t) ? 0 : /Conciergerie|veille|Attention/.test(t) ? 1 : 2; };
+          z.innerHTML = '<h3>Points à traiter</h3><p class="muted">Ce que les réponses des invités demandent à l\'équipe, foyer par foyer : allergies sévères, demandes à soumettre aux mariés, hébergements déclinés, nourrissons, conciergerie. Ils remontent aussi dans le fichier wedding planner.</p>' +
+            (F.length ? F.map(function(f){ var L = f.signaux.slice().sort(function(a, b){ return prio(a) - prio(b); }); return '<div style="padding:10px 0;border-top:1px solid var(--line)"><b>' + esc(f.nom) + '</b> <span class="muted">' + esc(f.cle || "") + (f.repondu ? "" : " · sans réponse définitive") + '</span><ul style="margin:6px 0 0;padding-left:18px">' + L.map(function(t){ return '<li' + (prio(t) === 0 ? ' style="color:#8a3b2e"' : '') + '>' + esc(t) + '</li>'; }).join("") + '</ul></div>'; }).join("") : '<p>Aucun point à traiter pour l\'instant.</p>');
+        }).catch(function(){ var z = $("sig-zone"); if (z) z.remove(); });
         emailsEtape(m, $("em-zone"));
         return;
       }
@@ -1135,7 +1141,7 @@
       if (m) feuilleRoute(m);
       if ($("fplanner")) $("fplanner").onclick = function(){ $("fpmsg").textContent = "Préparation…"; api("admin-fichier-planner", {}, m.code).then(function(rr){ var a = document.createElement("a"); a.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + rr.b64; a.download = rr.nom; document.body.appendChild(a); a.click(); a.remove(); $("fpmsg").textContent = ""; }).catch(function(e){ $("fpmsg").textContent = e.message; }); };
       if ($("demoak")) $("demoak").onclick = function(){ var b = this; b.disabled = true; $("demomsg").textContent = "Construction du mariage, une minute environ…";
-        api("admin-demo", { phase: "fiche" }).then(function(){ $("demomsg").textContent = "Fiche créée. Collect, réponses, logistique et plan de table…"; return api("admin-demo", { phase: "liste" }); }).then(function(){ $("demomsg").textContent = "Liste validée. Réponses des invités, plan de table…"; return api("admin-demo", { phase: "reponses" }); }).then(function(j){ $("demomsg").textContent = "Prêt : " + j.bilan.present + " foyers présents, " + j.bilan.personnes + " personnes."; location.hash = "#/m/" + j.code; }).catch(function(e){ b.disabled = false; $("demomsg").textContent = e.message; }); };
+        api("admin-demo", { phase: "fiche" }).then(function(){ $("demomsg").textContent = "Fiche créée. Collect, réponses, logistique et plan de table…"; return api("admin-demo", { phase: "liste" }); }).then(function(){ $("demomsg").textContent = "Liste validée. Réponses des invités, plan de table…"; return api("admin-demo", { phase: "reponses" }); }).then(function(j){ return api("admin-demo", { phase: "extras" }).then(function(){ return j; }); }).then(function(j){ $("demomsg").textContent = "Prêt : " + j.bilan.present + " foyers présents, " + j.bilan.personnes + " personnes."; location.hash = "#/m/" + j.code; }).catch(function(e){ b.disabled = false; $("demomsg").textContent = e.message; }); };
       wire(m);
       if (MOI.role !== "administrateur") { $("chk").querySelectorAll("input, select, textarea").forEach(function(el){ el.disabled = true; }); $("save").hidden = true; $("smsg").textContent = "Fiche du mariage en lecture seule : elle se modifie par un administrateur."; }
     }).catch(function(e){ target.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });

@@ -76,7 +76,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.22.0";
+const VERSION = "1.23.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -312,10 +312,15 @@ module.exports = async (req, res) => {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       try { return send(res, 200, { ok: true, foyers: await require("../lib/formulaire").signaux(q.w || b.w) }); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
+    if (action === "demo-auto") {
+      /* sans session : ne fait que tenir à jour le mariage Test Awa et Kevin, une étape par appel, puis plus rien */
+      if (!(await store.rateLimit(ip(req) + ":demo", 12))) return send(res, 429, { ok: false, error: "slow down" });
+      try { return send(res, 200, await require("../lib/demo").auto()); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
     if (action === "admin-demo") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
-      try { return send(res, 200, Object.assign({ ok: true }, await require("../lib/demo").awaKevin(u, b.phase))); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+      try { const D = require("../lib/demo"); if (b.phase === "extras") return send(res, 200, Object.assign({ ok: true }, await D.extras(u))); return send(res, 200, Object.assign({ ok: true }, await D.awaKevin(u, b.phase))); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-plan") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
