@@ -89,8 +89,29 @@
     var html = d.maisons.map(function(x){ return '<div class="yi-maison"><div class="yi-k">' + esc(x.ville || "") + (x.etoiles ? ' · ' + x.etoiles + ' étoiles' : '') + '</div><div class="yi-mnom">' + esc(x.nom) + '</div>' + (x.tarif ? '<p class="yi-aide" style="margin:6px 0 0">Tarif réservé aux invités : ' + esc(x.tarif) + '</p>' : '') + (x.butoir ? '<p class="yi-aide" style="margin:2px 0 0">À réserver avant le ' + esc(new Date(x.butoir + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })) + '</p>' : '') + '</div>'; }).join("");
     for (var i = 0; i < zones.length; i++) { zones[i].classList.add("yi"); zones[i].innerHTML = '<div class="yi-maisons">' + html + '</div><p class="yi-aide" style="margin-top:14px">Pour réserver, indiquez votre choix dans votre réponse : nous transmettons votre demande à la maison, qui revient vers vous directement.</p>'; }
   }
+  /* moteur v2 (méthode YID) : le formulaire composé pour ce foyer, servi par l'outil, dans la même fenêtre */
+  function charger(src, ok){ var x = document.createElement("script"); x.src = src; x.onload = ok; document.head.appendChild(x); }
+  function poser2(d){
+    var base = API.replace(/\/api\/forms$/, ""), V = "?v=1.20.0";
+    var css = el("link"); css.rel = "stylesheet"; css.href = base + "/formulaire/formulaire.css" + V; document.head.appendChild(css);
+    var sec = el("div", "yi yi-plein"); sec.id = "yid-accueil"; sec.hidden = true; document.body.appendChild(sec);
+    var carte = el("div", "yi-carte"); carte.style.padding = "0"; carte.style.overflow = "hidden"; sec.appendChild(carte);
+    var zone = el("div"); carte.appendChild(zone);
+    var x = el("button", "yi-fermer", "×"); x.type = "button"; x.setAttribute("aria-label", "Fermer"); carte.insertBefore(x, zone);
+    var monte = false, fermer = function(){ sec.hidden = true; document.documentElement.style.overflow = ""; };
+    x.onclick = fermer; sec.onclick = function(e){ if (e.target === sec) fermer(); };
+    var ouvrir = function(){ sec.hidden = false; document.documentElement.style.overflow = "hidden";
+      if (monte) return; monte = true;
+      charger(base + "/formulaire/pays.js" + V, function(){ charger(base + "/formulaire/moteur.js" + V, function(){ charger(base + "/formulaire/page.js" + V, function(){
+        window.YIDFormulaire.monter(zone, d, API, jeton, { etape: function(){ sec.scrollTop = 0; }, site: function(page){ fermer(); var a = document.querySelector('a[href*="' + page + '"]'); if (a) location.href = a.href; } });
+      }); }); });
+    };
+    brancher(ouvrir);
+    if (/[?&]yidouvrir=1/.test(location.search)) ouvrir();
+  }
   function poser(d){
     accueillir(d); maisons(d);
+    if (d.v === 2) return poser2(d);
     var sec = el("div", "yi yi-plein"); sec.id = "yid-accueil"; sec.hidden = true; document.body.appendChild(sec);
     var ouvrir = function(){ sec.hidden = false; document.documentElement.style.overflow = "hidden"; dessiner(false); };
     var fermer = function(){ sec.hidden = true; document.documentElement.style.overflow = ""; };

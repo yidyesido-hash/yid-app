@@ -2,6 +2,7 @@
    formulaire, envoi versionné, suivi, journal. Lancer : npm test */
 process.env.ADMIN_PASSWORD = "test";
 process.env.YID_MAIL_FAKE = "1";
+process.env.YID_EQUIPE_EMAIL = "equipe@exemple.fr";
 process.env.PGLITE_DIR = require("path").join(__dirname, "data-recette");
 const fs = require("fs"); fs.rmSync(process.env.PGLITE_DIR, { recursive: true, force: true });
 const handler = require("../api/forms");
@@ -425,23 +426,51 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("lien personnel : toute fiche active a son jeton, même complétée sans clé", l.filter(c => !c.desactive).every(c => /^[a-z0-9]{12}$/.test(c.jeton || "")));
     const c0 = avecCle[0];
     let r = await call("GET", "/api/forms?action=invite&yid=" + c0.jeton);
-    check("lien personnel : l'accueil est rendu, avec la salutation et les questions", r.json.ok && /^(Bonjour|Cher|Chère)/.test(r.json.salutation) && r.json.questions[0].k === "presence", JSON.stringify(r.json).slice(0, 200));
-    check("lien personnel : rien de l'administration ne fuit (ni clé, ni numéro)", !JSON.stringify(r.json).includes(c0.cle) && !JSON.stringify(r.json).includes(String(c0.numero || "x")));
+    check("lien personnel : le formulaire v2 est servi, composé à partir de la fiche", r.json.ok && r.json.v === 2 && r.json.cfg.moments.length > 0 && r.json.foyer && r.json.foyer.type, JSON.stringify(r.json).slice(0, 200));
+    check("lien personnel : rien de l'administration ne fuit (ni clé, ni numéro complet)", !JSON.stringify(r.json).includes(c0.cle) && !JSON.stringify(r.json).includes(String(c0.numero || "x")));
     r = await call("GET", "/api/forms?action=invite&yid=abcdefghjkmn");
     check("lien personnel : un jeton inconnu ne montre rien", r.status === 404);
     r = await call("GET", "/api/forms?action=invite&yid=" + c0.cle);
     check("lien personnel : la clé AC001 n'ouvre pas la fiche", r.status === 404);
-    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: {} });
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, etat: {} });
     check("lien personnel : sans réponse à la présence, rien n'est enregistré", r.status === 422);
-    const qs = (await call("GET", "/api/forms?action=invite&yid=" + c0.jeton)).json.questions;
-    const rep = { presence: qs[0].o[0], mot: "Avec plaisir" };
-    for (const q of qs) { if (q.k === "hebergement" && q.type === "choix") rep.hebergement = q.o[0]; if (q.type === "email") rep.email = "amy@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "Enfant" + i, age: 5 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; }
-    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, reponses: rep });
+    const V = (await call("GET", "/api/forms?action=invite&yid=" + c0.jeton)).json;
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, etat: { presence: "oui", coord: { nom: "X" } } });
+    check("lien personnel : le serveur relit avec le même moteur, une réponse incomplète est refusée", r.status === 422 && /Il manque encore/.test(r.json.detail || ""), JSON.stringify(r.json));
+    r = await call("POST", "/api/forms?action=invite-brouillon", { yid: c0.jeton, etat: { presence: "oui", step: "coord" } });
+    check("lien personnel : le brouillon est gardé en cours de route", r.json.ok);
+    const etat = remplirEtat(V.cfg, V.foyer);
+    const MOT = require("../public/formulaire/moteur.js"), eng = MOT.creer(V.cfg, V.foyer, etat);
+    check("lien personnel : l'état de recette est complet pour le moteur", eng.verifierTout().length === 0, eng.verifierTout().join(", "));
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: c0.jeton, etat });
     check("lien personnel : la réponse est enregistrée", r.json.ok && r.json.present === true, JSON.stringify(r.json));
     const apres = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.find(c => c.id === c0.id);
-    check("lien personnel : la fiche porte la réponse et sa date", apres.reponse && apres.reponse.presence === qs[0].o[0] && apres.reponse_le);
+    check("lien personnel : la fiche porte la réponse, ses champs historiques et sa date", apres.reponse && /présent/.test(apres.reponse.presence) && apres.reponse.etat && Array.isArray(apres.reponse.detail) && apres.reponse_le, JSON.stringify(apres.reponse || {}).slice(0, 200));
+    check("lien personnel : l'email saisi rejoint la fiche", apres.email === "amy@exemple.fr");
+    const mails = global.__YID_MAILS || [];
+    check("lien personnel : le récapitulatif part avec son PDF, vers l'équipe pour un mariage Test", mails.some(x => x.a === "equipe@exemple.fr" && /Vos réponses|As suas respostas/.test(x.objet) && /\.pdf$/.test(x.pj || "") && x.taille > 5000), JSON.stringify(mails.slice(-2)));
     const j = (await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 10 }, H)).json.journal || [];
     check("lien personnel : la réponse est au journal, signée invité", j.some(x => x.operation === "Réponse de l'invité" && x.operateur === "invité"));
+    r = await call("GET", "/api/forms?action=invite&yid=" + c0.jeton);
+    check("lien personnel : au retour, l'invité retrouve ses réponses au récapitulatif", r.json.deja && r.json.etat && r.json.etat.step === "recap");
+  }
+
+  /* 1.20.0 : la feuille de route du couple, et le mariage test Awa et Kevin */
+  {
+    let r = await call("POST", "/api/forms?action=admin-feuille-route&w=AC27", {}, H);
+    check("feuille de route : composée de la fiche, prête pour WhatsApp, sans tiret ni lien", r.json.ok && /\*Feuille de route · Mariage d'Alexander et Clarisse\*/.test(r.json.texte) && /28 février/.test(r.json.texte) && !/ [-–—] |https?:/.test(r.json.texte), (r.json.texte || "").slice(0, 120));
+    r = await call("POST", "/api/forms?action=admin-feuille-route&w=AC27", { op: "envoyee" }, H);
+    check("feuille de route : marquée envoyée, au journal", r.json.ok && r.json.envoyee && r.json.envoyee.par);
+    for (const phase of ["fiche", "liste", "reponses"]) { r = await call("POST", "/api/forms?action=admin-demo", { phase }, H); if (!r.json.ok) break; }
+    check("mariage test : Awa et Kevin construit de bout en bout, chaque réponse acceptée par le moteur", r.json.ok && r.json.bilan && r.json.bilan.present >= 15 && !r.json.bilan.refus.length, JSON.stringify(r.json).slice(0, 300));
+    const fm = (await call("POST", "/api/forms?action=admin-mariage&w=" + r.json.code, {}, H)).json.mariage || {};
+    check("mariage test : statut Test, six étapes terminées", fm.statut === "Test" && Object.keys(fm.etapes || {}).length >= 6, JSON.stringify(fm.etapes));
+    const sg = (await call("POST", "/api/forms?action=admin-formulaire-signaux&w=" + r.json.code, {}, H)).json;
+    check("mariage test : les signaux remontent (nourrisson, allergie sévère, hébergement décliné, accompagnant remplacé)", sg.ok && ["Nourrisson", "Allergie sévère", "Hébergement offert décliné", "Accompagnant remplacé"].every(t => sg.foyers.some(f => f.signaux.some(x => x.startsWith(t)))), JSON.stringify(sg).slice(0, 300));
+    const lg = (await call("POST", "/api/forms?action=admin-logistique&w=" + r.json.code, {}, H)).json;
+    check("mariage test : la navette compte ses passagers depuis le formulaire", lg.ok && lg.navettes && lg.navettes[0].aller >= 10, JSON.stringify(lg.navettes && lg.navettes[0]).slice(0, 200));
+    r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
+    check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 24);
   }
 
   /* 1.9.0 : la file de premier contact */
@@ -505,15 +534,16 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.filter(c => c.etat === "complète" && !c.desactive);
     /* deux invités confirment, dont un par son lien avec une adresse email */
     const [g1, g2] = l.filter(c => !c.reponse_le);
-    let q = (await call("GET", "/api/forms?action=invite&yid=" + g1.jeton)).json.questions;
-    check("emails : le formulaire de l'invité demande son adresse quand on ne l'a pas", q.some(x => x.k === "email" && x.requis));
-    const rep = (qs, mail) => { const o = { presence: qs[0].o[0] }; for (const x of qs) { if (x.k === "accompagnant" && x.type === "texte") o.accompagnant = "Paul Martin"; if (x.k === "vient_accompagne") o.vient_accompagne = x.o[1]; if (x.type === "enfants") o.enfants = Array.from({ length: x.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (x.k === "nb_enfants") o.nb_enfants = "Non"; if (x.k === "hebergement" && x.type === "choix") o.hebergement = x.o[0]; } if (mail) o.email = mail; return o; };
-    let r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "pas-une-adresse") });
-    check("emails : une adresse incomplète est refusée", r.status === 422);
-    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, reponses: rep(q, "Invite.Un@exemple.fr") });
-    check("emails : l'adresse donnée par l'invité rejoint sa fiche", r.json.ok);
-    q = (await call("GET", "/api/forms?action=invite&yid=" + g2.jeton)).json.questions;
-    await call("POST", "/api/forms?action=invite-repondre", { yid: g2.jeton, reponses: rep(q, "invite.deux@exemple.fr") });
+    let V1 = (await call("GET", "/api/forms?action=invite&yid=" + g1.jeton)).json;
+    check("emails : le formulaire de l'invité demande son adresse", V1.v === 2);
+    const et1 = remplirEtat(V1.cfg, V1.foyer); et1.coord.email = "pas-une-adresse";
+    let r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, etat: et1 });
+    check("emails : une adresse incomplète est refusée", r.status === 422 && /email/.test(r.json.detail || ""));
+    et1.coord.email = "Invite.Un@exemple.fr";
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g1.jeton, etat: et1 });
+    check("emails : l'adresse donnée par l'invité rejoint sa fiche", r.json.ok, JSON.stringify(r.json));
+    const V2 = (await call("GET", "/api/forms?action=invite&yid=" + g2.jeton)).json, et2 = remplirEtat(V2.cfg, V2.foyer); et2.coord.email = "invite.deux@exemple.fr";
+    await call("POST", "/api/forms?action=invite-repondre", { yid: g2.jeton, etat: et2 });
     r = await E({ op: "creer", modele: "programme" });
     const id = r.json.id, camp = r.json.campagnes.find(c => c.id === id);
     check("emails : un message se prépare depuis un modèle, vers les présents", camp && camp.audience === "presents" && camp.destinataires >= 2, JSON.stringify(camp && { d: camp.destinataires, e: camp.ecartes }));
@@ -577,21 +607,21 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   /* 1.14.0 : séjour et logistique */
   {
     const G = (b) => call("POST", "/api/forms?action=admin-logistique&w=AC27", b || {}, H);
-    let r = await G({ op: "regler", transfert: true, navettes: [{ moment: "Samedi soir", de: "Hôtel du Lac", vers: "Château", depart: "18h30", retours: "23h30, 1h", capacite: 4 }] });
+    let r = await G({ op: "regler", transfert: true, navettes: [{ moment: "Samedi soir", de: "Hôtel du Lac", vers: "Château", depart: "18h30", retours: "23h30, 1h", capacite: 1 }] });
     check("logistique : les réglages s'enregistrent, un trajet de navette avec ses rotations", r.json.ok && r.json.navettes.length === 1 && r.json.navettes[0].retours.length === 2, r.json.detail);
     r = await G({ op: "regler", navettes: [{ moment: "", de: "x", vers: "y" }, { moment: "Samedi soir", de: "", vers: "Château" }] });
     check("logistique : un trajet incomplet est refusé", r.status === 422);
     const l = (await call("POST", "/api/forms?action=admin-liste&w=AC27", {}, H)).json.contacts.filter(c => c.etat === "complète" && !c.desactive && !c.reponse_le);
-    const g = l[0], qs = (await call("GET", "/api/forms?action=invite&yid=" + g.jeton)).json.questions;
-    check("logistique : l'invité voit ses questions de venue (horaires, navette, retour)", qs.some(q => q.k === "arrivee") && qs.some(q => /_aller$/.test(q.k)) && qs.some(q => /_retour$/.test(q.k)));
-    const rep = { presence: qs[0].o[0] };
-    for (const q of qs) { if (q.type === "email") rep.email = "venue@exemple.fr"; if (q.k === "accompagnant" && q.type === "texte") rep.accompagnant = "Paul Martin"; if (q.k === "vient_accompagne") rep.vient_accompagne = q.o[1]; if (q.type === "enfants") rep.enfants = Array.from({ length: q.n }, (_, i) => ({ prenom: "E" + i, age: 4 })); if (q.k === "nb_enfants") rep.nb_enfants = "Non"; if (q.k === "hebergement" && q.type === "choix") rep.hebergement = q.o[0];
-      if (q.k === "arrivee") rep.arrivee = "TGV 8541, vendredi 15 h 42"; if (/_aller$/.test(q.k)) rep[q.k] = "4"; if (/_retour$/.test(q.k)) rep[q.k] = "1h"; }
-    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g.jeton, reponses: rep });
+    const g = l[0], VG = (await call("GET", "/api/forms?action=invite&yid=" + g.jeton)).json, nav = VG.cfg.trajets[0];
+    check("logistique : l'invité voit ses questions de venue (arrivée, navette et ses retours)", VG.cfg.arrivees && nav && nav.retours.includes("1h"), JSON.stringify(VG.cfg.trajets));
+    const rep = remplirEtat(VG.cfg, VG.foyer); rep.coord.email = "venue@exemple.fr";
+    rep.v.aller = { mode: "train", lieu: "Gare de Lyon", numero: "TGV 8541", date: VG.cfg.jours[0].v, heure: { h: "15", m: "40" } };
+    rep.dep = { trajets: { [nav.id]: true }, places: { [nav.id]: "1" }, retour: { [nav.id]: "1h" } };
+    r = await call("POST", "/api/forms?action=invite-repondre", { yid: g.jeton, etat: rep });
     check("logistique : la réponse de venue est enregistrée", r.json.ok, r.json.detail);
     r = await G();
     const n = r.json.navettes[0];
-    check("logistique : l'outil compte les places par trajet et par rotation", n.aller >= 4 && n.retours.find(x => x.heure === "1h").places >= 4);
+    check("logistique : l'outil compte les places par trajet et par rotation", n.aller >= 1 && n.retours.find(x => x.heure === "1h").places >= 1);
     check("logistique : l'alerte se lève quand le véhicule approche de sa capacité", n.alerte === true);
     check("logistique : les horaires de l'invité remontent pour le chauffeur", r.json.transferts.some(t => /TGV 8541/.test(t.arrivee)));
     await G({ op: "regler", transfert: false, navettes: [] });
@@ -725,3 +755,20 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
+
+/* Un état complet et sobre pour le moteur v2 : présent, seul, à tous les moments, sans régime. */
+function remplirEtat(cfg, f) {
+  const S = { step: "recap", presence: "oui", coord: { civ: "Madame", nom: f.nom || "Martin", prenom: f.prenom || "Amy", ind: f.ind || "FR", tel: f.tel || "612345678", email: "amy@exemple.fr" }, acc: {}, accs: {}, enf: {}, mom: {}, absent: {}, seulMoment: {}, v: {}, heb: {}, dep: {}, table: { regime: "non" }, fin: {}, ack: {} };
+  if (f.type === "deux" || f.type === "libre") S.acc.choix = "seul";
+  if (f.type === "plusieurs") S.nbAcc = "0";
+  if (f.enfants) S.nbEnf = "0";
+  S.tous = "oui";
+  if (cfg.heb && cfg.heb.gere === "tous" && !cfg.heb.offert && (cfg.heb.lieux || []).length) S.heb.lieu = "propres";
+  if (f.loge && cfg.heb.offert) S.heb.sejour = "non";
+  if (cfg.arrivees) { S.v.aller = { mode: "inconnu" }; S.v.retour = { mode: "inconnu" }; }
+  if ((cfg.trajets || []).length) S.dep.trajets = { aucun: true };
+  if ((cfg.plats || []).length) S.table.plat = { inv: cfg.plats[0].v };
+  if (cfg.conciergerie) S.fin.concierge = "non";
+  if (cfg.engagement) S.fin.engagement = true;
+  return S;
+}

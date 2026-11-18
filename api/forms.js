@@ -41,7 +41,11 @@
      ?action=photo           GET   la photo d'un mariage : k (clé publique)
      ?action=pass            GET   le pass QR (PNG) d'un invité présent : yid=JETON ; le QR porte son lien personnel
      ?action=invite          GET   le lien personnel d'un invité, lu par le script du site du mariage : yid=JETON ; renvoie l'accueil et les seules questions utiles
-     ?action=invite-repondre POST  la réponse de l'invité : yid, reponses { presence, accompagnant, vient_accompagne, enfants [{prenom, age}], nb_enfants, mot }
+     ?action=invite-repondre POST  la réponse de l'invité : yid, etat (moteur v2, relu par le serveur) ; reponses { … } pour un mariage sans partie D
+     ?action=invite-brouillon POST le brouillon de l'invité en cours de route : yid, etat
+     ?action=admin-feuille-route POST la feuille de route du mariage (w=CODE), texte WhatsApp ; op envoyee la marque envoyée
+     ?action=admin-formulaire-signaux POST les signaux des réponses (w=CODE), foyer par foyer
+     ?action=admin-demo      POST  crée ou recrée le mariage test Awa et Kevin, complet sur les sept étapes (administrateur)
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
      ?action=admin-plan      POST  étape 6 (w=CODE) : sans op, le plan ; op tables (tables) | placer (contact, table) | arrive (contact, on)
      ?action=admin-partenaires POST le répertoire : op liste | fiche (id) | enregistrer (fiche) | importer (texte JSON de la cartographie, administrateur)
@@ -71,7 +75,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.19.0";
+const VERSION = "1.20.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -204,7 +208,7 @@ module.exports = async (req, res) => {
   const action = q.action || "";
   cors(req, res);
   /* le lien personnel est lu depuis le site du mariage, quel qu'il soit : seul le jeton ouvre la fiche */
-  if (action === "invite" || action === "invite-repondre" || action === "pass") res.setHeader("Access-Control-Allow-Origin", "*");
+  if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon" || action === "pass") res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   try {
     await store.migrate();
@@ -264,13 +268,29 @@ module.exports = async (req, res) => {
       const png = await require("qrcode").toBuffer(contenu, { type: "png", margin: 2, width: 480, color: { dark: "#141210", light: "#FFFFFF" } });
       res.statusCode = 200; res.setHeader("Content-Type", "image/png"); res.setHeader("Cache-Control", "public, max-age=3600"); return res.end(png);
     }
-    if (action === "invite" || action === "invite-repondre") {
-      if (!(await store.rateLimit(ip(req) + (action === "invite" ? ":lien" : ":reponse"), action === "invite" ? 90 : 20))) return send(res, 429, { ok: false, error: "slow down" });
+    if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon") {
+      if (!(await store.rateLimit(ip(req) + (action === "invite" ? ":lien" : action === "invite-brouillon" ? ":brouillon" : ":reponse"), action === "invite" ? 90 : action === "invite-brouillon" ? 120 : 20))) return send(res, 429, { ok: false, error: "slow down" });
       const jt = String(q.yid || b.yid || "");
       try {
         if (action === "invite") { const v = await invite.lire(jt, req.headers.origin || req.headers.referer || ""); return v ? send(res, 200, Object.assign({ ok: true }, v)) : send(res, 404, { ok: false, error: "lien" }); }
+        if (action === "invite-brouillon") return send(res, 200, await invite.brouillon(jt, b));
         return send(res, 200, await invite.repondre(jt, b));
       } catch (e) { return send(res, e.message === "lien inconnu" ? 404 : 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-feuille-route") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const m = await store.mariageFresh(q.w || b.w); if (!m) return send(res, 404, { ok: false, error: "mariage" });
+      if (b.op === "envoyee") { const pp = Object.assign({}, m.parametres || {}); pp.feuille_route = { le: new Date().toISOString(), par: u.nom }; await require("../lib/db").query("UPDATE mariage SET parametres = $2, modifie_le = now() WHERE id = $1", [m.id, pp]); await store.journal(m.id, "Feuille de route", "Envoyée au couple dans le groupe du mariage, à épingler", null, null, u.nom); return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: pp.feuille_route }); }
+      return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: (m.parametres || {}).feuille_route || null });
+    }
+    if (action === "admin-formulaire-signaux") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      try { return send(res, 200, { ok: true, foyers: await require("../lib/formulaire").signaux(q.w || b.w) }); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-demo") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
+      try { return send(res, 200, Object.assign({ ok: true }, await require("../lib/demo").awaKevin(u, b.phase))); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-plan") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

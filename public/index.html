@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.19.0">
-<link rel="stylesheet" href="/cartes.css?v=1.19.0">
-<script src="/cartes.js?v=1.19.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.20.0">
+<link rel="stylesheet" href="/cartes.css?v=1.20.0">
+<script src="/cartes.js?v=1.20.0"></script>
 </head>
 <body>
 <header>
@@ -137,6 +137,18 @@
   applyTheme();
   var $ = function(id){ return document.getElementById(id); };
   var V = $("view");
+  /* la feuille de route : envoyée au couple après le premier rendez vous, dans le groupe du mariage, puis épinglée */
+  function feuilleRoute(m){
+    var box = $("froute"); if (!box) return;
+    var poser = function(j){
+      box.innerHTML = '<h3>Feuille de route</h3><p>À envoyer au couple après ce premier rendez vous, dans le groupe du mariage, puis à épingler : c\'est le fil rouge de chacun jusqu\'au jour J. Elle se compose de la fiche ; elle se met à jour si une date change.</p>' +
+        '<textarea id="frtexte" rows="16" style="width:100%;font:14px/1.5 system-ui,sans-serif" readonly>' + esc(j.texte) + '</textarea>' +
+        '<div class="row"><button id="frcopier">Copier pour WhatsApp</button>' + (j.envoyee ? '<span class="pill ok">Envoyée le ' + esc(fmt(j.envoyee.le)) + ' par ' + esc(j.envoyee.par) + '</span>' : '<button class="ghost" id="frenvoyee">Marquer comme envoyée et épinglée</button>') + '</div>';
+      $("frcopier").onclick = function(){ var b = this, t = $("frtexte"); try { navigator.clipboard.writeText(t.value).then(function(){ b.textContent = "Texte copié"; }); } catch (e) { t.select(); document.execCommand("copy"); b.textContent = "Texte copié"; } };
+      if ($("frenvoyee")) $("frenvoyee").onclick = function(){ api("admin-feuille-route", { op: "envoyee" }, m.code).then(poser).catch(function(e){ alert(e.message); }); };
+    };
+    api("admin-feuille-route", {}, m.code).then(poser).catch(function(e){ box.innerHTML = '<h3>Feuille de route</h3><p class="err">' + esc(e.message) + '</p>'; });
+  }
   function api(action, payload, w){
     return fetch("/api/forms?action=" + action + (w ? "&w=" + encodeURIComponent(w) : ""), { method:"POST", headers:{ "Content-Type":"application/json", "X-Admin-Token": TOKEN }, body: JSON.stringify(payload || {}) })
       .then(function(r){ return r.text().then(function(t){ var j; try { j = JSON.parse(t); } catch (e) { throw new Error(r.status === 504 || /timed out|An error o/i.test(t) ? "Le serveur n'a pas répondu à temps. Ce qui a déjà été enregistré l'est bien : rechargez la page pour vérifier, puis réessayez si besoin." : "Réponse inattendue du serveur (" + r.status + "). Rechargez la page."); } return j; }).then(function(j){ if (r.status === 401) { logout("Session expirée, reconnectez vous."); throw new Error("Session expirée"); } if (!j.ok && r.status !== 422) throw new Error(j.detail || j.error || "Erreur"); return j; }); });
@@ -1113,13 +1125,16 @@
       CHK = j;
       var vals = (m && m.checklist) || {};
       if (!m) { vals.statut = "Signé"; vals.langue_defaut = "fr"; }
-      var html = (pane ? "" : '<h2 class="sec">Créer un mariage</h2><p class="lead">La checklist du premier rendez vous. En gras, ce qui se dit au couple ; en italique, comment remplir. En validant, le mariage existe, son dossier et ses classeurs sont créés sur SharePoint, la fiche est archivée en PDF.</p>') +
-        (pane ? '<div class="card"><h3>1. Fiche du mariage</h3><p>La fiche du premier rendez vous. Modifier un champ et enregistrer réécrit l\'onglet Paramètres du classeur, archive une nouvelle version de la fiche et inscrit au journal chaque champ modifié, avant et après.' + (m.fiche_pdf ? ' Dernière fiche : ' + esc(m.fiche_pdf.split("/").pop()) + '.' : '') + (m.dossier ? ' Dossier SharePoint : ' + esc(m.dossier) + '.' : '') + '</p></div>' + boiteCard(m) : "") +
+      var html = (pane ? "" : '<div class="card"><h3>Le mariage test Awa et Kevin</h3><p>Un mariage fictif, complet sur les étapes de l\'outil : fiche, collect de 24 foyers, premier contact, réponses relues par le formulaire, quatre maisons partenaires, navette, plan de table, espace mariés et feuille de route. Statut Test : rien ne part jamais vers un invité. Le relancer recrée la liste.</p><div class="row"><button class="ghost" id="demoak">Créer le mariage test</button><span class="muted" id="demomsg"></span></div></div>') + (pane ? "" : '<h2 class="sec">Créer un mariage</h2><p class="lead">La checklist du premier rendez vous. En gras, ce qui se dit au couple ; en italique, comment remplir. En validant, le mariage existe, son dossier et ses classeurs sont créés sur SharePoint, la fiche est archivée en PDF.</p>') +
+        (pane ? '<div class="card"><h3>1. Fiche du mariage</h3><p>La fiche du premier rendez vous. Modifier un champ et enregistrer réécrit l\'onglet Paramètres du classeur, archive une nouvelle version de la fiche et inscrit au journal chaque champ modifié, avant et après.' + (m.fiche_pdf ? ' Dernière fiche : ' + esc(m.fiche_pdf.split("/").pop()) + '.' : '') + (m.dossier ? ' Dossier SharePoint : ' + esc(m.dossier) + '.' : '') + '</p></div>' + '<div class="card" id="froute"><h3>Feuille de route</h3><p class="muted">Chargement</p></div>' + boiteCard(m) : "") +
         '<form id="chk" onsubmit="return false">' + j.sections.map(function(s){
           return '<div class="card"><h3>' + esc(s.titre) + '</h3><p>' + esc(s.aide) + '</p>' + s.champs.map(function(f){ return field(f, vals[f.k]); }).join("") + '</div>';
         }).join("") + '<div class="card"><div class="row"><button id="save">' + (m ? "Enregistrer les modifications" : "Créer le mariage") + '</button><span class="muted" id="smsg"></span></div><div id="serr" class="err"></div><div id="sres"></div></div></form>';
       target.innerHTML = html;
       if (m) wireBoite(m);
+      if (m) feuilleRoute(m);
+      if ($("demoak")) $("demoak").onclick = function(){ var b = this; b.disabled = true; $("demomsg").textContent = "Construction du mariage, une minute environ…";
+        api("admin-demo", { phase: "fiche" }).then(function(){ $("demomsg").textContent = "Fiche créée. Collect, réponses, logistique et plan de table…"; return api("admin-demo", { phase: "liste" }); }).then(function(){ $("demomsg").textContent = "Liste validée. Réponses des invités, plan de table…"; return api("admin-demo", { phase: "reponses" }); }).then(function(j){ $("demomsg").textContent = "Prêt : " + j.bilan.present + " foyers présents, " + j.bilan.personnes + " personnes."; location.hash = "#/m/" + j.code; }).catch(function(e){ b.disabled = false; $("demomsg").textContent = e.message; }); };
       wire(m);
       if (MOI.role !== "administrateur") { $("chk").querySelectorAll("input, select, textarea").forEach(function(el){ el.disabled = true; }); $("save").hidden = true; $("smsg").textContent = "Fiche du mariage en lecture seule : elle se modifie par un administrateur."; }
     }).catch(function(e){ target.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });

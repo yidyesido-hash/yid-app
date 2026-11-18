@@ -1,0 +1,89 @@
+@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:400;font-display:swap;src:url(../vendor/fonts/cormorant-garamond-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:500;font-display:swap;src:url(../vendor/fonts/cormorant-garamond-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Cormorant Garamond";font-style:italic;font-weight:400;font-display:swap;src:url(../vendor/fonts/cormorant-garamond-latin-400-italic.woff2) format("woff2")}
+.yidf{
+  --ivoire:#faf7f2; --papier:#ffffff; --encre:#2b2621; --doux:#6f665c; --trait:#e4ddd2;
+  --or:#a8865a; --or-pale:#f3ece1; --alerte:#8a5a2b; --alerte-fond:#fbf3e8; --manque:#b4553d;
+  --serif: "Cormorant Garamond", "Cormorant", Garamond, "Times New Roman", serif;
+  --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.yidf .marque{text-align:center;letter-spacing:.32em;font-size:11px;color:var(--or);text-transform:uppercase;margin-bottom:6px}
+.yidf .etapes{display:flex;gap:6px;justify-content:center;margin:0 0 26px}
+.yidf .etapes i{display:block;width:22px;height:2px;background:var(--trait)}
+.yidf .etapes i.fait{background:var(--or)}
+.yidf h1{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.15;text-align:center;margin:8px 0 18px}
+.yidf h2{font-family:var(--serif);font-weight:400;font-size:28px;line-height:1.2;margin:0 0 6px;text-align:center}
+.yidf .chapeau{text-align:center;color:var(--doux);margin:0 0 26px}
+.yidf .q{background:var(--papier);border:1px solid var(--trait);border-radius:10px;padding:20px 18px;margin:0 0 16px}
+.yidf .q h3{font-family:var(--serif);font-weight:500;font-size:21px;line-height:1.3;margin:0 0 4px}
+.yidf .q .aide{color:var(--doux);font-size:14px;margin:2px 0 10px}
+.yidf .q .indic{font-size:12px;letter-spacing:.06em;color:var(--or);text-transform:uppercase;margin:6px 0 10px}
+.yidf .q.manque{border-color:var(--manque)}
+.yidf .sous{border-top:1px solid var(--trait);margin-top:16px;padding-top:14px}
+.yidf .sous:first-child{border-top:0;margin-top:0;padding-top:0}
+.yidf .sous h4{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 4px}
+.yidf .qui{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--doux);margin:14px 0 6px}
+.yidf .choix{display:flex;flex-direction:column;gap:8px}
+.yidf .choix.ligne{flex-direction:row;flex-wrap:wrap}
+.yidf .opt{position:relative;display:flex;align-items:flex-start;gap:12px;border:1px solid var(--trait);border-radius:8px;padding:13px 14px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+.yidf .choix.ligne .opt{flex:0 1 auto}
+.yidf .opt input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.yidf .opt .marq{flex:0 0 20px;width:20px;height:20px;border:1.5px solid #bfb4a5;border-radius:50%;margin-top:1px;display:flex;align-items:center;justify-content:center;background:#fff}
+.yidf .opt.case .marq{border-radius:5px}
+.yidf .opt .marq::after{content:"";display:block;width:10px;height:10px;border-radius:50%;background:transparent}
+.yidf .opt.case .marq::after{width:11px;height:6px;border-radius:0;border-left:2px solid transparent;border-bottom:2px solid transparent;transform:rotate(-45deg) translate(1px,-1px);background:none}
+.yidf .opt.on{border-color:var(--or);background:var(--or-pale)}
+.yidf .opt.on .marq{border-color:var(--or)}
+.yidf .opt.on .marq::after{background:var(--or)}
+.yidf .opt.case.on .marq{background:var(--or)}
+.yidf .opt.case.on .marq::after{background:none;border-color:#fff}
+.yidf .opt input:focus-visible + .marq{outline:2px solid var(--or);outline-offset:2px}
+.yidf .opt .lib b{font-weight:600;display:block}
+.yidf .opt .lib small{display:block;color:var(--doux);font-size:13.5px}
+.yidf .champ{margin:10px 0 0}
+.yidf .champ label{display:block;font-size:13.5px;color:var(--doux);margin:0 0 4px}
+.yidf .champ input[type=text],.yidf .champ input[type=email],.yidf .champ input[type=tel],.yidf .champ select,.yidf .champ textarea{width:100%;font:inherit;padding:12px 12px;border:1px solid var(--trait);border-radius:8px;background:#fff;color:var(--encre)}
+.yidf .champ textarea{min-height:92px;resize:vertical}
+.yidf .champ input:focus,.yidf .champ select:focus,.yidf .champ textarea:focus{outline:none;border-color:var(--or)}
+.yidf .champ.manque input,.yidf .champ.manque select,.yidf .champ.manque textarea{border-color:var(--manque)}
+.yidf .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.yidf .tel{display:grid;grid-template-columns:110px 1fr;gap:8px}
+.yidf .heure{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.yidf .info{background:var(--or-pale);border-radius:8px;padding:14px 16px;margin:0 0 16px;font-size:15px}
+.yidf .info.discrete{background:none;border:1px dashed var(--trait);color:var(--doux);font-size:14px}
+.yidf .note{background:var(--alerte-fond);border:1px solid #ecd9bf;border-radius:8px;padding:14px 16px;margin:12px 0 0;font-size:15px}
+.yidf .note .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.yidf .lien{color:var(--or);text-decoration:underline;text-underline-offset:3px;cursor:pointer;background:none;border:0;padding:0;font:inherit}
+.yidf .lien-site{display:block;text-align:center;margin:6px 0 18px;font-size:14.5px}
+.yidf .btn{display:inline-block;font:inherit;font-size:15px;letter-spacing:.04em;padding:14px 26px;border-radius:999px;border:1px solid var(--encre);background:var(--encre);color:#fff;cursor:pointer}
+.yidf .btn.clair{background:#fff;color:var(--encre)}
+.yidf .btn.petit{padding:8px 16px;font-size:14px}
+.yidf .nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:26px}
+.yidf .nav .lien{color:var(--doux)}
+.yidf .manquant{background:#fff;border:1px solid var(--manque);color:var(--manque);border-radius:8px;padding:12px 14px;margin-top:16px;font-size:14.5px}
+.yidf .carte-accueil{background:var(--papier);border:1px solid var(--trait);border-radius:12px;padding:34px 24px;text-align:center}
+.yidf .carte-accueil p{margin:0 0 14px}
+.yidf .encadre{border:1px solid var(--or);border-radius:8px;padding:14px 16px;margin:20px 0;background:#fffdf9}
+.yidf .recap-sec{background:#fff;border:1px solid var(--trait);border-radius:10px;padding:16px 18px;margin:0 0 14px}
+.yidf .recap-sec header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.yidf .recap-sec header b{font-family:var(--serif);font-size:20px;font-weight:500}
+.yidf .rr{display:grid;grid-template-columns:1fr 1.2fr;gap:10px;padding:7px 0;border-top:1px solid #f1ece4;font-size:14.5px}
+.yidf .rr:first-of-type{border-top:0}
+.yidf .rr span{color:var(--doux)}
+.yidf .attente{display:inline-block;font-size:12px;letter-spacing:.04em;color:var(--alerte);background:var(--alerte-fond);border-radius:999px;padding:2px 10px;margin-left:4px}
+@media (max-width:420px){.yidf h1{font-size:30px}
+.yidf .duo{grid-template-columns:1fr}
+.yidf .rr{grid-template-columns:1fr;gap:2px}}
+.yidf .btn.mic.on{background:var(--manque);border-color:var(--manque);color:#fff}
+.yidf{box-sizing:border-box;background:var(--ivoire);color:var(--encre);font-family:var(--sans);font-size:16px;line-height:1.55;max-width:600px;margin:0 auto;padding:28px 20px 60px;-webkit-text-size-adjust:100%;text-align:left}
+.yidf *,.yidf *:before,.yidf *:after{box-sizing:border-box}
+.yidf .facult{font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--doux);font-weight:400;margin-left:6px;vertical-align:middle}
+.yidf ul.moments{margin:6px 0 4px;padding:0 0 0 18px;color:var(--encre);font-size:14.5px}
+.yidf ul.moments li{margin:2px 0}
+.yidf .doux{color:var(--doux)}
+.yidf .perso{text-align:center;font-family:var(--serif);font-style:italic;font-size:18px;color:var(--doux);margin:-6px 0 14px}
+.yidf .sous-note{margin-top:10px}
+.yidf .fin-recap{text-align:center;color:var(--doux);margin:22px 0 4px;font-size:15px}
+.yidf .aide-champ{font-size:13px;color:var(--doux);margin:6px 0 0}
+.yi .yidf .marque,.yi .yidf .indic,.yi .yidf .facult{text-transform:uppercase!important}
+.yi .yidf .marque{letter-spacing:.32em!important}.yi .yidf .indic{letter-spacing:.06em!important}.yi .yidf .facult{letter-spacing:.08em!important}
