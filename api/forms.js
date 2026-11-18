@@ -44,6 +44,7 @@
      ?action=invite-repondre POST  la réponse de l'invité : yid, etat (moteur v2, relu par le serveur) ; reponses { … } pour un mariage sans partie D
      ?action=invite-brouillon POST le brouillon de l'invité en cours de route : yid, etat
      ?action=admin-feuille-route POST la feuille de route du mariage (w=CODE), texte WhatsApp ; op envoyee la marque envoyée
+     ?action=admin-fichier-planner POST le classeur du wedding planner (w=CODE) : invités, traiteur, rooming list, venues, attention ; b64
      ?action=admin-formulaire-signaux POST les signaux des réponses (w=CODE), foyer par foyer
      ?action=admin-demo      POST  crée ou recrée le mariage test Awa et Kevin, complet sur les sept étapes (administrateur)
      ?action=admin-premier-contact POST la file de premier contact (w=CODE) : sans op, la file ; op noter (id, etat) note l'issue d'un contact, sous plafond et délai
@@ -75,7 +76,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.20.0";
+const VERSION = "1.21.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -137,6 +138,8 @@ function readToken(tok) {
 }
 const INSTALLATION = { nom: "administrateur", role: "administrateur" };
 /* Qui parle ? Le jeton de session, ou le mot de passe d'installation donné directement. */
+/* le pass s'ouvre trois jours avant le mariage (envoi groupé, M53 et M55) ; un mariage Test le montre à tout moment */
+function passOuvert(c) { if (c.statut === "Test" || !c.date_mariage) return true; const d = new Date(String(c.date_mariage).slice(0, 10) + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - 3); return Date.now() >= d.getTime(); }
 function who(req, b) { return readToken(req.headers["x-admin-token"]) || (okPassword(req.headers["x-admin-password"] || b.password) ? INSTALLATION : null); }
 
 function newKey() {
@@ -208,7 +211,7 @@ module.exports = async (req, res) => {
   const action = q.action || "";
   cors(req, res);
   /* le lien personnel est lu depuis le site du mariage, quel qu'il soit : seul le jeton ouvre la fiche */
-  if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon" || action === "pass") res.setHeader("Access-Control-Allow-Origin", "*");
+  if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon" || action === "pass" || action === "pass-info") res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   try {
     await store.migrate();
@@ -258,12 +261,26 @@ module.exports = async (req, res) => {
       if (!ph) { res.statusCode = 404; return res.end(); }
       res.statusCode = 200; res.setHeader("Content-Type", ph.type); res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); return res.end(ph.buffer);
     }
+    if (action === "pass-info") {
+      /* le pass dessiné (charte validée) : noms, table, code, QR ; ouvert trois jours avant le mariage, à tout moment sur un mariage Test */
+      if (!(await store.rateLimit(ip(req) + ":pass", 120))) return send(res, 429, { ok: false, error: "slow down" });
+      const jt = String(q.yid || "").toLowerCase(), D = require("../lib/db");
+      const c = /^[a-z0-9]{12}$/.test(jt) ? (await D.query("SELECT c.id, c.cle, c.reponse, c.reponse_le, c.jeton, c.desactive, c.nom_repertoire, m.id AS mid, m.code, m.site, m.statut, m.date_mariage, m.lieu, m.prenoms, m.photo_cle, m.parametres FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
+      if (!c || c.desactive || !plan.present(c)) return send(res, 404, { ok: false, error: "pass" });
+      if (!passOuvert(c)) { const d = new Date(String(c.date_mariage).slice(0, 10) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - 3); return send(res, 403, { ok: false, error: "bientot", ouverture: d.toISOString().slice(0, 10) }); }
+      const r = c.reponse || {}, P = (c.parametres || {}).plan || {}, t = (P.tables || []).find(x => x.id === (P.placements || {})[c.id]);
+      const noms = Array.isArray(r.detail) ? r.detail.map(p => (p.civilite ? p.civilite + " " : "") + (p.nom || "Nom à communiquer")) : [c.nom_repertoire];
+      const ck = (c.parametres || {}).checklist || {}, contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
+      const svg = await require("qrcode").toString(contenu, { type: "svg", margin: 0, color: { dark: "#24160f", light: "#0000" } });
+      const morceaux = String(ck.prenoms || c.prenoms || "").split(/\s+(?:et|&)\s+/i);
+      return send(res, 200, { ok: true, prenoms: morceaux, date: c.date_mariage, lieu: String(c.lieu || ck.lieu || "").split(",")[0], noms, table: t ? t.nom : null, code: String(c.cle || "").replace(/^([A-Z]+)(\d+)$/, "$1 $2"), photo: c.photo_cle ? "/api/forms?action=photo&k=" + c.photo_cle : null, qr: svg });
+    }
     if (action === "pass") {
       /* le pass de l'invité présent : son QR code, qui porte son lien personnel */
       if (!(await store.rateLimit(ip(req) + ":pass", 120))) return send(res, 429, { ok: false, error: "slow down" });
       const jt = String(q.yid || "").toLowerCase();
-      const c = /^[a-z0-9]{12}$/.test(jt) ? (await require("../lib/db").query("SELECT c.reponse, c.reponse_le, c.jeton, c.desactive, m.site FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
-      if (!c || c.desactive || !plan.present(c)) return send(res, 404, { ok: false, error: "pass" });
+      const c = /^[a-z0-9]{12}$/.test(jt) ? (await require("../lib/db").query("SELECT c.reponse, c.reponse_le, c.jeton, c.desactive, m.site, m.statut, m.date_mariage FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
+      if (!c || c.desactive || !plan.present(c) || !passOuvert(c)) return send(res, 404, { ok: false, error: "pass" });
       const contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
       const png = await require("qrcode").toBuffer(contenu, { type: "png", margin: 2, width: 480, color: { dark: "#141210", light: "#FFFFFF" } });
       res.statusCode = 200; res.setHeader("Content-Type", "image/png"); res.setHeader("Cache-Control", "public, max-age=3600"); return res.end(png);
@@ -282,6 +299,11 @@ module.exports = async (req, res) => {
       const m = await store.mariageFresh(q.w || b.w); if (!m) return send(res, 404, { ok: false, error: "mariage" });
       if (b.op === "envoyee") { const pp = Object.assign({}, m.parametres || {}); pp.feuille_route = { le: new Date().toISOString(), par: u.nom }; await require("../lib/db").query("UPDATE mariage SET parametres = $2, modifie_le = now() WHERE id = $1", [m.id, pp]); await store.journal(m.id, "Feuille de route", "Envoyée au couple dans le groupe du mariage, à épingler", null, null, u.nom); return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: pp.feuille_route }); }
       return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: (m.parametres || {}).feuille_route || null });
+    }
+    if (action === "admin-fichier-planner") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      try { const x = await require("../lib/fichiers").planner(q.w || b.w); const m = await store.mariageFresh(q.w || b.w); await store.journal(m.id, "Fichier wedding planner", x.nom, null, null, u.nom); return send(res, 200, { ok: true, nom: x.nom, b64: x.buffer.toString("base64") }); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-formulaire-signaux") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

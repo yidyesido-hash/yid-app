@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#24160f">
+<title>Votre pass</title>
+<style>
+@font-face{font-family:Corm;font-display:swap;src:url(/vendor/fonts/cormorant-garamond-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Corm;font-style:italic;font-display:swap;src:url(/vendor/fonts/cormorant-garamond-latin-400-italic.woff2) format("woff2")}
+@font-face{font-family:Jost;font-weight:300;font-display:swap;src:url(/vendor/fonts/jost-latin-300-normal.woff2) format("woff2")}
+@font-face{font-family:Jost;font-weight:500;font-display:swap;src:url(/vendor/fonts/jost-latin-500-normal.woff2) format("woff2")}
+html,body{margin:0;background:#24160f;min-height:100%}
+body{display:flex;align-items:flex-start;justify-content:center}
+#zone{width:100vw;max-width:540px;position:relative}
+.pass{width:1080px;height:1350px;position:absolute;top:0;left:0;transform-origin:0 0;overflow:hidden;box-sizing:border-box;background:#2a1a12;color:#f4efe6;font-family:Jost,Helvetica,Arial,sans-serif;font-weight:300;padding:575px 120px 0}
+.photo{position:absolute;inset:0;background-repeat:no-repeat;background-size:1080px auto;background-position:center -120px;opacity:.82;filter:saturate(.9)}
+.teinte{position:absolute;inset:0;background:#5a2e18;mix-blend-mode:multiply;opacity:.35}
+.voile{position:absolute;inset:0;background:linear-gradient(180deg,rgba(36,22,15,.05) 0%,rgba(36,22,15,.10) 30%,rgba(36,22,15,.70) 46%,rgba(36,22,15,.94) 56%,#24160f 72%)}
+.sans{padding-top:380px}
+.sans .voile{background:radial-gradient(120% 70% at 50% 0%,#5a3a26 0%,#2a1a12 55%,#24160f 100%)}
+.pass > *:not(.photo):not(.teinte):not(.voile){position:relative}
+.cadre{position:absolute!important;inset:44px;border:1px solid rgba(214,180,128,.55)}
+.k{position:absolute!important;top:92px;left:0;right:0;font-weight:500;font-size:19px;letter-spacing:.42em;text-transform:uppercase;color:#d6b480;text-align:center}
+.noms{font-family:Corm;font-size:84px;line-height:1;text-align:center;margin:0 0 14px;white-space:nowrap;text-shadow:0 2px 24px rgba(0,0,0,.35)}
+.noms i{font-style:italic;font-size:60px;color:#d6b480;margin:0 14px}
+.date{font-family:Corm;font-style:italic;font-size:38px;text-align:center;color:#e2d3bf}
+.lieu{font-size:22px;letter-spacing:.18em;text-transform:uppercase;text-align:center;color:#e2d3bf;margin-top:12px}
+.filet{width:90px;height:1px;background:#d6b480;margin:26px auto}
+.bloc{display:grid;grid-template-columns:1fr 220px;gap:60px;align-items:center}
+.lbl{font-weight:500;font-size:15px;letter-spacing:.32em;text-transform:uppercase;color:#d6b480;margin:0 0 8px}
+.val{font-family:Corm;font-size:40px;line-height:1.18;margin:0 0 22px}
+.qrw{width:220px;height:220px;padding:14px;box-sizing:border-box;background:#f6efe4;border:1px solid #d6b480}
+.qrw svg{width:100%;height:100%;display:block}
+.code{font-size:15px;letter-spacing:.3em;text-align:center;color:#e2d3bf;margin-top:12px}
+.pied{position:absolute!important;left:0;right:0;bottom:64px;text-align:center}
+.pied p{font-family:Corm;font-style:italic;font-size:26px;color:#e2d3bf;margin:0 0 18px}
+.pied img{height:52px}
+.msg{color:#e2d3bf;font:300 17px/1.6 Jost,Helvetica,sans-serif;text-align:center;padding:90px 28px}
+.msg b{display:block;font:400 30px Corm,Georgia,serif;color:#f4efe6;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="zone"><p class="msg">Un instant…</p></div>
+<script>
+(function () {
+  var z = document.getElementById("zone"), jt = (new URLSearchParams(location.search).get("yid") || "").toLowerCase();
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"], JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  var dl = function (iso, jour) { var d = new Date(String(iso).slice(0, 10) + "T12:00:00Z"); return (jour ? JOURS[d.getUTCDay()] + " " : "") + (d.getUTCDate() === 1 ? "1er" : d.getUTCDate()) + " " + MOIS[d.getUTCMonth()] + " " + d.getUTCFullYear(); };
+  var msg = function (t, s) { z.innerHTML = '<p class="msg"><b>' + t + '</b>' + (s || "") + '</p>'; };
+  if (!/^[a-z0-9]{12}$/.test(jt)) return msg("Ce lien ne semble pas valide.", "Notre équipe reste à votre écoute.");
+  fetch("/api/forms?action=pass-info&yid=" + jt).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ok && d.error === "bientot") return msg("Votre pass arrive bientôt.", "Il vous sera adressé le " + dl(d.ouverture) + ", trois jours avant le mariage.");
+    if (!d.ok) return msg("Ce pass n'est pas disponible.", "Notre équipe reste à votre écoute.");
+    var p = d.prenoms || [], noms = p.length > 1 ? esc(p[0]) + "<i>&amp;</i>" + esc(p.slice(1).join(" ")) : esc(p[0] || "");
+    var h = '<div class="pass' + (d.photo ? "" : " sans") + '" id="pass">' + (d.photo ? '<div class="photo" style="background-image:url(' + esc(d.photo) + ')"></div><div class="teinte"></div>' : "") + '<div class="voile"></div><div class="cadre"></div>' +
+      '<div class="k">Pass nominatif</div><div class="noms">' + noms + '</div><div class="date">' + esc(dl(d.date, true)) + '</div>' + (d.lieu ? '<div class="lieu">' + esc(d.lieu) + '</div>' : "") + '<div class="filet"></div>' +
+      '<div class="bloc"><div><p class="lbl">' + (d.noms.length > 1 ? "Invités" : "Invité") + '</p><p class="val">' + d.noms.map(esc).join("<br>") + '</p>' + (d.table ? '<p class="lbl">Table</p><p class="val">' + esc(d.table) + '</p>' : "") + '</div>' +
+      '<div><div class="qrw">' + d.qr + '</div><div class="code">' + esc(d.code) + '</div></div></div>' +
+      '<div class="pied"><p>Ce pass vous sera demandé à l\'accueil. Il vous est personnellement destiné.</p><img src="/img/pass-monogramme.png" alt="Yes I Do"></div></div>';
+    z.innerHTML = h; document.title = "Votre pass · " + (p.join(" et "));
+    var ajuster = function () { var w = z.clientWidth, k = w / 1080; document.getElementById("pass").style.transform = "scale(" + k + ")"; z.style.height = (1350 * k) + "px"; };
+    ajuster(); window.addEventListener("resize", ajuster);
+  }).catch(function () { msg("Ce pass n'est pas disponible pour l'instant.", "Merci de réessayer dans un instant."); });
+})();
+</script>
+</body>
+</html>

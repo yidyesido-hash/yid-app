@@ -464,6 +464,7 @@
       if (logeOffert && S.heb.sejour === "non") s.push("Hébergement offert décliné : à réattribuer avec les mariés");
       if (logeOffert && dormeurs().length) s.push("Logés sur place : " + dormeurs().length + " personne(s)");
       presents().forEach(function (id) { var a = ageDe(id); if (role(id) === "enf" && a === 0) s.push("Nourrisson : " + prenom(id) + (dormeurs().indexOf(id) >= 0 ? ", logé : lit pour bébé à vérifier avec le lieu" : "") + ((S.enf[id] || {}).poussette === "oui" ? ", poussette ou cosy dans la salle" : "")); });
+      if (CFG.arrivees && dormeurs().length && (S.v.aller || {}).date && CFG.jours && CFG.jours[1] && S.v.aller.date < CFG.jours[1].v) s.push("Arrivée la veille du mariage : vérifier l'hébergement de la nuit précédente");
       var nd = REPAS ? presents().filter(function (id) { return !dine(id); }).length : 0; if (nd) s.push(nd + " personne(s) ne dîneront pas : repas en moins pour le traiteur");
       if (S.fin.concierge === "tout") s.push("Conciergerie : aide demandée pour l'ensemble de la venue");
       if (S.fin.concierge === "partie") s.push("Conciergerie : aide demandée (" + Object.keys(S.fin.pour || {}).filter(function (k) { return S.fin.pour[k]; }).join(", ") + ")");

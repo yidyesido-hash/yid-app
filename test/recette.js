@@ -469,6 +469,12 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("mariage test : les signaux remontent (nourrisson, allergie sévère, hébergement décliné, accompagnant remplacé)", sg.ok && ["Nourrisson", "Allergie sévère", "Hébergement offert décliné", "Accompagnant remplacé"].every(t => sg.foyers.some(f => f.signaux.some(x => x.startsWith(t)))), JSON.stringify(sg).slice(0, 300));
     const lg = (await call("POST", "/api/forms?action=admin-logistique&w=" + r.json.code, {}, H)).json;
     check("mariage test : la navette compte ses passagers depuis le formulaire", lg.ok && lg.navettes && lg.navettes[0].aller >= 10, JSON.stringify(lg.navettes && lg.navettes[0]).slice(0, 200));
+    const code = r.json.code;
+    let x = await call("POST", "/api/forms?action=admin-fichier-planner&w=" + code, {}, H);
+    check("fichier wedding planner : un classeur composé des réponses", x.json.ok && /\.xlsx$/.test(x.json.nom) && x.json.b64.length > 5000);
+    const lp = (await call("POST", "/api/forms?action=admin-liste&w=" + code, {}, H)).json.contacts.filter(c => c.reponse_le && !/regret/.test((c.reponse || {}).presence || ""));
+    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
+    check("pass : noms, code et QR pour un foyer présent (mariage Test, ouvert à tout moment)", x.json.ok && x.json.noms.length >= 1 && /<svg/.test(x.json.qr) && /^AK\d* \d+$/.test(x.json.code), JSON.stringify(x.json).slice(0, 160));
     r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
     check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 24);
   }
