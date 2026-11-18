@@ -77,17 +77,18 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-accueil", {}, H);
   check("accueil : mariages, cheminement, journal", r.json.ok && r.json.mariages.length === 2 && r.json.reglages.cheminement.indexOf("1. Fiche du mariage") === 0 && r.json.journal.length > 0);
   r = await call("POST", "/api/forms?action=admin-checklist", { date_mariage: "2027-07-10", delai_arret_jours: 45 }, H);
+  check("fiche : programme structuré, périodes et repas déduits, pass cohérent avec la protection", (await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, { protection_liste: "Non", pass: "Pass de contrôle, avec QR" }) }, H)).json.errors.some(e => e.k === "pass"));
   check("checklist : 4 sections, remise proposée, clôture calculée", r.json.sections.length === 4 && r.json.remise && r.json.arret === "2027-05-26", r.json.remise + " / " + r.json.arret);
-  const fiche = { pack: "Signature", prevu_contrat: 120, seuil: 130, date_mariage: "2027-07-10", delai_arret_jours: 45, conciergerie: "Oui", hebergement: "Une partie des invités", lieux_hebergement: "Domaine de la Muette", volume_estime: 110, multi_periodes: "Non", regie: "Oui",
+  const fiche = { pack: "Signature", prevu_contrat: 120, seuil: 130, date_mariage: "2027-07-10", delai_arret_jours: 45, conciergerie: "Oui", hebergement: "Une partie des invités", lieux_hebergement: "Domaine de la Muette", volume_estime: 110, regie: "Oui",
     prenoms: "Alexander et Clarisse", lieu: "Domaine de la Muette, Seine et Marne", initiales: "ac", pays: "France", regime_enfants: "Mixte", consigne_enfants: "Enfants des proches uniquement", proches: "Kevin (frère de l'époux) ; Tante Awa (tante de l'épouse)", listes_attendues: "Tante Awa", quotas: "Tante Awa = 12", date_remise: r.json.remise, support: "Oui", telephone_epoux: "Android", telephone_epouse: "iPhone",
-    moments: "Cérémonie à la mairie de Sotteville-lès-Rouen ; Vin d'honneur ; Dîner et soirée", repas_table: "Oui", plats: "Viande ; Poisson", cuisson: "Non", audience_maitrisee: "Oui", hebergement_offert: "Oui", nuits: "la nuit du samedi 10 au dimanche 11 juillet", acces_anticipe: "Non", arrivees: "Non", trajets: "", engagement_horaires: "Non", date_reponse: "2027-02-28", date_modification: "2027-03-15", langues_formulaire: "fr ; PT",
+    programme: [{ heure: "14:00", libelle: "Cérémonie à la mairie de Sotteville-lès-Rouen", lieu: "Mairie de Sotteville-lès-Rouen", acces: "Tous les invités", service: "Rien n'est servi" }, { heure: "17:00", libelle: "Vin d'honneur", lieu: "Domaine de la Muette", acces: "Tous les invités", service: "Cocktail ou vin d'honneur" }, { heure: "20:00", libelle: "Dîner et soirée", lieu: "Domaine de la Muette", acces: "Tous les invités", service: "Repas servi à table" }], plats: "Viande ; Poisson", cuisson: "Non", protection_liste: "Oui", pass: "Pass de contrôle, avec QR", hebergement_offert: "Oui", nuits: "la nuit du samedi 10 au dimanche 11 juillet", acces_anticipe: "Non", arrivees: "Non", engagement_horaires: "Non", date_reponse: "2027-02-28", date_modification: "2027-03-15", langues_formulaire: "fr ; PT",
     statut: "Test", langue_defaut: "fr", boite_email: "", site: "" };
   r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { prevu_contrat: "abc" }) }, H);
   check("déclaration refusée avec un champ faux (422)", r.status === 422 && r.json.errors.some(e => e.k === "prevu_contrat"));
   r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { date_modification: "2027-02-01" }) }, H);
   check("fiche : modification avant la date de réponse refusée", !r.json.ok && r.json.errors.some(e => e.k === "date_modification"));
-  r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { audience_maitrisee: "" }) }, H);
-  check("fiche : caractéristique du formulaire obligatoire", !r.json.ok && r.json.errors.some(e => e.k === "audience_maitrisee"));
+  r = await call("POST", "/api/forms?action=admin-declarer", { data: Object.assign({}, fiche, { protection_liste: "" }) }, H);
+  check("fiche : caractéristique du formulaire obligatoire", !r.json.ok && r.json.errors.some(e => e.k === "protection_liste"));
   r = await call("POST", "/api/forms?action=admin-declarer", { data: fiche }, H);
   check("mariage créé, code AC27, étape 1 terminée", r.status === 200 && r.json.ok && r.json.code === "AC27" && r.json.created && r.json.mariage.etape === 2 && r.json.mariage.etapes["1"], r.status !== 200 ? JSON.stringify(r.json).slice(0, 300) : "clôture " + r.json.mariage.date_arret);
   check("SharePoint non configuré en local : signalé, pas bloquant", r.json.sharepoint && r.json.sharepoint.erreurs.length === 1);
@@ -475,8 +476,16 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     const lp = (await call("POST", "/api/forms?action=admin-liste&w=" + code, {}, H)).json.contacts.filter(c => c.reponse_le && !/regret/.test((c.reponse || {}).presence || ""));
     x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
     check("pass : noms, code et QR pour un foyer présent (mariage Test, ouvert à tout moment)", x.json.ok && x.json.noms.length >= 1 && /<svg/.test(x.json.qr) && /^AK\d* \d+$/.test(x.json.code), JSON.stringify(x.json).slice(0, 160));
+    const anglo = lp.find(c => c.nom_repertoire === "Emma London");
+    x = await call("GET", "/api/forms?action=invite&yid=" + anglo.jeton);
+    const MOT = require("../public/formulaire/moteur.js"), eA = MOT.creer(x.json.cfg, x.json.foyer, x.json.etat);
+    check("anglais : le foyer anglophone reçoit son formulaire et les mots des mariés traduits", x.json.foyer.langue === "en" && eA.collecte().rows.some(r => r.label === "Attendance") && x.json.cfg.moments.some(m => m.l.en === "Drinks on the terrace"), JSON.stringify(eA.collecte().rows.slice(0, 2)));
+    const sgP = sg.foyers.some(f => f.signaux.some(t => /soumettre aux mariés \(protection de la liste\)/.test(t)));
+    check("protection de la liste : le remplacement d'un accompagnant devient une demande aux mariés", sgP);
+    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
+    check("pass de contrôle : mode contrôle, seules les personnes nommées y figurent", x.json.mode === "controle" && x.json.noms.every(n => !/Nom à communiquer/.test(n)));
     r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
-    check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 24);
+    check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 25);
   }
 
   /* 1.9.0 : la file de premier contact */

@@ -76,7 +76,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.21.0";
+const VERSION = "1.22.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -273,14 +273,17 @@ module.exports = async (req, res) => {
       const ck = (c.parametres || {}).checklist || {}, contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
       const svg = await require("qrcode").toString(contenu, { type: "svg", margin: 0, color: { dark: "#24160f", light: "#0000" } });
       const morceaux = String(ck.prenoms || c.prenoms || "").split(/\s+(?:et|&)\s+/i);
-      return send(res, 200, { ok: true, prenoms: morceaux, date: c.date_mariage, lieu: String(c.lieu || ck.lieu || "").split(",")[0], noms, table: t ? t.nom : null, code: String(c.cle || "").replace(/^([A-Z]+)(\d+)$/, "$1 $2"), photo: c.photo_cle ? "/api/forms?action=photo&k=" + c.photo_cle : null, qr: svg });
+      const mode = (require("../lib/formulaire").config({ parametres: c.parametres, prenoms: c.prenoms, date_mariage: c.date_mariage, lieu: c.lieu }).pass) || "Pass d'accueil, avec QR";
+      const sansQR = /sans QR/.test(mode), controle = /contrôle/.test(mode);
+      const nomsP = controle && Array.isArray(r.detail) ? r.detail.filter(p => p.nom).map(p => (p.civilite ? p.civilite + " " : "") + p.nom) : noms;
+      return send(res, 200, { ok: true, mode: sansQR ? "sans" : controle ? "controle" : "accueil", attente: controle && Array.isArray(r.detail) && r.detail.some(p => !p.nom), prenoms: morceaux, date: c.date_mariage, lieu: String(c.lieu || ck.lieu || "").split(",")[0], noms: nomsP, table: t ? t.nom : null, code: sansQR ? null : String(c.cle || "").replace(/^([A-Z]+)(\d+)$/, "$1 $2"), photo: c.photo_cle ? "/api/forms?action=photo&k=" + c.photo_cle : null, qr: sansQR ? null : svg });
     }
     if (action === "pass") {
       /* le pass de l'invité présent : son QR code, qui porte son lien personnel */
       if (!(await store.rateLimit(ip(req) + ":pass", 120))) return send(res, 429, { ok: false, error: "slow down" });
       const jt = String(q.yid || "").toLowerCase();
-      const c = /^[a-z0-9]{12}$/.test(jt) ? (await require("../lib/db").query("SELECT c.reponse, c.reponse_le, c.jeton, c.desactive, m.site, m.statut, m.date_mariage FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
-      if (!c || c.desactive || !plan.present(c) || !passOuvert(c)) return send(res, 404, { ok: false, error: "pass" });
+      const c = /^[a-z0-9]{12}$/.test(jt) ? (await require("../lib/db").query("SELECT c.reponse, c.reponse_le, c.jeton, c.desactive, m.site, m.statut, m.date_mariage, m.parametres FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
+      if (!c || c.desactive || !plan.present(c) || !passOuvert(c) || /sans QR/.test(((c.parametres || {}).formulaire || {}).pass || "")) return send(res, 404, { ok: false, error: "pass" });
       const contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
       const png = await require("qrcode").toBuffer(contenu, { type: "png", margin: 2, width: 480, color: { dark: "#141210", light: "#FFFFFF" } });
       res.statusCode = 200; res.setHeader("Content-Type", "image/png"); res.setHeader("Cache-Control", "public, max-age=3600"); return res.end(png);

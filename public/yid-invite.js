@@ -92,7 +92,7 @@
   /* moteur v2 (méthode YID) : le formulaire composé pour ce foyer, servi par l'outil, dans la même fenêtre */
   function charger(src, ok){ var x = document.createElement("script"); x.src = src; x.onload = ok; document.head.appendChild(x); }
   function poser2(d){
-    var base = API.replace(/\/api\/forms$/, ""), V = "?v=1.20.0";
+    var base = API.replace(/\/api\/forms$/, ""), V = "?v=1.22.0";
     var css = el("link"); css.rel = "stylesheet"; css.href = base + "/formulaire/formulaire.css" + V; document.head.appendChild(css);
     var sec = el("div", "yi yi-plein"); sec.id = "yid-accueil"; sec.hidden = true; document.body.appendChild(sec);
     var carte = el("div", "yi-carte"); carte.style.padding = "0"; carte.style.overflow = "hidden"; sec.appendChild(carte);

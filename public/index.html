@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.21.0">
-<link rel="stylesheet" href="/cartes.css?v=1.21.0">
-<script src="/cartes.js?v=1.21.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.22.0">
+<link rel="stylesheet" href="/cartes.css?v=1.22.0">
+<script src="/cartes.js?v=1.22.0"></script>
 </head>
 <body>
 <header>
@@ -1141,16 +1141,39 @@
     }).catch(function(e){ target.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
   function field(f, v){
-    var val = Array.isArray(v) ? v.join(" ; ") : (v == null ? "" : v);
+    var val = f.t === "programme" ? "" : Array.isArray(v) ? v.join(" ; ") : (v == null ? "" : v);
     var input;
     if (f.t === "select") input = '<select name="' + f.k + '"><option value="">Choisir</option>' + f.o.map(function(o){ return '<option' + (o === val ? " selected" : "") + '>' + esc(o) + '</option>'; }).join("") + '</select>';
     else if (f.t === "ouinon") input = '<div class="radios">' + ["Oui","Non"].map(function(o){ return '<label class="' + (o === val ? "sel" : "") + '"><input type="radio" name="' + f.k + '" value="' + o + '"' + (o === val ? " checked" : "") + '><span>' + o + '</span></label>'; }).join("") + '</div>';
     else if (f.t === "date") input = '<input type="date" name="' + f.k + '" value="' + esc(val) + '">';
     else if (f.t === "int") input = '<input type="number" name="' + f.k + '" value="' + esc(val) + '" inputmode="numeric">';
     else if (f.t === "liste") input = '<input type="text" name="' + f.k + '" value="' + esc(val) + '" placeholder="Séparés par des points virgules">';
+    else if (f.t === "programme") input = programmeEditeur(f.k, Array.isArray(v) ? v : []);
     else input = '<input type="text" name="' + f.k + '" value="' + esc(val) + '">';
     return '<div class="field" data-k="' + f.k + '"><div class="num">' + esc(f.n) + (f.req ? "" : " · facultatif") + '</div>' + (f.q ? '<div class="q">' + esc(f.q) + '</div>' : '<label>' + esc(f.l) + '</label>') + (f.q ? '<label class="small muted" style="font-weight:400">' + esc(f.l) + '</label>' : "") + input + '<div class="h">' + esc(f.h || "") + '</div><div class="err" data-err="' + f.k + '"></div></div>';
   }
+  /* le programme de la journée (D1) : une ligne par moment, rangée en JSON dans un champ caché */
+  var ACCES_P = ["Tous les invités", "Sur invitation"], SERV_P = ["Rien n'est servi", "Cocktail ou vin d'honneur", "Repas servi à table", "Buffet"];
+  function programmeEditeur(k, L){
+    if (!L.length) L = [{ heure: "", libelle: "", lieu: "", acces: ACCES_P[0], service: SERV_P[0] }];
+    var opt = function(o, v){ return o.map(function(x){ return '<option' + (x === v ? " selected" : "") + '>' + esc(x) + '</option>'; }).join(""); };
+    var ligne = function(m){ return '<div class="prog-l" style="display:grid;grid-template-columns:88px 1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)">' +
+      '<input type="text" data-p="heure" value="' + esc(m.heure || "") + '" placeholder="17:00" inputmode="numeric" maxlength="5" aria-label="Heure"><input type="text" data-p="libelle" value="' + esc(m.libelle || "") + '" placeholder="Le moment, tel que les invités le liront">' +
+      '<span></span><input type="text" data-p="lieu" value="' + esc(m.lieu || "") + '" placeholder="Le lieu">' +
+      '<span></span><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center"><select data-p="acces">' + opt(ACCES_P, m.acces) + '</select><select data-p="service">' + opt(SERV_P, m.service) + '</select><button type="button" class="ghost" data-prog-retirer>Retirer</button></div></div>'; };
+    return '<div class="prog" data-prog="' + k + '">' + L.map(ligne).join("") + '<button type="button" class="ghost" data-prog-ajouter style="margin-top:8px">Ajouter un moment</button><input type="hidden" name="' + k + '" value="' + esc(JSON.stringify(L)) + '"></div>';
+  }
+  function programmeSync(box){ var L = []; box.querySelectorAll(".prog-l").forEach(function(r){ var o = {}; r.querySelectorAll("[data-p]").forEach(function(i){ o[i.dataset.p] = i.value; }); L.push(o); }); box.querySelector('input[type="hidden"]').value = JSON.stringify(L); }
+  document.addEventListener("click", function(e){
+    var b = e.target.closest("[data-prog-ajouter],[data-prog-retirer]"); if (!b) return; var box = b.closest(".prog"); if (!box) return;
+    if (b.hasAttribute("data-prog-ajouter")) { var tmp = document.createElement("div"); tmp.innerHTML = programmeEditeur("x", [{ acces: ACCES_P[0], service: SERV_P[0] }]); box.insertBefore(tmp.querySelector(".prog-l"), b); }
+    else if (box.querySelectorAll(".prog-l").length > 1) b.closest(".prog-l").remove();
+    programmeSync(box);
+  });
+  document.addEventListener("input", function(e){ var box = e.target.closest && e.target.closest(".prog"); if (box) programmeSync(box); });
+  document.addEventListener("change", function(e){ var box = e.target.closest && e.target.closest(".prog"); if (box) programmeSync(box);
+    /* la protection de la liste propose d'office le pass de contrôle ; sans elle, il n'a pas lieu d'être */
+    if (e.target.name === "protection_liste") { var ps = document.querySelector('select[name="pass"]'); if (ps) { if (e.target.value === "Oui" && !ps.value) ps.value = "Pass de contrôle, avec QR"; if (e.target.value === "Non" && /contrôle/.test(ps.value)) ps.value = "Pass d'accueil, avec QR"; } } });
   function values(){ var o = {}; var fm = $("chk"); CHK.sections.forEach(function(s){ s.champs.forEach(function(f){ var el = fm.elements[f.k]; if (!el) return; if (f.t === "ouinon") { var c = fm.querySelector('input[name="' + f.k + '"]:checked'); o[f.k] = c ? c.value : ""; } else o[f.k] = el.value; }); }); return o; }
   function visible(f, v){ if (!f.si) return true; var x = v[f.si.k]; if (f.si.eq !== undefined) return x === f.si.eq; if (f.si.ne !== undefined) return x !== f.si.ne && x !== undefined && x !== ""; if (f.si.filled) return !!(x && String(x).trim()); return true; }
   function refresh(){ var v = values(); CHK.sections.forEach(function(s){ s.champs.forEach(function(f){ var d = document.querySelector('.field[data-k="' + f.k + '"]'); if (d) d.hidden = !visible(f, v); }); }); document.querySelectorAll(".radios label").forEach(function(l){ l.classList.toggle("sel", l.querySelector("input").checked); }); }
