@@ -5,19 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Votre réponse</title>
-<link rel="stylesheet" href="formulaire.css?v=1.22.0">
+<link rel="stylesheet" href="formulaire.css?v=1.24.0">
 <style>html,body{margin:0;background:#faf7f2}.attente{display:block;text-align:center;padding:80px 20px;font:15px Helvetica,Arial,sans-serif;color:#6f665c}</style>
 </head>
 <body>
 <div id="f"><p class="attente">Un instant…</p></div>
-<script src="pays.js?v=1.22.0"></script>
-<script src="moteur.js?v=1.22.0"></script>
-<script src="page.js?v=1.22.0"></script>
+<script src="pays.js?v=1.24.0"></script>
+<script src="moteur.js?v=1.24.0"></script>
+<script src="page.js?v=1.24.0"></script>
 <script>
 (function () {
-  var p = new URLSearchParams(location.search), jeton = (p.get("yid") || "").toLowerCase(), el = document.getElementById("f");
+  var p = new URLSearchParams(location.search), jeton = (p.get("yid") || "").toLowerCase(), el = document.getElementById("f"), apercu = p.get("apercu") || "";
   var api = location.origin + "/api/forms";
   var refus = function () { el.innerHTML = '<p class="attente">Ce lien ne semble pas valide. Notre équipe reste à votre écoute.</p>'; };
+  if (apercu) {
+    fetch(api + "?action=invite-apercu&e=" + encodeURIComponent(apercu) + "&l=" + encodeURIComponent(p.get("l") || "")).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) return refus();
+      document.title = "Aperçu du formulaire · " + d.cfg.maries; el.innerHTML = '<p style="max-width:600px;margin:0 auto;padding:10px 20px;font:13px Helvetica,Arial,sans-serif;color:#6f665c;text-align:center">Aperçu : le formulaire tel qu\'un invité le reçoit. Rien n\'est enregistré.</p><div id="fa"></div>';
+      var e = YIDMoteur.creer(d.cfg, d.foyer, null); var z = document.getElementById("fa"); z.classList.add("yidf");
+      e.brancher(z, { envoyer: function () { return Promise.resolve(); } });
+    }).catch(refus);
+    return;
+  }
   if (!/^[a-z0-9]{12}$/.test(jeton)) return refus();
   fetch(api + "?action=invite&yid=" + jeton).then(function (r) { return r.json(); }).then(function (d) {
     if (!d || !d.ok || d.v !== 2) return refus();

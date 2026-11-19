@@ -98,9 +98,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.23.0">
-<link rel="stylesheet" href="/cartes.css?v=1.23.0">
-<script src="/cartes.js?v=1.23.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.24.0">
+<link rel="stylesheet" href="/cartes.css?v=1.24.0">
+<script src="/cartes.js?v=1.24.0"></script>
 </head>
 <body>
 <header>
@@ -137,6 +137,77 @@
   applyTheme();
   var $ = function(id){ return document.getElementById(id); };
   var V = $("view");
+  /* ---------- l'aperçu du formulaire pour l'équipe : le moteur de l'outil, un foyer choisi par typologie ---------- */
+  var MOTEUR_PRET = null;
+  function chargerMoteur(){
+    if (MOTEUR_PRET) return MOTEUR_PRET;
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.24.0"; document.head.appendChild(css);
+    var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.24.0").then(function(){ return un("/formulaire/moteur.js?v=1.24.0"); });
+    return MOTEUR_PRET;
+  }
+  function apercuFormulaire(m, o){
+    o = Object.assign({ type: "deux", enfants: 0, loge: false, langue: "fr" }, o || {});
+    var ov = document.createElement("div"); ov.style.cssText = "position:fixed;inset:0;z-index:80;background:rgba(20,16,12,.55);display:flex;justify-content:center;overflow:auto;padding:24px 10px";
+    ov.innerHTML = '<div style="background:#faf7f2;border-radius:16px;max-width:640px;width:100%;align-self:flex-start;box-shadow:0 20px 60px rgba(0,0,0,.25)"><div style="position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0;padding:12px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-bottom:1px solid var(--line);z-index:2">' +
+      '<b style="flex:1;min-width:140px">Aperçu du formulaire</b><select data-ap="type"><option value="deux">Pour deux</option><option value="unique">Invitation unique</option><option value="libre">Ne sait pas encore</option><option value="plusieurs">Trois accompagnants</option></select><select data-ap="enfants"><option value="0">Sans enfant</option><option value="1">Un enfant</option><option value="2">Deux enfants</option></select><select data-ap="loge"><option value="">Non logé</option><option value="1">Logé</option></select><select data-ap="langue"><option value="fr">Français</option><option value="en">English</option><option value="pt">Português</option></select><button type="button" class="ghost" data-apx>Fermer</button></div><div id="apz"><p class="muted" style="padding:20px">Chargement</p></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector("[data-apx]").onclick = function(){ ov.remove(); }; ov.onclick = function(e){ if (e.target === ov) ov.remove(); };
+    ov.querySelector('[data-ap="type"]').value = o.type; ov.querySelector('[data-ap="enfants"]').value = String(o.enfants); ov.querySelector('[data-ap="loge"]').value = o.loge ? "1" : ""; ov.querySelector('[data-ap="langue"]').value = o.langue;
+    var monter = function(){
+      var c = { type: ov.querySelector('[data-ap="type"]').value, enfants: +ov.querySelector('[data-ap="enfants"]').value, loge: !!ov.querySelector('[data-ap="loge"]').value, langue: ov.querySelector('[data-ap="langue"]').value, colonne: o.colonne || null };
+      Promise.all([chargerMoteur(), api("admin-formulaire-apercu", c, m.code)]).then(function(r){ var d = r[1], z = document.createElement("div"); z.id = "apz"; ov.querySelector("#apz").replaceWith(z); z.className = "yidf";
+        var e = window.YIDMoteur.creer(d.cfg, d.foyer, null); e.brancher(z, { envoyer: function(){ return Promise.resolve(); } }); if (o.vu) o.vu(); })
+      .catch(function(e){ ov.querySelector("#apz").innerHTML = '<p class="err" style="padding:20px">' + esc(e.message) + '</p>'; });
+    };
+    ov.querySelectorAll("[data-ap]").forEach(function(x){ x.onchange = monter; }); monter();
+  }
+  /* ---------- les colonnes du mariage : le socle de la fiche, et les colonnes ajoutées en passant la méthode ---------- */
+  var COL_VUS = {};
+  function colonnesCarte(m){
+    var box = $("fcols"); if (!box) return;
+    var poser = function(r){
+      var R = r.referentiel, L = r.colonnes || [];
+      var opt = function(o, v){ return Object.keys(o).map(function(k){ return '<option value="' + esc(k) + '"' + (k === v ? " selected" : "") + '>' + esc(o[k]) + '</option>'; }).join(""); };
+      box.innerHTML = '<h3>Colonnes du mariage</h3><p>Le collect reprend le socle de la fiche : <b>' + esc(r.socle.join(", ")) + '</b>. Ajoutez une colonne à tout moment : l\'outil passe la méthode et décide si elle crée une question du formulaire. Une question n\'est envoyée aux invités qu\'après avoir été vue dans l\'aperçu.</p>' +
+        (L.length ? L.map(function(c){ var d = c.decision; return '<div style="padding:10px 0;border-top:1px solid var(--line)"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.nom) + '</b>' + (d.question ? (c.active ? pill("Question active", "ok") : pill("Question à valider", "warn")) : pill("Sans question à l\'invité", "")) + '</div><div class="small muted" style="margin-top:4px">' + esc(d.pourquoi) + '</div>' +
+          (d.question ? '<div class="small" style="margin-top:6px">« ' + esc(c.question.fr) + ' »' + (c.question.aide ? ' <span class="muted">' + esc(c.question.aide) + '</span>' : '') + '</div>' : '') +
+          '<div class="row" style="margin-top:8px">' + (d.question ? '<button class="ghost" data-colap="' + c.id + '">Voir dans l\'aperçu</button>' + (c.active ? '<button class="ghost" data-colact="' + c.id + '" data-on="">Retirer du formulaire</button>' : '<button data-colact="' + c.id + '" data-on="1">Activer la question</button>') : '') + '<button class="ghost" data-colsup="' + c.id + '">Supprimer</button></div></div>'; }).join("") : '<p class="muted">Aucune colonne ajoutée pour ce mariage.</p>') +
+        '<details style="margin-top:12px"><summary><b>Ajouter une colonne</b></summary><div class="col-f" style="display:grid;gap:8px;margin-top:10px">' +
+        (r.suggestions.length ? '<label class="small muted">Reprendre une colonne d\'un autre mariage (facultatif)<select data-cf="sugg"><option value="">Aucune</option>' + r.suggestions.map(function(x, i){ return '<option value="' + i + '">' + esc(x.nom) + '</option>'; }).join("") + '</select></label>' : '') +
+        '<label class="small muted">Nom de la colonne<input data-cf="nom" placeholder="Ex. Pointure pour les tongs de la soirée"></label>' +
+        '<label class="small muted">0 · Qui détient l\'information ?<select data-cf="detenteur">' + opt(R.detenteurs, "maries") + '</select></label>' +
+        '<div data-inv hidden style="display:grid;gap:8px">' +
+        '<label class="small muted">1 · À qui sert la réponse ? (plusieurs)<select data-cf="usages" multiple size="4">' + R.usages.map(function(u){ return '<option>' + esc(u) + '</option>'; }).join("") + '</select></label>' +
+        '<label class="small muted">2 · Pour quels foyers ?<select data-cf="pour">' + opt(R.pour, "tous") + '</select></label>' +
+        '<label class="small muted">3 · Pourquoi la pose-t-on ? (phrase de cadre)<input data-cf="cadre" placeholder="Afin de…"></label>' +
+        '<label class="small muted">Le sujet, en quelques mots<input data-cf="sujet" placeholder="Ex. Votre pointure"></label>' +
+        '<label class="small muted">4 · Quelles réponses ?<select data-cf="reponses">' + opt(R.reponses, "unique") + '</select></label>' +
+        '<label class="small muted" data-opts>Les choix, séparés par des points virgules<input data-cf="options" placeholder="36 à 38 ; 39 à 41 ; 42 à 44"></label>' +
+        '<label class="small muted"><input type="checkbox" data-cf="inconnu" checked> Proposer « Je ne le sais pas encore »</label>' +
+        '<label class="small muted">5 · Pour qui dans le foyer ?<select data-cf="portee">' + opt(R.portees, "foyer") + '</select></label>' +
+        '<label class="small muted"><input type="checkbox" data-cf="precision"> 6 · Une réponse positive ouvre une précision à saisir</label>' +
+        '<label class="small muted"><input type="checkbox" data-cf="facultatif"> Question facultative</label>' +
+        '<label class="small muted">Étape du formulaire<select data-cf="etape">' + opt(R.etapes, "fin1") + '</select></label>' +
+        '<label class="small muted"><input type="checkbox" data-cf="promesse_ok"> 7 · La question ne promet aucun service non garanti</label>' +
+        '<div class="row"><button class="ghost" id="colprop">Rédiger la question</button></div>' +
+        '<label class="small muted">La question (ajustable)<input data-cf="qfr"></label><label class="small muted">En anglais (facultatif)<input data-cf="qen"></label><label class="small muted">En portugais (facultatif)<input data-cf="qpt"></label></div>' +
+        '<div class="small" id="coldec"></div><div class="row"><button id="coladd">Ajouter la colonne</button><span class="small err" id="colerr"></span></div></div></details>';
+      var v = function(k){ var x = box.querySelector('[data-cf="' + k + '"]'); if (!x) return ""; if (x.type === "checkbox") return x.checked; if (x.multiple) return Array.prototype.filter.call(x.options, function(o){ return o.selected; }).map(function(o){ return o.value; }); return x.value; };
+      var corps = function(){ return { nom: v("nom"), detenteur: v("detenteur"), usages: v("usages"), pour: v("pour"), cadre: v("cadre"), sujet: v("sujet"), reponses: v("reponses"), options: v("options"), inconnu: v("inconnu"), portee: v("portee"), precision: v("precision"), facultatif: v("facultatif"), etape: v("etape"), promesse_ok: v("promesse_ok"), question: v("qfr") ? { fr: v("qfr"), en: v("qen"), pt: v("qpt"), aide: v("cadre") } : undefined }; };
+      var maj = function(){ var inv = v("detenteur") === "invite"; box.querySelector("[data-inv]").hidden = !inv; var mo = box.querySelector("[data-opts]"); if (mo) mo.hidden = ["unique", "multiple"].indexOf(v("reponses")) < 0;
+        api("admin-colonnes", Object.assign({ op: "proposer" }, corps()), m.code).then(function(x){ $("coldec").innerHTML = '<b>' + (x.decision.question ? "Crée une question" : "Pas de question") + '</b> · ' + esc(x.decision.pourquoi) + (x.erreurs.length && inv ? '<div class="muted">À compléter : ' + esc(x.erreurs.join(" ")) + '</div>' : ''); }).catch(function(){}); };
+      box.querySelectorAll("[data-cf]").forEach(function(x){ x.onchange = maj; });
+      if (box.querySelector('[data-cf="sugg"]')) box.querySelector('[data-cf="sugg"]').onchange = function(){ var sg = r.suggestions[+this.value]; if (!sg) return; box.querySelector('[data-cf="nom"]').value = sg.nom; box.querySelector('[data-cf="detenteur"]').value = sg.detenteur || "maries"; box.querySelector('[data-cf="cadre"]').value = sg.cadre || ""; box.querySelector('[data-cf="sujet"]').value = sg.sujet || ""; if (sg.reponses) box.querySelector('[data-cf="reponses"]').value = sg.reponses; box.querySelector('[data-cf="options"]').value = (sg.options || []).join(" ; "); maj(); };
+      $("colprop").onclick = function(){ api("admin-colonnes", Object.assign({ op: "proposer" }, corps(), { question: undefined }), m.code).then(function(x){ box.querySelector('[data-cf="qfr"]').value = x.proposition.fr; maj(); }); };
+      $("coladd").onclick = function(){ $("colerr").textContent = ""; api("admin-colonnes", Object.assign({ op: "ajouter" }, corps()), m.code).then(poser).catch(function(e){ $("colerr").textContent = e.message; }); };
+      box.querySelectorAll("[data-colap]").forEach(function(b){ b.onclick = function(){ var id = b.dataset.colap; apercuFormulaire(m, { colonne: id, vu: function(){ COL_VUS[id] = true; } }); }; });
+      box.querySelectorAll("[data-colact]").forEach(function(b){ b.onclick = function(){ api("admin-colonnes", { op: "activer", id: b.dataset.colact, on: !!b.dataset.on, apercu_vu: !!COL_VUS[b.dataset.colact] }, m.code).then(poser).catch(function(e){ window.alert(e.message); }); }; });
+      box.querySelectorAll("[data-colsup]").forEach(function(b){ b.onclick = function(){ if (!window.confirm("Supprimer cette colonne ?")) return; api("admin-colonnes", { op: "supprimer", id: b.dataset.colsup }, m.code).then(poser); }; });
+      maj();
+    };
+    api("admin-colonnes", { op: "lister" }, m.code).then(poser).catch(function(e){ box.innerHTML = '<h3>Colonnes du mariage</h3><p class="err">' + esc(e.message) + '</p>'; });
+  }
   /* la feuille de route : envoyée au couple après le premier rendez vous, dans le groupe du mariage, puis épinglée */
   function feuilleRoute(m){
     var box = $("froute"); if (!box) return;
@@ -335,9 +406,13 @@
     var envoyer = function(corps){ return api("admin-plan", corps, m.code).then(function(r){ if (!r.ok) { $("plmsg").textContent = r.detail; return; } dessinerPlan(m, pane, r); }); };
     var nomT = {}; R.tables.forEach(function(t){ nomT[t.id] = t.nom; });
     var h = '<div class="card"><h3>6. Plan de table et jour J</h3><div class="contact"><div class="cases-c" style="grid-template-columns:repeat(4,1fr)"><div class="verre"><b>' + R.foyers.length + '</b><span>foyers présents</span></div><div class="verre"><b>' + R.personnes + '</b><span>personnes</span></div><div class="verre"><b>' + R.tables.length + '</b><span>tables</span></div><div class="verre' + (R.a_placer ? ' plein' : '') + '"><b>' + R.a_placer + '</b><span>à placer</span></div></div></div>' +
-      '<p style="margin:4px 0 10px"><a class="lienbas" href="#/m/' + m.code + '/accueil">Tablette du jour J : rechercher, scanner, plan, parcours 3D</a></p><div class="vues" style="margin-top:6px"><button type="button" data-plm="plan" class="' + (PL_MODE === "plan" ? "on" : "") + '">Plan de table</button><button type="button" data-plm="jourj" class="' + (PL_MODE === "jourj" ? "on" : "") + '">Accueil jour J</button></div></div><p class="err" id="plmsg">' + esc(msg || "") + '</p>';
+      '<p style="margin:4px 0 10px"><a class="lienbas" href="#/m/' + m.code + '/accueil">Tablette du jour J : rechercher, scanner, plan, parcours 3D</a></p><div class="vues" style="margin-top:6px"><button type="button" data-plm="pass" class="' + (PL_MODE === "pass" ? "on" : "") + '">Pass</button><button type="button" data-plm="plan" class="' + (PL_MODE === "plan" ? "on" : "") + '">Plan de table</button><button type="button" data-plm="jourj" class="' + (PL_MODE === "jourj" ? "on" : "") + '">Accueil jour J</button></div></div><p class="err" id="plmsg">' + esc(msg || "") + '</p>';
     if (!R.foyers.length) h += '<div class="card"><p class="muted" style="margin:0">Le plan se construit avec les invités qui ont confirmé leur présence sur leur lien personnel. Aucune confirmation pour l\'instant.</p></div>';
-    if (PL_MODE === "plan") {
+    if (PL_MODE === "pass") {
+      var modeP = R.pass || "Pass d'accueil, avec QR";
+      h += '<div class="card"><h3 style="margin:0 0 6px">Les pass des invités</h3><p class="muted" style="margin:0 0 10px">' + esc(modeP) + '. Chaque foyer présent a le sien, envoyé trois jours avant le mariage avec le modèle « Le pass » de la messagerie' + (/sans QR/.test(modeP) ? '.' : ' ; à l\'entrée, la tablette le scanne (onglet Scanner) et signale un second passage.') + ' Ouvrez un pass pour le voir tel que l\'invité le recevra, et scannez le depuis la tablette pour essayer l\'accueil.</p>' +
+        R.foyers.map(function(f){ return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><b>' + esc(f.nom) + '</b><div class="small muted">' + f.personnes + ' personne' + (f.personnes > 1 ? 's' : '') + (f.table && nomT[f.table] ? ' · ' + esc(nomT[f.table]) : ' · sans table') + (f.arrive ? ' · accueilli' : '') + '</div></div>' + (f.jeton ? '<a class="lienbas" target="_blank" rel="noopener" href="/pass.html?yid=' + esc(f.jeton) + '">Ouvrir le pass</a>' : '<span class="small muted">lien à créer</span>') + '</div>'; }).join("") + '</div>';
+    } else if (PL_MODE === "plan") {
       var aPlacer = R.foyers.filter(function(f){ return !f.table || !nomT[f.table]; }), prec = null;
       h += '<div class="card"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;flex:1">À placer</h3><span class="small muted">' + (PL_SEL ? "Touchez une table pour l'y placer" : "Touchez un invité, puis sa table") + '</span></div>' +
         (aPlacer.length ? aPlacer.map(function(f){ var g = f.cercle ? f.cercle.l : ""; var t = g !== prec ? '<div class="k" style="margin:14px 0 6px">' + esc(g) + '</div>' : ''; prec = g; return t + '<button type="button" class="ch pl-f' + (PL_SEL === f.id ? ' sel' : '') + '" data-plf="' + f.id + '">' + esc(f.nom) + (f.personnes > 1 ? ' · ' + f.personnes : '') + '</button>'; }).join("") : '<p class="small muted" style="margin:8px 0 0">Tous les foyers présents ont leur table.</p>') + '</div>';
@@ -369,15 +444,26 @@
   var TB = { onglet: "chercher", q: "", sel: null, edit: false, R: null, m: null, flux: null, pause: false };
   function accueilJourJ(code){
     V.innerHTML = '<p class="muted">Chargement</p>';
-    Promise.all([api("admin-mariage", {}, code), api("admin-plan", {}, code)]).then(function(r){ TB.m = r[0].mariage; TB.R = r[1]; tablette(); }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+    Promise.all([api("admin-mariage", {}, code), api("admin-plan", {}, code)]).then(function(r){ TB.m = r[0].mariage; TB.R = r[1]; TB.horsLigne = false; tbGarder(); tablette(); tbRejouer(); }).catch(function(e){
+      var c = null; try { c = JSON.parse(localStorage.getItem("yid_tb_" + code) || "null"); } catch (x) {}
+      if (c && c.R) { TB.m = c.m; TB.R = c.R; TB.horsLigne = true; tablette(); } else V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
+  /* hors ligne : la tablette garde le plan sur l'appareil, accueille quand même, et renvoie les accueils dès que le réseau revient */
+  function tbGarder(){ try { localStorage.setItem("yid_tb_" + TB.m.code, JSON.stringify({ m: { code: TB.m.code, prenoms: TB.m.prenoms }, R: TB.R, le: new Date().toISOString() })); } catch (e) {} }
+  function tbFile(){ try { return JSON.parse(localStorage.getItem("yid_tbq_" + TB.m.code) || "[]"); } catch (e) { return []; } }
+  function tbFileSet(q){ try { localStorage.setItem("yid_tbq_" + TB.m.code, JSON.stringify(q)); } catch (e) {} }
+  function tbLocal(id, on){ var f = TB.R.foyers.filter(function(x){ return x.id === id; })[0]; if (!f) return; f.arrive = on ? { le: new Date().toISOString(), par: "hors ligne" } : null; TB.R.arrives = TB.R.foyers.filter(function(x){ return x.arrive; }).reduce(function(s, x){ return s + x.personnes; }, 0); tbGarder(); }
+  function tbRejouer(){ var q = tbFile(); if (!q.length || !TB.m) return; var c = q.shift();
+    api("admin-plan", c, TB.m.code).then(function(r){ if (r && r.foyers) TB.R = r; tbFileSet(q); TB.horsLigne = false; tbGarder(); if (q.length) tbRejouer(); else tablette(); }).catch(function(){ TB.horsLigne = true; }); }
+  window.addEventListener("online", function(){ if (TB.m) tbRejouer(); });
   function tbRecharger(R){ if (R && R.foyers) TB.R = R; tablette(); }
-  function tbEnvoyer(corps){ return api("admin-plan", corps, TB.m.code).then(function(r){ if (!r.ok) { window.alert(r.detail || "Action impossible"); return r; } TB.R = r; return r; }); }
+  function tbEnvoyer(corps){ return api("admin-plan", corps, TB.m.code).then(function(r){ if (!r.ok) { window.alert(r.detail || "Action impossible"); return r; } TB.R = r; TB.horsLigne = false; tbGarder(); return r; }).catch(function(e){
+      if (corps.op !== "arrive") throw e; TB.horsLigne = true; var q = tbFile(); q.push(corps); tbFileSet(q); tbLocal(corps.contact, corps.on); return TB.R; }); }
   function tbTable(id){ return (TB.R.tables || []).filter(function(t){ return t.id === id; })[0] || null; }
   function tablette(){
     var R = TB.R, m = TB.m; tbStopScan();
     var ONG = [["chercher", "Rechercher"], ["scanner", "Scanner"], ["plan", "Plan"]];
-    V.innerHTML = '<div class="tab-j"><div class="tab-tete"><a href="#/m/' + m.code + '/6" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><div class="tab-compte"><b>' + R.arrives + '</b> / ' + R.personnes + ' accueillis</div></div>' +
+    V.innerHTML = '<div class="tab-j"><div class="tab-tete"><a href="#/m/' + m.code + '/6" class="muted small" style="text-decoration:none">‹ ' + esc(m.prenoms) + '</a><div class="tab-compte"><b>' + R.arrives + '</b> / ' + R.personnes + ' accueillis' + (TB.horsLigne ? '<div class="small" style="color:#8a5a1e">Hors ligne · ' + tbFile().length + ' accueil(s) en attente d\'envoi</div>' : '') + '</div></div>' +
       '<div class="vues tab-vues">' + ONG.map(function(o){ return '<button type="button" data-tbo="' + o[0] + '" class="' + (TB.onglet === o[0] ? "on" : "") + '">' + o[1] + '</button>'; }).join("") + '</div><div id="tbc"></div></div><div id="tbfiche"></div>';
     V.querySelectorAll("[data-tbo]").forEach(function(b){ b.onclick = function(){ TB.onglet = b.dataset.tbo; TB.edit = false; tablette(); }; });
     if (TB.onglet === "chercher") tbChercher(); else if (TB.onglet === "scanner") tbScanner(); else tbPlan();
@@ -385,8 +471,9 @@
   }
   function tbChercher(){
     var R = TB.R, C = $("tbc");
-    C.innerHTML = '<input id="tbq" class="tab-q" placeholder="Nom de l\'invité ou de son accompagnant" value="' + esc(TB.q) + '" autocomplete="off"><div id="tbl"></div>';
-    var liste = function(){ var q = TB.q.toLowerCase(), L = R.foyers.filter(function(f){ return !q || f.nom.toLowerCase().indexOf(q) >= 0 || (f.accompagnant || "").toLowerCase().indexOf(q) >= 0; });
+    C.innerHTML = '<input id="tbq" class="tab-q" placeholder="Nom, accompagnant ou numéro de téléphone" value="' + esc(TB.q) + '" autocomplete="off"><div id="tbl"></div>';
+    var chiffres = function(x){ return String(x || "").replace(/\D/g, ""); };
+    var liste = function(){ var q = TB.q.toLowerCase(), qd = chiffres(TB.q).replace(/^0/, ""), L = R.foyers.filter(function(f){ return !q || f.nom.toLowerCase().indexOf(q) >= 0 || (f.accompagnant || "").toLowerCase().indexOf(q) >= 0 || (qd.length >= 4 && chiffres(f.numero).indexOf(qd) >= 0); });
       $("tbl").innerHTML = L.map(function(f){ var t = tbTable(f.table); return '<button type="button" class="tab-l' + (f.arrive ? ' ok' : '') + '" data-tbf="' + f.id + '"><span class="tab-n"><b>' + esc(f.nom) + '</b><span class="small muted">' + f.personnes + ' pers.' + (f.accompagnant ? ' · avec ' + esc(f.accompagnant) : '') + '</span></span><span class="tab-t">' + esc(t ? t.nom : "sans table") + '</span>' + (f.arrive ? '<span class="tab-ok">✓</span>' : '') + '</button>'; }).join("") || '<p class="muted">Aucun invité ne correspond.</p>';
       $("tbl").querySelectorAll("[data-tbf]").forEach(function(b){ b.onclick = function(){ TB.sel = +b.dataset.tbf; tbFiche(TB.sel); }; }); };
     $("tbq").oninput = function(){ TB.q = this.value; liste(); }; liste();
@@ -399,7 +486,7 @@
       '<div class="tab-inf">' + [[f.personnes + " personne" + (f.personnes > 1 ? "s" : ""), (f.accompagnant ? "avec " + f.accompagnant : "") + (f.enfants.length ? (f.accompagnant ? ", " : "") + "enfants : " + f.enfants.join(", ") : "")], ["Hébergement", f.hebergement], ["Arrivée", f.arrivee], ["Un mot", f.mot], ["Téléphone", f.numero]].filter(function(x){ return x[1] || x[0].indexOf("personne") >= 0; }).map(function(x){ return '<div><span class="sub">' + esc(x[0]) + '</span><b>' + esc(x[1] || "") + '</b></div>'; }).join("") + '</div>' +
       (f.arrive ? '<p class="small" style="color:#2F6B45;margin:12px 0 0">Accueilli' + (f.arrive.le ? ' à ' + new Date(f.arrive.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : '') + (f.arrive.par ? ' par ' + esc(f.arrive.par) : '') + '</p>' : '') +
       '<div class="tab-act"><button type="button" class="cta or" id="tbarr"><span>' + (f.arrive ? "Annuler l'accueil" : "Accueillir") + '</span></button>' +
-      (t ? '<button type="button" class="petit" id="tbvoir">Voir sur le plan</button><button type="button" class="petit" id="tb3d">Parcours 3D</button>' : '') + '</div>' +
+      (t ? '<button type="button" class="petit" id="tbvoir">Voir sur le plan</button><button type="button" class="petit" id="tb3d">Parcours 3D</button>' : '') + (f.jeton ? '<a class="petit" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" rel="noopener" href="/pass.html?yid=' + esc(f.jeton) + '">Voir son pass</a>' : '') + '</div>' +
       '<label class="small muted" style="display:block;margin-top:14px">Placer ou changer de table</label><select id="tbch"><option value="">Sans table</option>' + TB.R.tables.map(function(x){ return '<option value="' + x.id + '"' + (x.id === f.table ? ' selected' : '') + '>' + esc(x.nom) + ' (' + x.occupees + (x.places ? '/' + x.places : '') + ')</option>'; }).join("") + '</select></div></div>';
     $("tbx").onclick = function(){ TB.sel = null; F.innerHTML = ""; };
     F.querySelector(".tab-voile").onclick = function(e){ if (e.target.classList.contains("tab-voile")) { TB.sel = null; F.innerHTML = ""; } };
@@ -414,7 +501,12 @@
     var C = $("tbc");
     C.innerHTML = '<div class="tab-scan"><video id="tbv" playsinline muted></video><div class="tab-viseur"></div></div><div id="tbres" class="tab-res"></div><div style="display:flex;gap:8px;margin-top:12px"><input id="tbman" placeholder="Ou saisir le code du pass" style="flex:1"><button type="button" class="petit" id="tbmanb">Vérifier</button></div><p class="small muted" id="tbinfo" style="margin-top:8px"></p>';
     var traiter = function(texte){ if (TB.pause) return; TB.pause = true;
-      api("admin-plan", { op: "scan", texte: texte }, TB.m.code).then(function(r){ if (r.foyers) TB.R = r; var s = r.scan || { statut: "inconnu" }, f = s.id && TB.R.foyers.filter(function(x){ return x.id === s.id; })[0], t = f && tbTable(f.table);
+      var jt = (String(texte).match(/[?&]yid=([a-z0-9]{12})/i) || String(texte).match(/^(?:YID:)?([a-z0-9]{12})$/i) || [])[1];
+      var horsLigne = function(){ var f = jt && TB.R.foyers.filter(function(x){ return x.jeton === jt.toLowerCase(); })[0];
+        if (!f) return { scan: { statut: "inconnu" } };
+        if (f.arrive) return { scan: { statut: "deja", id: f.id, nom: f.nom, le: f.arrive.le, par: f.arrive.par } };
+        var q = tbFile(); q.push({ op: "arrive", contact: f.id, on: true }); tbFileSet(q); tbLocal(f.id, true); TB.horsLigne = true; return { scan: { statut: "ok", id: f.id, nom: f.nom } }; };
+      api("admin-plan", { op: "scan", texte: texte }, TB.m.code).catch(function(){ return horsLigne(); }).then(function(r){ if (r.foyers) TB.R = r; var s = r.scan || { statut: "inconnu" }, f = s.id && TB.R.foyers.filter(function(x){ return x.id === s.id; })[0], t = f && tbTable(f.table);
         var M = { ok: ["ok", "Bienvenue " + (s.nom || ""), t ? t.nom : "Sans table"], deja: ["deja", "Déjà accueilli : " + (s.nom || ""), "à " + (s.le ? new Date(s.le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "") + (s.par ? " par " + s.par : "")], absent: ["ko", s.nom + " n'a pas confirmé sa présence", "Vérifier avec le couple"], inconnu: ["ko", "Pass inconnu pour ce mariage", "Rechercher l'invité par son nom"] }[s.statut];
         $("tbres").className = "tab-res " + M[0]; $("tbres").innerHTML = '<b>' + esc(M[1]) + '</b><div class="tab-grande" style="margin-top:4px">' + esc(M[2]) + '</div>' + (s.id ? '<button type="button" class="petit" id="tbouvre" style="margin-top:10px">Ouvrir sa fiche</button>' : '');
         if ($("tbouvre")) $("tbouvre").onclick = function(){ TB.sel = s.id; tbFiche(s.id); };
@@ -1132,13 +1224,15 @@
       var vals = (m && m.checklist) || {};
       if (!m) { vals.statut = "Signé"; vals.langue_defaut = "fr"; }
       var html = (pane ? "" : '<div class="card"><h3>Le mariage test Awa et Kevin</h3><p>Un mariage fictif, complet sur les étapes de l\'outil : fiche, collect de 24 foyers, premier contact, réponses relues par le formulaire, quatre maisons partenaires, navette, plan de table, espace mariés et feuille de route. Statut Test : rien ne part jamais vers un invité. Le relancer recrée la liste.</p><div class="row"><button class="ghost" id="demoak">Créer le mariage test</button><span class="muted" id="demomsg"></span></div></div>') + (pane ? "" : '<h2 class="sec">Créer un mariage</h2><p class="lead">La checklist du premier rendez vous. En gras, ce qui se dit au couple ; en italique, comment remplir. En validant, le mariage existe, son dossier et ses classeurs sont créés sur SharePoint, la fiche est archivée en PDF.</p>') +
-        (pane ? '<div class="card"><h3>1. Fiche du mariage</h3><p>La fiche du premier rendez vous. Modifier un champ et enregistrer réécrit l\'onglet Paramètres du classeur, archive une nouvelle version de la fiche et inscrit au journal chaque champ modifié, avant et après.' + (m.fiche_pdf ? ' Dernière fiche : ' + esc(m.fiche_pdf.split("/").pop()) + '.' : '') + (m.dossier ? ' Dossier SharePoint : ' + esc(m.dossier) + '.' : '') + '</p></div>' + '<div class="card" id="froute"><h3>Feuille de route</h3><p class="muted">Chargement</p></div><div class="card"><h3>Fichier wedding planner</h3><p>Un classeur composé des réponses des invités : une ligne par personne, les couverts pour le traiteur, la rooming list par maison, les venues et navettes, et les points d\'attention. À jour à chaque téléchargement.</p><div class="row"><button class="ghost" id="fplanner">Télécharger le fichier</button><span class="muted" id="fpmsg"></span></div></div>' + boiteCard(m) : "") +
+        (pane ? '<div class="card"><h3>1. Fiche du mariage</h3><p>La fiche du premier rendez vous. Modifier un champ et enregistrer réécrit l\'onglet Paramètres du classeur, archive une nouvelle version de la fiche et inscrit au journal chaque champ modifié, avant et après.' + (m.fiche_pdf ? ' Dernière fiche : ' + esc(m.fiche_pdf.split("/").pop()) + '.' : '') + (m.dossier ? ' Dossier SharePoint : ' + esc(m.dossier) + '.' : '') + '</p></div>' + '<div class="card" id="fapercu"><h3>Le formulaire des invités</h3><p>Voyez le formulaire tel qu\'un invité le reçoit, selon sa typologie. Rien n\'est enregistré.</p><div class="row"><button class="ghost" id="fapb">Ouvrir l\'aperçu</button></div></div><div class="card" id="fcols"><h3>Colonnes du mariage</h3><p class="muted">Chargement</p></div><div class="card" id="froute"><h3>Feuille de route</h3><p class="muted">Chargement</p></div><div class="card"><h3>Fichier wedding planner</h3><p>Un classeur composé des réponses des invités : une ligne par personne, les couverts pour le traiteur, la rooming list par maison, les venues et navettes, et les points d\'attention. À jour à chaque téléchargement.</p><div class="row"><button class="ghost" id="fplanner">Télécharger le fichier</button><span class="muted" id="fpmsg"></span></div></div>' + boiteCard(m) : "") +
         '<form id="chk" onsubmit="return false">' + j.sections.map(function(s){
           return '<div class="card"><h3>' + esc(s.titre) + '</h3><p>' + esc(s.aide) + '</p>' + s.champs.map(function(f){ return field(f, vals[f.k]); }).join("") + '</div>';
         }).join("") + '<div class="card"><div class="row"><button id="save">' + (m ? "Enregistrer les modifications" : "Créer le mariage") + '</button><span class="muted" id="smsg"></span></div><div id="serr" class="err"></div><div id="sres"></div></div></form>';
       target.innerHTML = html;
       if (m) wireBoite(m);
       if (m) feuilleRoute(m);
+      if (m && $("fapb")) $("fapb").onclick = function(){ apercuFormulaire(m, {}); };
+      if (m) colonnesCarte(m);
       if ($("fplanner")) $("fplanner").onclick = function(){ $("fpmsg").textContent = "Préparation…"; api("admin-fichier-planner", {}, m.code).then(function(rr){ var a = document.createElement("a"); a.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + rr.b64; a.download = rr.nom; document.body.appendChild(a); a.click(); a.remove(); $("fpmsg").textContent = ""; }).catch(function(e){ $("fpmsg").textContent = e.message; }); };
       if ($("demoak")) $("demoak").onclick = function(){ var b = this; b.disabled = true; $("demomsg").textContent = "Construction du mariage, une minute environ…";
         api("admin-demo", { phase: "fiche" }).then(function(){ $("demomsg").textContent = "Fiche créée. Collect, réponses, logistique et plan de table…"; return api("admin-demo", { phase: "liste" }); }).then(function(){ $("demomsg").textContent = "Liste validée. Réponses des invités, plan de table…"; return api("admin-demo", { phase: "reponses" }); }).then(function(j){ return api("admin-demo", { phase: "extras" }).then(function(){ return j; }); }).then(function(j){ $("demomsg").textContent = "Prêt : " + j.bilan.present + " foyers présents, " + j.bilan.personnes + " personnes."; location.hash = "#/m/" + j.code; }).catch(function(e){ b.disabled = false; $("demomsg").textContent = e.message; }); };

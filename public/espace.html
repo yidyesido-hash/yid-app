@@ -133,9 +133,9 @@
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
 </style>
-<link rel="stylesheet" href="/espace-habillage.css?v=1.23.0">
-<link rel="stylesheet" href="/cartes.css?v=1.23.0">
-<script src="/cartes.js?v=1.23.0"></script>
+<link rel="stylesheet" href="/espace-habillage.css?v=1.24.0">
+<link rel="stylesheet" href="/cartes.css?v=1.24.0">
+<script src="/cartes.js?v=1.24.0"></script>
 </head>
 <body>
 <div class="page">
@@ -214,6 +214,11 @@
     faits.push(["Enfants", m.enfants === "sans" ? "Mariage sans enfants" : m.enfants === "mixte" ? (m.consigne_enfants || "Selon les familles") : "Bienvenus"]);
     if (m.hebergement !== "aucun") faits.push(["Hébergement", (m.lieux || []).filter(function(x){ return x !== "Par leurs propres moyens"; }).join(" · ") + (m.hebergement === "partie" ? " (une partie des invités)" : "")]);
     html += '<h2 style="margin-top:34px">Le cadre de votre mariage</h2><p class="intro">Ce que nous avons posé ensemble lors de notre premier échange.</p><div class="faits">' + faits.filter(function(f){ return f[1]; }).map(function(f){ return '<div class="fait"><span>' + esc(f[0]) + '</span><b>' + esc(f[1]) + '</b></div>'; }).join("") + '</div>';
+    var liens = [];
+    if (m.formulaire) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="/formulaire/?apercu=' + encodeURIComponent(J || "") + '"><span>Le formulaire de vos invités</span><b>Voir l\'aperçu ›</b></a>');
+    if (m.site) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="' + esc(m.site) + '"><span>Le site de votre mariage</span><b>Ouvrir ›</b></a>');
+    if (liens.length) html += '<h2 style="margin-top:34px">Ce que reçoivent vos invités</h2><p class="intro">Le parcours de vos invités, tel qu\'ils le découvriront.</p><div class="faits">' + liens.join("") + '</div>';
+    if (m.feuille_route) html += '<h2 style="margin-top:34px">Votre feuille de route</h2><p class="intro">Le fil de notre accompagnement, épinglé dans le groupe de votre mariage.</p><div class="fait" style="display:block;white-space:pre-line;line-height:1.6">' + esc(m.feuille_route).replace(/\*([^*\n]+)\*/g, "<b>$1</b>") + '</div>';
     $("t-parcours").innerHTML = html;
     if ($("ppile")) {
       var P = YID.pileActive = YID.pile($("ppile"), { index: PIDX, onChange: function(i, n){ PIDX = i; $("pcnt").textContent = (i + 1) + " sur " + n; YID.points($("pdots"), i, n); } });

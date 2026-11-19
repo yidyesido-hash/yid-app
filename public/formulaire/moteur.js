@@ -29,11 +29,12 @@
     var HEB = CFG.heb || { gere: "aucun" };
     var logeOffert = !!(FOY.loge && HEB.offert);
     var choixLieu = HEB.gere === "tous" && !HEB.offert && (HEB.lieux || []).length > 0;
+    var MAISONS = (CFG.maisons || []).filter(function (x) { return x && x.nom; });
 
     var S = ETAT && typeof ETAT === "object" ? JSON.parse(JSON.stringify(ETAT)) : null;
     if (!S || !S.coord) S = { step: "accueil", presence: null, motNon: "", coord: { civ: FOY.civ || "", titre: "", titreAutre: "", nom: FOY.nom || "", prenom: FOY.prenom || "", ind: FOY.ind || "FR", tel: FOY.tel || "", email: FOY.email || "" },
       acc: { choix: null }, nbAcc: null, accs: {}, nbEnf: null, enf: {}, tous: null, mom: {}, absent: {}, seulMoment: {}, v: {}, heb: {}, dep: {}, table: {}, fin: {}, ack: {} };
-    ["acc", "accs", "enf", "mom", "absent", "seulMoment", "v", "heb", "dep", "table", "fin", "ack"].forEach(function (k) { if (!S[k]) S[k] = {}; });
+    ["acc", "accs", "enf", "mom", "absent", "seulMoment", "v", "heb", "dep", "table", "fin", "ack", "resa", "extra"].forEach(function (k) { if (!S[k]) S[k] = {}; });
     S.step = S.step || "accueil";
 
     var MODE = "form", REQ = [], ROWS = [], SECTION = "";
@@ -75,6 +76,7 @@
     function attend(id, m) { return present(id) && momOn(id, m); }
     var TRAITEUR = MOMENTS.filter(function (m) { return m.traiteur; }); if (!TRAITEUR.length) TRAITEUR = MOMENTS.slice();
     var REPAS = MOMENTS.filter(function (m) { return m.repas; })[0] || null;
+    function repasNom() { return REPAS && !/d[îi]ner/i.test(REPAS.l.fr || REPAS.l) ? "repas" : "dîner"; }
     function servi(id) { return TRAITEUR.some(function (m) { return attend(id, m.id); }) || (!MOMENTS.length && present(id)); }
     function dine(id) { return REPAS ? attend(id, REPAS.id) : present(id); }
 
@@ -148,6 +150,7 @@
       return top.concat(L.filter(function (p) { return prio.indexOf(p[0]) < 0; })).map(function (p) { return { v: p[0], l: p[5] + " " + p[col] + " " + p[1], rl: p[1] }; });
     }
 
+    function telGroupe(t, ind) { var d = String(t || "").replace(/\D/g, "").replace(/^0/, ""); if (ind === "FR" || ind === "RE" || ind === "GP" || ind === "MQ" || ind === "GF" || ind === "YT") return d.replace(/^(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4 $5"); return d.replace(/(\d{3})(?=\d)/g, "$1 "); }
     /* ---------- étapes ---------- */
     var ETAPES = {
       accueil: { t: function () { return tt("Accueil", "Boas-vindas", "Welcome"); }, visible: function () { return true; }, rendu: etAccueil },
@@ -156,7 +159,7 @@
       accomp: { t: function () { return tt("Ceux qui vous accompagnent", "Quem vem consigo", "Those coming with you"); }, visible: function () { return S.presence === "oui" && (FOY.type !== "unique" || FOY.enfants > 0); }, rendu: etAccomp },
       moments: { t: function () { return tt("La journée", "O dia", "The day"); }, visible: function () { return S.presence === "oui" && MOMENTS.length > 1; }, rendu: etMoments },
       voyage: { t: function () { return tt("Votre venue", "A sua vinda", "Your journey"); }, visible: function () { return S.presence === "oui" && !!CFG.arrivees; }, rendu: etVoyage },
-      heberg: { t: function () { return logeOffert ? tt("Votre séjour", "A sua estadia", "Your stay") : tt("Votre hébergement", "O seu alojamento", "Your accommodation"); }, visible: function () { return S.presence === "oui" && (logeOffert || choixLieu); }, rendu: etHeberg },
+      heberg: { t: function () { return logeOffert ? tt("Votre séjour", "A sua estadia", "Your stay") : tt("Votre hébergement", "O seu alojamento", "Your accommodation"); }, visible: function () { return S.presence === "oui" && (logeOffert || choixLieu || resaPossible()); }, rendu: etHeberg },
       deplac: { t: function () { return tt("Vos déplacements", "As suas deslocações", "Getting around"); }, visible: function () { return S.presence === "oui" && (CFG.trajets || []).length > 0; }, rendu: etDeplac },
       table: { t: function () { return tt("À table", "À mesa", "At the table"); }, visible: function () { return S.presence === "oui" && presents().some(servi); }, rendu: etTable },
       fin1: { t: function () { return tt("Pour conclure", "Para terminar", "To conclude"); }, visible: function () { return S.presence === "oui"; }, rendu: etConclure },
@@ -198,17 +201,17 @@
       var h = q("civ", tt("Civilité", "Tratamento", "Title"), "", blocCivilite("coord", "", tt("votre civilité", "o seu tratamento", "your title")));
       h += q("nom", tt("Nom et prénom", "Apelido e nome próprio", "Surname and first name"), "", '<div class="duo">' + txt("coord.nom", { label: tt("Nom", "Apelido", "Surname"), req: true, need: tt("votre nom", "o seu apelido", "your surname"), ac: "family-name" }) + txt("coord.prenom", { label: tt("Prénom", "Nome próprio", "First name"), req: true, need: tt("votre prénom", "o seu nome próprio", "your first name"), live: "inv", ac: "given-name" }) + "</div>");
       var P = PAYS_G.filter(function (p) { return p[0] === S.coord.ind; })[0];
-      h += q("tel", tt("Numéro de téléphone", "Número de telefone", "Phone number"), "", MODE === "recap" ? row(tt("Téléphone", "Telefone", "Phone"), (P ? P[1] : "") + " " + S.coord.tel) :
+      h += q("tel", tt("Numéro de téléphone", "Número de telefone", "Phone number"), "", MODE === "recap" ? row(tt("Téléphone", "Telefone", "Phone"), (P ? P[1] : "") + " " + telGroupe(S.coord.tel, S.coord.ind)) :
         '<div class="tel">' + sel("coord.ind", optionsPays(), { req: true, need: tt("l'indicatif de votre pays", "o indicativo do seu país", "your country code"), ph: false }) + txt("coord.tel", { req: true, need: tt("votre numéro de téléphone", "o seu número de telefone", "your phone number"), type: "tel", ac: "tel-national" }) + "</div>");
       h += q("email", tt("Adresse email", "Endereço de email", "Email address"), tt("Pour vous tenir au courant de la suite.", "Para lhe darmos notícias dos próximos passos.", "To keep you informed of what comes next."), txt("coord.email", { req: true, type: "email", need: tt("une adresse email valide", "um endereço de email válido", "a valid email address"), r: "Email", ac: "email" }));
       return h;
     }
     function blocPersonne(b, id, qui, plusTard) {
-      var f = get(b) || {}, h = "";
-      if (plusTard) h += checks(b, [{ v: "plusTard", l: tt("Je vous communiquerai son nom plus tard", "Indicarei o nome mais tarde", "I will send you their name later") }], { sansIndic: true, r: tt("Nom", "Nome", "Name") + " · " + qui });
-      if (f.plusTard) return h + (MODE === "recap" ? row(qui, tt("Nom à communiquer", "Nome a indicar", "Name to follow"), true) : CFG.protection ? '<p class="aide-champ">' + tt("Son nom nous sera nécessaire avant le " + tr(CFG.reponseAvant) + ", pour préparer son invitation.", "Precisaremos do nome antes de " + tr(CFG.reponseAvant) + ", para prepararmos o convite.", "We will need their name by " + tr(CFG.reponseAvant) + ", to prepare their invitation.") + "</p>" : "");
+      var f = get(b) || {}, h = "", tard = "";
+      if (plusTard) tard = checks(b, [{ v: "plusTard", l: tt("Je vous communiquerai son nom plus tard", "Indicarei o nome mais tarde", "I will send you their name later") }], { sansIndic: true, r: tt("Nom", "Nome", "Name") + " · " + qui });
+      if (f.plusTard) return tard + (MODE === "recap" ? row(qui, tt("Nom à communiquer", "Nome a indicar", "Name to follow"), true) : CFG.protection ? '<p class="aide-champ">' + tt("Son nom nous sera nécessaire avant le " + tr(CFG.reponseAvant) + ", pour préparer son invitation.", "Precisaremos do nome antes de " + tr(CFG.reponseAvant) + ", para prepararmos o convite.", "We will need their name by " + tr(CFG.reponseAvant) + ", to prepare their invitation.") + "</p>" : "");
       return h + blocCivilite(b, " · " + qui, tt("la civilité de ", "o tratamento de ", "the title of ") + qui) +
-        '<div class="duo">' + txt(b + ".nom", { label: tt("Nom", "Apelido", "Surname"), req: true, need: tt("le nom de ", "o apelido de ", "the surname of ") + qui, r: tt("Nom", "Apelido", "Surname") + " · " + qui }) + txt(b + ".prenom", { label: tt("Prénom", "Nome próprio", "First name"), req: true, need: tt("le prénom de ", "o nome próprio de ", "the first name of ") + qui, live: id, r: tt("Prénom", "Nome próprio", "First name") + " · " + qui }) + "</div>";
+        '<div class="duo">' + txt(b + ".nom", { label: tt("Nom", "Apelido", "Surname"), req: true, need: tt("le nom de ", "o apelido de ", "the surname of ") + qui, r: tt("Nom", "Apelido", "Surname") + " · " + qui }) + txt(b + ".prenom", { label: tt("Prénom", "Nome próprio", "First name"), req: true, need: tt("le prénom de ", "o nome próprio de ", "the first name of ") + qui, live: id, r: tt("Prénom", "Nome próprio", "First name") + " · " + qui }) + "</div>" + tard;
     }
     function etAccomp() {
       var h = "", sans = { v: "seul", l: tt("Non, je viendrai sans accompagnant", "Não, irei sem acompanhante", "No, I will come without a guest") };
@@ -289,8 +292,8 @@
         }
         if (x.mode && x.mode !== "inconnu") {
           if (jours.length) h += sel(p + ".date", jours, { label: tt("Date", "Data", "Date"), req: true, need: arr ? tt("la date d'arrivée", "a data de chegada", "the arrival date") : tt("la date de départ", "a data de partida", "the departure date"), r: tt("Date", "Data", "Date") + suf });
-          h += checks(p, [{ v: "heureInconnue", l: tt("Je ne connais pas encore l'horaire", "Ainda não sei o horário", "I don't know the time yet") }], { sansIndic: true, r: tt("Horaire", "Horário", "Time") + suf });
           if (!x.heureInconnue) h += heure(p + ".heure", { label: arr ? tt("Heure d'arrivée", "Hora de chegada", "Arrival time") : tt("Heure de départ", "Hora de partida", "Departure time"), need: arr ? tt("l'heure d'arrivée", "a hora de chegada", "the arrival time") : tt("l'heure de départ", "a hora de partida", "the departure time"), r: tt("Heure", "Hora", "Time") + suf });
+          h += checks(p, [{ v: "heureInconnue", l: tt("Je ne connais pas encore l'horaire", "Ainda não sei o horário", "I don't know the time yet") }], { sansIndic: true, r: tt("Horaire", "Horário", "Time") + suf });
         }
         return h;
       }
@@ -303,6 +306,7 @@
         var opts = HEB.lieux.map(function (l) { return { v: l, l: l }; }).concat([{ v: "propres", l: tt("Par mes propres moyens", "Pelos meus próprios meios", "By my own means") }, PASENCORE()]);
         return q("lieu", tt("Où séjournerez-vous ?", "Onde ficará alojado?", "Where will you be staying?"), "", radio("heb.lieu", opts, { need: tt("votre lieu de séjour", "o seu alojamento", "your accommodation"), r: tt("Hébergement", "Alojamento", "Accommodation"), attente: function (v) { return v === "inconnu"; } }));
       }
+      if (!logeOffert) return blocResa();
       var lieu = FOY.lieu || HEB.lieu || tt("le domaine", "o domaine", "the estate");
       var texte = tt(MARIES() + " ont le plaisir de vous recevoir " + aLieu(lieu) + " pour " + tr(HEB.nuits) + ".", MARIES() + " têm o prazer de lhe oferecer a estadia em " + lieu + " na " + tr(HEB.nuits) + ".", MARIES() + " are delighted to host you at " + lieu + " for " + tr(HEB.nuits) + ".");
       if (autres.length) texte += " " + tt("Cette attention s'étend à " + listeEt(autres.map(nm)) + ".", "Esta atenção estende-se a " + listeEt(autres.map(nm)) + ".", "This kind attention extends to " + listeEt(autres.map(nm)) + ".");
@@ -317,14 +321,15 @@
       h += q("sejour", tt("Séjournerez-vous sur place ?", "Pernoitará no local?", "Will you be staying on site?"), "", corps);
       var dorment = dormeurs();
       if (MODE === "form") dorment.forEach(function (id) {
-        if (!MOMENTS.length || servi(id)) return;
+        if (!REPAS || dine(id)) return;
         var cle = "dort_" + id;
         if (!ack(cle, tt("la confirmation du séjour de ", "a confirmação da estadia de ", "confirmation of the stay of ") + prenom(id), "1"))
-          h += note(cle, id === "inv" ? tt("Nous remarquons que vous séjournerez sur place sans assister à la réception. Pourriez-vous nous le confirmer ?", "Reparamos que pernoitará no local sem estar presente na receção. Poderia confirmar-nos?", "We notice that you will stay on site without attending the reception. Could you confirm this?") : tt("Nous remarquons que " + nm(id) + " séjournera sur place sans assister à la réception. Pourriez-vous nous le confirmer ?", "Reparamos que " + nm(id) + " pernoitará no local sem estar presente na receção. Poderia confirmar-nos?", "We notice that " + nm(id) + " will stay on site without attending the reception. Could you confirm this?"),
+          h += note(cle, id === "inv" ? tt("Nous remarquons que vous séjournerez sur place sans assister au " + repasNom() + ". Pourriez-vous nous le confirmer ?", "Reparamos que pernoitará no local sem estar presente no jantar. Poderia confirmar-nos?", "We notice that you will stay on site without attending the dinner. Could you confirm this?") : tt("Nous remarquons que " + nm(id) + " séjournera sur place sans assister au " + repasNom() + ". Pourriez-vous nous le confirmer ?", "Reparamos que " + nm(id) + " pernoitará no local sem estar presente no jantar. Poderia confirmar-nos?", "We notice that " + nm(id) + " will stay on site without attending the dinner. Could you confirm this?"),
             '<button class="btn petit clair" data-ack="' + cle + '" data-sig="1">' + tt("Je le confirme", "Confirmo", "I confirm") + '</button><button class="btn petit clair" data-aller="q_sejour">' + tt("Je corrige", "Vou corrigir", "Let me correct this") + "</button>");
       });
-      if (dorment.length && HEB.acces) h += q("arrivee", tt("À quelle heure pensez-vous arriver sur place ?", "A que horas prevê chegar ao local?", "At what time do you expect to arrive on site?"), tt("Afin que l'on vous y accueille.", "Para que o possamos receber.", "So that we can welcome you."), checks("heb", [{ v: "heureInconnue", l: tt("Je ne connais pas encore l'horaire", "Ainda não sei o horário", "I don't know the time yet") }], { sansIndic: true, r: tt("Horaire", "Horário", "Time") }) + (S.heb.heureInconnue ? "" : heure("heb.heure", { label: tt("Heure d'arrivée", "Hora de chegada", "Arrival time"), need: tt("votre heure d'arrivée", "a sua hora de chegada", "your arrival time"), r: tt("Arrivée sur place", "Chegada ao local", "Arrival on site") })));
+      if (dorment.length && HEB.acces) h += q("arrivee", tt("À quelle heure pensez-vous arriver sur place ?", "A que horas prevê chegar ao local?", "At what time do you expect to arrive on site?"), tt("Afin que l'on vous y accueille.", "Para que o possamos receber.", "So that we can welcome you."), (S.heb.heureInconnue ? "" : heure("heb.heure", { label: tt("Heure d'arrivée", "Hora de chegada", "Arrival time"), need: tt("votre heure d'arrivée", "a sua hora de chegada", "your arrival time"), r: tt("Arrivée sur place", "Chegada ao local", "Arrival on site") })) + checks("heb", [{ v: "heureInconnue", l: tt("Je ne connais pas encore l'horaire", "Ainda não sei o horário", "I don't know the time yet") }], { sansIndic: true, r: tt("Horaire", "Horário", "Time") }));
       if (dorment.length) h += q("hebPrecision", tt("Un détail à nous signaler pour votre séjour ?", "Algum pormenor a assinalar para a sua estadia?", "Anything we should know about your stay?"), "", txt("heb.precision", { area: true, ph: tt("Un accès sans marches, des lits séparés…", "Um acesso sem degraus, camas separadas…", "Step free access, separate beds…"), r: tt("Précision pour le séjour", "Pormenor para a estadia", "Note for the stay") }), "", true);
+      if (S.heb.sejour === "non") h += blocResa(); else if (MODE === "form") S.resa = {};
       return h + lienSite("hebergement", tt("Le lieu et ses alentours", "O local e arredores", "The venue and its surroundings"));
     }
     /* « au Domaine de Maffliers », « à l'Auberge du Jeu de Paume », « à la Villa… », « à l'InterContinental… » */
@@ -335,6 +340,19 @@
       if (/^(villa|maison|bastide|ferme|grange|bergerie|chartreuse|commanderie|résidence)\b/i.test(l)) return "à la " + l;
       if (/^[aeiouyéèêâîôh]/i.test(l)) return "à l'" + l;
       return "à " + l;
+    }
+    /* Phase 5 : réserver une chambre dans une maison partenaire, pour un foyer qui n'est pas reçu par les mariés.
+       La réservation est faite au nom de l'invité ; il règle directement l'établissement (YID ne manie jamais l'argent des invités). */
+    function resaPossible() { return MAISONS.length > 0 && !!CFG.conciergerie && !choixLieu && (!logeOffert || S.heb.sejour === "non"); }
+    function blocResa() {
+      if (!resaPossible()) { S.resa = {}; return ""; }
+      var opts = MAISONS.map(function (x) { return { v: x.nom, l: x.nom, d: [x.ville, x.tarif].filter(Boolean).join(" · ") }; }).concat([{ v: "non", l: tt("Non merci, je m'en occupe", "Não, obrigado, eu trato disso", "No thank you, I will arrange it myself") }, PASENCORE()]);
+      var corps = radio("resa.maison", opts, { need: tt("votre réponse sur la réservation d'une chambre", "a sua resposta sobre a reserva de um quarto", "your answer about booking a room"), r: tt("Réservation d'une chambre", "Reserva de um quarto", "Room booking"), attente: function (v) { return v === "inconnu"; } });
+      if (S.resa.maison && S.resa.maison !== "non" && S.resa.maison !== "inconnu") {
+        corps += sel("resa.chambres", [1, 2, 3, 4].map(function (n) { return { v: String(n), l: String(n) }; }), { label: tt("Combien de chambres ?", "Quantos quartos?", "How many rooms?"), req: true, need: tt("le nombre de chambres", "o número de quartos", "the number of rooms"), r: tt("Chambres", "Quartos", "Rooms") });
+        if (MODE === "form") corps += '<p class="aide-champ">' + tt("Nous réservons en votre nom et revenons vers vous avec la confirmation. Le règlement se fait directement auprès de l'établissement.", "Reservamos em seu nome e voltamos a contactá-lo com a confirmação. O pagamento é feito diretamente ao estabelecimento.", "We will book in your name and come back to you with the confirmation. Payment is made directly to the hotel.") + "</p>";
+      }
+      return q("resa", tt("Souhaitez-vous que nous vous réservions une chambre à proximité ?", "Deseja que lhe reservemos um quarto nas proximidades?", "Would you like us to book you a room nearby?"), tt(MARIES() + " ont retenu ces maisons pour leurs invités.", MARIES() + " escolheram estes alojamentos para os seus convidados.", MARIES() + " have selected these hotels for their guests."), corps);
     }
     function dormeurs() { var P = presents(); return S.heb.sejour === "oui" ? P : S.heb.sejour === "partiel" ? P.filter(function (id) { return (S.heb.qui || {})[id]; }) : []; }
     function etDeplac() {
@@ -347,7 +365,7 @@
     }
     var REGIMES = [{ v: "veg", fr: "Végétarien", pt: "Vegetariano", en: "Vegetarian", veg: true }, { v: "vegan", fr: "Végétalien", pt: "Vegano", en: "Vegan", veg: true }, { v: "porc", fr: "Sans porc", pt: "Sem carne de porco", en: "No pork" }, { v: "alcool", fr: "Sans alcool", pt: "Sem álcool", en: "No alcohol" }, { v: "halal", fr: "Halal", pt: "Halal", en: "Halal" }, { v: "casher", fr: "Casher", pt: "Kosher", en: "Kosher" }, { v: "gluten", fr: "Sans gluten", pt: "Sem glúten", en: "Gluten free" }, { v: "lactose", fr: "Sans lactose", pt: "Sem lactose", en: "Lactose free" }, { v: "coque", fr: "Allergie aux fruits à coque", pt: "Alergia a frutos de casca rija", en: "Tree nut allergy", allergie: true }, { v: "arachide", fr: "Allergie aux arachides", pt: "Alergia ao amendoim", en: "Peanut allergy", allergie: true }, { v: "mer", fr: "Allergie aux poissons et fruits de mer", pt: "Alergia a peixe e marisco", en: "Fish and seafood allergy", allergie: true, bad: /poisson|peixe|fish/i }, { v: "autre", fr: "Autre", pt: "Outro", en: "Other" }];
     function etTable() {
-      var P = presents(), auDiner = (CFG.plats || []).length ? P.filter(dine) : [], servis = P.filter(servi), h = "";
+      var P = presents(), auDiner = (CFG.plats || []).length ? P.filter(dine) : [], servis = P.filter(function (id) { return servi(id) && !(role(id) === "enf" && ageDe(id) === 0); }), h = "";
       var concerne = function (id) { return S.table.regime === "oui" && (servis.length === 1 || (S.table.qui || {})[id]); };
       var menuEnfant = function (id) { return role(id) === "enf" && CFG.ageMenu && ageDe(id) != null && ageDe(id) < CFG.ageMenu; };
       if (auDiner.length) {
@@ -395,7 +413,7 @@
           var opts = [{ v: "aller", l: tt("Le trajet jusqu'au mariage", "A viagem até ao casamento", "Getting to the wedding") }];
           if (MOMENTS.length > 1) opts.push({ v: "entre", l: tt("Les trajets entre les lieux", "As deslocações entre os locais", "Getting between venues") });
           opts.push({ v: "retour", l: tt("Le retour après la soirée", "O regresso depois da festa", "Getting back after the evening") });
-          if (!logeOffert || S.heb.sejour === "non") opts.push({ v: "hotel", l: tt("Un hébergement à proximité", "Um alojamento nas proximidades", "Accommodation nearby") });
+          if ((!logeOffert || S.heb.sejour === "non") && !resaPossible()) opts.push({ v: "hotel", l: tt("Un hébergement à proximité", "Um alojamento nas proximidades", "Accommodation nearby") });
           opts.push({ v: "autre", l: tt("Autre chose", "Outra coisa", "Something else") });
           Object.keys(S.fin.pour || {}).forEach(function (k) { if (!opts.some(function (o) { return o.v === k; })) delete S.fin.pour[k]; });
           corps += '<div class="champ"><label>' + tt("Pour quoi pouvons-nous vous aider ?", "Em que podemos ajudar?", "How can we help?") + "</label></div>" + checks("fin.pour", opts, { min1: true, need: tt("ce pour quoi nous pouvons vous aider", "aquilo em que podemos ajudar", "what we can help you with"), r: tt("Aide demandée", "Ajuda pedida", "Help requested") });
@@ -412,7 +430,7 @@
     function collecte() {
       var sM = MODE, sR = REQ; MODE = "recap"; ROWS = [];
       var secs = ordre().filter(function (k) { return ["accueil", "recap", "fin"].indexOf(k) < 0; });
-      secs.forEach(function (k) { SECTION = k; ETAPES[k].rendu(); });
+      secs.forEach(function (k) { SECTION = k; ETAPES[k].rendu(); blocExtra(k); });
       MODE = sM; REQ = sR;
       return { secs: secs.map(function (k) { return { k: k, t: ETAPES[k].t() }; }), rows: ROWS.filter(function (r) { return r.val !== "" && r.label !== ""; }) };
     }
@@ -423,6 +441,7 @@
       if (accIds().some(function (id) { return (fiche(id) || {}).plusTard; })) L.push(tt("un nom à nous communiquer", "um nome a indicar-nos", "a name to send us"));
       if (S.nbEnf === "inconnu") L.push(tt("la venue de vos enfants", "a vinda dos seus filhos", "whether your children will attend"));
       if (logeOffert && S.heb.sejour === "inconnu") L.push(tt("votre séjour sur place", "a sua estadia no local", "your stay on site"));
+      if (resaPossible() && S.resa.maison === "inconnu") L.push(tt("la réservation de votre chambre", "a reserva do seu quarto", "your room booking"));
       if (choixLieu && S.heb.lieu === "inconnu") L.push(tt("votre hébergement", "o seu alojamento", "your accommodation"));
       if (CFG.arrivees && ((S.v.aller || {}).mode === "inconnu" || (S.v.retour || {}).mode === "inconnu" || (S.v.aller || {}).heureInconnue || (S.v.retour || {}).heureInconnue)) L.push(tt("les horaires de votre venue", "os horários da sua vinda", "the timings of your journey"));
       return L;
@@ -444,7 +463,40 @@
     }
 
     /* ---------- lecture pour le serveur et l'équipe ---------- */
-    function manquantsEtape(k) { MODE = "form"; REQ = []; SECTION = k; ETAPES[k].rendu(); var vus = {}; return REQ.filter(function (r) { if (r.ok() || vus[r.label]) return false; vus[r.label] = 1; return true; }).map(function (r) { return r.label; }); }
+    /* Les questions nées des colonnes du mariage (méthode YID), rangées à leur étape ; à « Pour conclure » si leur étape n'est pas affichée. */
+    function extraPour(c) {
+      var p = c.pour || "tous";
+      if (p === "loges") return FOY.loge && (!logeOffert || dormeurs().length > 0);
+      if (p === "non_loges") return !FOY.loge || S.heb.sejour === "non";
+      if (p === "enfants") return enfIds().length > 0;
+      if (p === "accompagnes") return accIds().length > 0;
+      var m = /^colonne:([^=]+)=(.*)$/.exec(p); if (m) return String((FOY.colonnes || {})[m[1]] || "") === m[2];
+      return true;
+    }
+    function blocExtra(k) {
+      var Q = (CFG.questions || []).filter(function (c) { var ici = c.etape === k || (k === "fin1" && ordre().indexOf(c.etape) < 0); return ici && extraPour(c); });
+      if (!S.extra) S.extra = {};
+      return Q.map(function (c) {
+        var b = "extra." + c.id, rr = c.nom, corps = "", inconnu = c.inconnu ? [PASENCORE()] : [];
+        var opts = c.reponses === "ouinon" ? [{ v: "oui", l: tt("Oui", "Sim", "Yes") }, { v: "non", l: tt("Non", "Não", "No") }] : (c.options || []).map(function (o) { return { v: o, l: o }; });
+        var champ = function (base, label, need) {
+          if (c.reponses === "texte") return txt(base, { area: true, req: !c.facultatif, need: need, r: label });
+          if (c.reponses === "nombre") { var n = []; for (var i = 0; i <= 10; i++) n.push({ v: String(i), l: String(i) }); return sel(base, n, { req: !c.facultatif, need: need, r: label }); }
+          if (c.reponses === "heure") return heure(base, { label: tt("Heure", "Hora", "Time"), need: need, r: label });
+          if (c.reponses === "multiple") return checks(base, opts, { min1: !c.facultatif, need: need, r: label });
+          return radio(base, opts.concat(inconnu), c.facultatif ? { facultatif: true, r: label } : { need: need, r: label, attente: function (v) { return v === "inconnu"; } });
+        };
+        if (c.portee === "personne" && c.reponses === "ouinon") {
+          corps = radio(b + ".tous", [{ v: "non", l: tt("Personne", "Ninguém", "No one") }, { v: "oui", l: tt("Oui, certaines personnes", "Sim, algumas pessoas", "Yes, some people") }].concat(inconnu), c.facultatif ? { facultatif: true, r: rr } : { need: tt("votre réponse : ", "a sua resposta: ", "your answer: ") + rr.toLowerCase(), r: rr, attente: function (v) { return v === "inconnu"; } });
+          if ((S.extra[c.id] || {}).tous === "oui") corps += checks(b + ".qui", presents().map(function (id) { return { v: id, l: prenom(id), html: nm(id) }; }), { ligne: true, min1: true, need: tt("les personnes concernées", "as pessoas abrangidas", "the people concerned"), r: rr + tt(" · qui", " · quem", " · who") });
+        } else if (c.portee === "personne") {
+          presents().forEach(function (id) { corps += '<div class="sous">' + (MODE === "form" ? "<h4>" + nm(id) + "</h4>" : "") + champ(b + "." + id, rr + " · " + prenom(id), rr.toLowerCase() + tt(" de ", " de ", " for ") + prenom(id)) + "</div>"; });
+        } else corps = champ(b + ".v", rr, tt("votre réponse : ", "a sua resposta: ", "your answer: ") + rr.toLowerCase());
+        if (c.precision) { var v = (S.extra[c.id] || {}).v, t = (S.extra[c.id] || {}).tous; if ((v && v !== "non" && v !== "inconnu") || t === "oui") corps += txt(b + ".precision", { label: tt("Une précision ?", "Algum pormenor?", "Any detail?"), r: rr + tt(" · précision", " · pormenor", " · detail") }); }
+        return q("x_" + c.id, esc(tr(c.q)), c.aide ? esc(c.aide) : "", corps, "", c.facultatif);
+      }).join("");
+    }
+    function manquantsEtape(k) { MODE = "form"; REQ = []; SECTION = k; ETAPES[k].rendu(); blocExtra(k); var vus = {}; return REQ.filter(function (r) { if (r.ok() || vus[r.label]) return false; vus[r.label] = 1; return true; }).map(function (r) { return r.label; }); }
     function verifierTout() { var out = []; ordre().forEach(function (k) { if (["accueil", "recap", "fin"].indexOf(k) < 0) out = out.concat(manquantsEtape(k)); }); return out; }
     function personnes() {
       return presents().map(function (id) {
@@ -464,6 +516,7 @@
       if (S.acc.choix === "autre") s.push(CFG.protection ? "Accompagnant remplacé : soumettre aux mariés (protection de la liste)" : "Accompagnant remplacé : pour information");
       if (CFG.protection && accIds().some(function (id) { return (fiche(id) || {}).plusTard; })) s.push("Nom à obtenir avant le " + tr(CFG.reponseAvant) + " (protection de la liste)");
       if (logeOffert && S.heb.sejour === "non") s.push("Hébergement offert décliné : à réattribuer avec les mariés");
+      if (resaPossible() && S.resa.maison && ["non", "inconnu"].indexOf(S.resa.maison) < 0) s.push("Réservation d'hôtel demandée : " + S.resa.maison + ", " + (S.resa.chambres || 1) + " chambre(s), à confirmer à l'invité");
       if (logeOffert && dormeurs().length) s.push("Logés sur place : " + dormeurs().length + " personne(s)");
       presents().forEach(function (id) { var a = ageDe(id); if (role(id) === "enf" && a === 0) s.push("Nourrisson : " + prenom(id) + (dormeurs().indexOf(id) >= 0 ? ", logé : lit pour bébé à vérifier avec le lieu" : "") + ((S.enf[id] || {}).poussette === "oui" ? ", poussette ou cosy dans la salle" : "")); });
       if (CFG.arrivees && dormeurs().length && (S.v.aller || {}).date && CFG.jours && CFG.jours[1] && S.v.aller.date < CFG.jours[1].v) s.push("Arrivée la veille du mariage : vérifier l'hébergement de la nuit précédente");
@@ -487,10 +540,12 @@
       if (choixLieu && S.heb.lieu && S.heb.lieu !== "inconnu") o.hebergement = S.heb.lieu === "propres" ? "Par leurs propres moyens" : S.heb.lieu;
       if (logeOffert && S.heb.sejour === "non") o.hebergement = "Par leurs propres moyens";
       o.personnes = ps.length;
+      if ((CFG.questions || []).length) { o.colonnes = {}; (CFG.questions || []).forEach(function (c) { var x = (S.extra || {})[c.id]; if (x) o.colonnes[c.nom] = x; }); }
       (CFG.trajets || []).forEach(function (t) { if ((S.dep.trajets || {})[t.id]) { o["nav_" + t.id + "_aller"] = String((S.dep.places || {})[t.id] || ""); if ((S.dep.retour || {})[t.id]) o["nav_" + t.id + "_retour"] = S.dep.retour[t.id] === "sans" ? "Pas de navette" : S.dep.retour[t.id]; } else o["nav_" + t.id + "_aller"] = "Non merci"; });
       var trajet = function (x) { x = x || {}; if (!x.mode) return null; if (x.mode === "inconnu") return "À confirmer"; var md = { avion: "Vol", train: "Train", voiture: "Voiture", taxi: "Taxi ou chauffeur" }[x.mode]; var j = (CFG.jours || []).filter(function (d) { return d.v === x.date; })[0]; return [md + (x.numero ? " " + x.numero : ""), x.lieu || "", j ? j.l.fr : "", x.heureInconnue ? "horaire à confirmer" : x.heure && x.heure.h ? x.heure.h + " h " + x.heure.m : ""].filter(Boolean).join(", "); };
       if (CFG.arrivees) { o.arrivee = trajet(S.v.aller); o.depart = trajet(S.v.retour); }
       if (logeOffert && S.heb.sejour !== "non") o.hebergement = FOY.lieu || HEB.lieu || null;
+      if (resaPossible() && S.resa.maison && ["non", "inconnu"].indexOf(S.resa.maison) < 0) { o.hebergement = S.resa.maison; o.reservation = { maison: S.resa.maison, chambres: Number(S.resa.chambres || 1), statut: "demandée" }; }
       if (choixLieu && S.heb.lieu === "inconnu") delete o.hebergement;
       return o;
     }
@@ -503,7 +558,7 @@
       var ord = ordre(); if (ord.indexOf(S.step) < 0) S.step = ord[0];
       var h = '<div class="marque">' + esc(tt("Mariage de ", "Casamento de ", "The wedding of ") + MARIES()) + "</div>";
       if (["accueil", "fin"].indexOf(S.step) < 0) { var vis = ord.filter(function (k) { return ["accueil", "fin"].indexOf(k) < 0; }); h += '<div class="etapes">' + vis.map(function (k, j) { return '<i class="' + (j <= vis.indexOf(S.step) ? "fait" : "") + '"></i>'; }).join("") + "</div>"; if (S.step !== "recap") h += "<h2>" + esc(ETAPES[S.step].t()) + "</h2>"; }
-      SECTION = S.step; h += ETAPES[S.step].rendu();
+      SECTION = S.step; h += ETAPES[S.step].rendu(); if (["accueil", "presence", "recap", "fin"].indexOf(S.step) < 0) h += blocExtra(S.step);
       if (["accueil", "fin"].indexOf(S.step) < 0) h += pied();
       EL.innerHTML = elide(h); EL.setAttribute("lang", LANG);
       if (keep) { if (EL.scrollTop !== undefined && EL.scrollHeight > EL.clientHeight) EL.scrollTop = y; else window.scrollTo(0, y); }

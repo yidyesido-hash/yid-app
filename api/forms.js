@@ -44,6 +44,8 @@
      ?action=invite-repondre POST  la réponse de l'invité : yid, etat (moteur v2, relu par le serveur) ; reponses { … } pour un mariage sans partie D
      ?action=invite-brouillon POST le brouillon de l'invité en cours de route : yid, etat
      ?action=admin-feuille-route POST la feuille de route du mariage (w=CODE), texte WhatsApp ; op envoyee la marque envoyée
+     ?action=admin-colonnes   POST  les colonnes du mariage (w=CODE) : op lister, proposer, ajouter, modifier, activer, supprimer, valeur
+     ?action=admin-formulaire-apercu POST l'aperçu du formulaire pour l'équipe (w=CODE) : type, enfants, loge, langue, colonne
      ?action=admin-fichier-planner POST le classeur du wedding planner (w=CODE) : invités, traiteur, rooming list, venues, attention ; b64
      ?action=admin-formulaire-signaux POST les signaux des réponses (w=CODE), foyer par foyer
      ?action=admin-demo      POST  crée ou recrée le mariage test Awa et Kevin, complet sur les sept étapes (administrateur)
@@ -76,7 +78,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.23.0";
+const VERSION = "1.24.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -211,7 +213,7 @@ module.exports = async (req, res) => {
   const action = q.action || "";
   cors(req, res);
   /* le lien personnel est lu depuis le site du mariage, quel qu'il soit : seul le jeton ouvre la fiche */
-  if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon" || action === "pass" || action === "pass-info") res.setHeader("Access-Control-Allow-Origin", "*");
+  if (action === "invite" || action === "invite-repondre" || action === "invite-brouillon" || action === "invite-apercu" || action === "pass" || action === "pass-info") res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
   try {
     await store.migrate();
@@ -303,6 +305,22 @@ module.exports = async (req, res) => {
       if (b.op === "envoyee") { const pp = Object.assign({}, m.parametres || {}); pp.feuille_route = { le: new Date().toISOString(), par: u.nom }; await require("../lib/db").query("UPDATE mariage SET parametres = $2, modifie_le = now() WHERE id = $1", [m.id, pp]); await store.journal(m.id, "Feuille de route", "Envoyée au couple dans le groupe du mariage, à épingler", null, null, u.nom); return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: pp.feuille_route }); }
       return send(res, 200, { ok: true, texte: require("../lib/feuille").composer(m), envoyee: (m.parametres || {}).feuille_route || null });
     }
+    if (action === "admin-colonnes") {
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      try { const C = require("../lib/colonnes"); if (!b.op || b.op === "lister") return send(res, 200, Object.assign({ ok: true }, await C.lister(q.w || b.w))); return send(res, 200, Object.assign({ ok: true }, await C.agir(q.w || b.w, b.op, b, u), await C.lister(q.w || b.w))); }
+      catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "admin-formulaire-apercu") {
+      /* l'aperçu de l'équipe : un foyer choisi par typologie, la question d'une colonne en cours de validation comprise ; rien n'est enregistré */
+      const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
+      const m = await store.mariageFresh(q.w || b.w); const F = require("../lib/formulaire"); if (!m) return send(res, 404, { ok: false, error: "mariage" });
+      if (!F.actif(m)) return send(res, 422, { ok: false, detail: "Le formulaire s'ouvre une fois la partie D de la fiche remplie (programme et date de réponse)." });
+      const t = String(b.type || "deux"), ck = (m.parametres || {}).checklist || {}, lieux = (ck.lieux_hebergement || []).filter(Boolean);
+      const c = { id: 0, prenom: "Camille", nom: "Martin", numero: "+33639980000", invitation: t === "unique" ? "Invitation unique" : t === "libre" ? "Ne sait pas encore" : "Invitation pour deux", nb_accompagnants: t === "plusieurs" ? 3 : null, accompagnant: "",
+        nb_enfants: Number(b.enfants) || 0, hebergement: b.loge && lieux[0] ? lieux[0] : null, langue: String(b.langue || "fr"), qualification: { colonnes: b.colonnes || {} }, civilite: null };
+      const cfg = await F.configComplete(m); if (b.colonne) cfg.questions = require("../lib/colonnes").questionsApercu(m, String(b.colonne));
+      return send(res, 200, { ok: true, cfg, foyer: F.foyer(c, m) });
+    }
     if (action === "admin-fichier-planner") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       try { const x = await require("../lib/fichiers").planner(q.w || b.w); const m = await store.mariageFresh(q.w || b.w); await store.journal(m.id, "Fichier wedding planner", x.nom, null, null, u.nom); return send(res, 200, { ok: true, nom: x.nom, b64: x.buffer.toString("base64") }); }
@@ -311,6 +329,15 @@ module.exports = async (req, res) => {
     if (action === "admin-formulaire-signaux") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       try { return send(res, 200, { ok: true, foyers: await require("../lib/formulaire").signaux(q.w || b.w) }); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+    }
+    if (action === "invite-apercu") {
+      /* l'aperçu du formulaire pour le couple (espace mariés) : un foyer fictif, rien n'est enregistré */
+      if (!(await store.rateLimit(ip(req) + ":apercu", 60))) return send(res, 429, { ok: false, error: "slow down" });
+      const m = await require("../lib/espace").parJeton(String(q.e || ""));
+      const F = require("../lib/formulaire");
+      if (!m || !F.actif(m)) return send(res, 404, { ok: false, error: "apercu" });
+      const c = { id: 0, prenom: "Camille", nom: "Martin", numero: "+33639980000", invitation: "Invitation pour deux", accompagnant: "", nb_enfants: 0, hebergement: null, langue: String(q.l || m.langue_defaut || "fr"), qualification: {}, civilite: null };
+      return send(res, 200, { ok: true, v: 2, apercu: true, cfg: await F.configComplete(m), foyer: F.foyer(c, m), etat: null });
     }
     if (action === "demo-auto") {
       /* sans session : ne fait que tenir à jour le mariage Test Awa et Kevin, une étape par appel, puis plus rien */

@@ -462,30 +462,6 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("feuille de route : composée de la fiche, prête pour WhatsApp, sans tiret ni lien", r.json.ok && /\*Feuille de route · Mariage d'Alexander et Clarisse\*/.test(r.json.texte) && /28 février/.test(r.json.texte) && !/ [-–—] |https?:/.test(r.json.texte), (r.json.texte || "").slice(0, 120));
     r = await call("POST", "/api/forms?action=admin-feuille-route&w=AC27", { op: "envoyee" }, H);
     check("feuille de route : marquée envoyée, au journal", r.json.ok && r.json.envoyee && r.json.envoyee.par);
-    for (const phase of ["fiche", "liste", "reponses"]) { r = await call("POST", "/api/forms?action=admin-demo", { phase }, H); if (!r.json.ok) break; }
-    check("mariage test : Awa et Kevin construit de bout en bout, chaque réponse acceptée par le moteur", r.json.ok && r.json.bilan && r.json.bilan.present >= 15 && !r.json.bilan.refus.length, JSON.stringify(r.json).slice(0, 300));
-    const fm = (await call("POST", "/api/forms?action=admin-mariage&w=" + r.json.code, {}, H)).json.mariage || {};
-    check("mariage test : statut Test, six étapes terminées", fm.statut === "Test" && Object.keys(fm.etapes || {}).length >= 6, JSON.stringify(fm.etapes));
-    const sg = (await call("POST", "/api/forms?action=admin-formulaire-signaux&w=" + r.json.code, {}, H)).json;
-    check("mariage test : les signaux remontent (nourrisson, allergie sévère, hébergement décliné, accompagnant remplacé)", sg.ok && ["Nourrisson", "Allergie sévère", "Hébergement offert décliné", "Accompagnant remplacé"].every(t => sg.foyers.some(f => f.signaux.some(x => x.startsWith(t)))), JSON.stringify(sg).slice(0, 300));
-    const lg = (await call("POST", "/api/forms?action=admin-logistique&w=" + r.json.code, {}, H)).json;
-    check("mariage test : la navette compte ses passagers depuis le formulaire", lg.ok && lg.navettes && lg.navettes[0].aller >= 10, JSON.stringify(lg.navettes && lg.navettes[0]).slice(0, 200));
-    const code = r.json.code;
-    let x = await call("POST", "/api/forms?action=admin-fichier-planner&w=" + code, {}, H);
-    check("fichier wedding planner : un classeur composé des réponses", x.json.ok && /\.xlsx$/.test(x.json.nom) && x.json.b64.length > 5000);
-    const lp = (await call("POST", "/api/forms?action=admin-liste&w=" + code, {}, H)).json.contacts.filter(c => c.reponse_le && !/regret/.test((c.reponse || {}).presence || ""));
-    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
-    check("pass : noms, code et QR pour un foyer présent (mariage Test, ouvert à tout moment)", x.json.ok && x.json.noms.length >= 1 && /<svg/.test(x.json.qr) && /^AK\d* \d+$/.test(x.json.code), JSON.stringify(x.json).slice(0, 160));
-    const anglo = lp.find(c => c.nom_repertoire === "Emma London");
-    x = await call("GET", "/api/forms?action=invite&yid=" + anglo.jeton);
-    const MOT = require("../public/formulaire/moteur.js"), eA = MOT.creer(x.json.cfg, x.json.foyer, x.json.etat);
-    check("anglais : le foyer anglophone reçoit son formulaire et les mots des mariés traduits", x.json.foyer.langue === "en" && eA.collecte().rows.some(r => r.label === "Attendance") && x.json.cfg.moments.some(m => m.l.en === "Drinks on the terrace"), JSON.stringify(eA.collecte().rows.slice(0, 2)));
-    const sgP = sg.foyers.some(f => f.signaux.some(t => /soumettre aux mariés \(protection de la liste\)/.test(t)));
-    check("protection de la liste : le remplacement d'un accompagnant devient une demande aux mariés", sgP);
-    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
-    check("pass de contrôle : mode contrôle, seules les personnes nommées y figurent", x.json.mode === "controle" && x.json.noms.every(n => !/Nom à communiquer/.test(n)));
-    r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
-    check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 25);
   }
 
   /* 1.9.0 : la file de premier contact */
@@ -767,13 +743,60 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("clôture : le mariage se clôt", r.json.ok && r.json.close);
   }
 
+  /* 1.20.0 et suivantes : le mariage test Awa et Kevin (en fin de recette : il remplit le répertoire des partenaires) */
+  {
+    let r;
+    for (const phase of ["fiche", "liste", "reponses"]) { r = await call("POST", "/api/forms?action=admin-demo", { phase }, H); if (!r.json.ok) break; }
+    check("mariage test : Awa et Kevin construit de bout en bout, chaque réponse acceptée par le moteur", r.json.ok && r.json.bilan && r.json.bilan.present >= 15 && !r.json.bilan.refus.length, JSON.stringify(r.json).slice(0, 300));
+    const fm = (await call("POST", "/api/forms?action=admin-mariage&w=" + r.json.code, {}, H)).json.mariage || {};
+    check("mariage test : statut Test, six étapes terminées", fm.statut === "Test" && Object.keys(fm.etapes || {}).length >= 6, JSON.stringify(fm.etapes));
+    const sg = (await call("POST", "/api/forms?action=admin-formulaire-signaux&w=" + r.json.code, {}, H)).json;
+    check("mariage test : les signaux remontent (nourrisson, allergie sévère, hébergement décliné, accompagnant remplacé)", sg.ok && ["Nourrisson", "Allergie sévère", "Hébergement offert décliné", "Accompagnant remplacé"].every(t => sg.foyers.some(f => f.signaux.some(x => x.startsWith(t)))), JSON.stringify(sg).slice(0, 300));
+    const lg = (await call("POST", "/api/forms?action=admin-logistique&w=" + r.json.code, {}, H)).json;
+    check("mariage test : la navette compte ses passagers depuis le formulaire", lg.ok && lg.navettes && lg.navettes[0].aller >= 10, JSON.stringify(lg.navettes && lg.navettes[0]).slice(0, 200));
+    const code = r.json.code;
+    let x = await call("POST", "/api/forms?action=admin-fichier-planner&w=" + code, {}, H);
+    check("fichier wedding planner : un classeur composé des réponses", x.json.ok && /\.xlsx$/.test(x.json.nom) && x.json.b64.length > 5000);
+    const lp = (await call("POST", "/api/forms?action=admin-liste&w=" + code, {}, H)).json.contacts.filter(c => c.reponse_le && !/regret/.test((c.reponse || {}).presence || ""));
+    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
+    check("pass : noms, code et QR pour un foyer présent (mariage Test, ouvert à tout moment)", x.json.ok && x.json.noms.length >= 1 && /<svg/.test(x.json.qr) && /^AK\d* \d+$/.test(x.json.code), JSON.stringify(x.json).slice(0, 160));
+    const anglo = lp.find(c => c.nom_repertoire === "Emma London");
+    x = await call("GET", "/api/forms?action=invite&yid=" + anglo.jeton);
+    const MOT = require("../public/formulaire/moteur.js"), eA = MOT.creer(x.json.cfg, x.json.foyer, x.json.etat);
+    check("anglais : le foyer anglophone reçoit son formulaire et les mots des mariés traduits", x.json.foyer.langue === "en" && eA.collecte().rows.some(r => r.label === "Attendance") && x.json.cfg.moments.some(m => m.l.en === "Drinks on the terrace"), JSON.stringify(eA.collecte().rows.slice(0, 2)));
+    const sgP = sg.foyers.some(f => f.signaux.some(t => /soumettre aux mariés \(protection de la liste\)/.test(t)));
+    check("protection de la liste : le remplacement d'un accompagnant devient une demande aux mariés", sgP);
+    x = await call("GET", "/api/forms?action=pass-info&yid=" + lp[0].jeton);
+    check("pass de contrôle : mode contrôle, seules les personnes nommées y figurent", x.json.mode === "controle" && x.json.noms.every(n => !/Nom à communiquer/.test(n)));
+    x = await call("POST", "/api/forms?action=admin-colonnes&w=" + code, { op: "lister" }, H);
+    check("colonnes : le socle de la fiche et les deux colonnes de la démonstration", x.json.ok && x.json.socle.includes("Présence") && x.json.colonnes.length === 2 && x.json.colonnes.find(c => c.id === "cdemo2").decision.question && !x.json.colonnes.find(c => c.id === "cdemo1").decision.question, JSON.stringify(x.json.socle));
+    x = await call("POST", "/api/forms?action=admin-colonnes&w=" + code, { op: "ajouter", nom: "Taille de veste", detenteur: "invite", usages: [], pour: "tous", cadre: "Afin de…", reponses: "texte", portee: "foyer", etape: "fin1", promesse_ok: true }, H);
+    check("colonnes : la méthode refuse une question dont personne ne se sert", !x.json.ok && /À qui sert/.test(x.json.detail || ""), x.json.detail);
+    x = await call("POST", "/api/forms?action=admin-colonnes&w=" + code, { op: "ajouter", nom: "Pointure", detenteur: "invite", usages: ["La wedding planner"], pour: "tous", cadre: "Afin de prévoir des chaussures de danse.", sujet: "Votre pointure", reponses: "unique", options: ["36 à 38", "39 à 41", "42 à 44"], inconnu: true, portee: "personne", etape: "fin1", promesse_ok: true }, H);
+    const pid = x.json.ok && x.json.colonnes.find(c => c.nom === "Pointure").id;
+    check("colonnes : une colonne détenue par l'invité crée une question rédigée selon nos règles, inactive avant l'aperçu", x.json.ok && /pointure/i.test(x.json.colonnes.find(c => c.nom === "Pointure").question.fr) && !x.json.colonnes.find(c => c.nom === "Pointure").active, JSON.stringify(x.json).slice(0, 200));
+    x = await call("POST", "/api/forms?action=admin-colonnes&w=" + code, { op: "activer", id: pid, on: true }, H);
+    check("colonnes : pas d'activation sans aperçu vu", !x.json.ok);
+    x = await call("POST", "/api/forms?action=admin-formulaire-apercu&w=" + code, { type: "deux", colonne: pid }, H);
+    const eP = MOT.creer(x.json.cfg, x.json.foyer, null);
+    check("aperçu : l'équipe voit le formulaire et la question en cours de validation", x.json.ok && x.json.cfg.questions.some(q => q.id === pid) && x.json.cfg.questions.some(q => q.id === "cdemo2") && eP.ordre().length >= 2, JSON.stringify({ q: (x.json.cfg || {}).questions, o: eP.ordre(), d: x.json.detail }).slice(0, 300));
+    x = await call("POST", "/api/forms?action=admin-colonnes&w=" + code, { op: "supprimer", id: pid }, H);
+    check("colonnes : une colonne se supprime", x.json.ok && x.json.colonnes.length === 2);
+    check("réservation : les demandes d'hôtel des non logés remontent à l'équipe", sg.foyers.some(f => f.signaux.some(t => /^Réservation d'hôtel demandée/.test(t))));
+    const em = (await call("POST", "/api/forms?action=admin-emails&w=" + code, {}, H)).json;
+    check("emails : destinataires par typologie (logés, langue, réservation)", em.ok !== false && ["pres_loges", "pres_en", "pres_hotel", "pres_deux"].every(k => (em.audiences || []).some(a => a.k === k || a.cle === k || a.id === k)), JSON.stringify((em.audiences || []).slice(0, 3)));
+    r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
+    check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 25);
+  }
+
+
   console.log(ko ? `\n${ko} contrôle(s) en échec sur ${n}` : `\n${n} contrôles, tout est vert`);
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
 
 /* Un état complet et sobre pour le moteur v2 : présent, seul, à tous les moments, sans régime. */
 function remplirEtat(cfg, f) {
-  const S = { step: "recap", presence: "oui", coord: { civ: "Madame", nom: f.nom || "Martin", prenom: f.prenom || "Amy", ind: f.ind || "FR", tel: f.tel || "612345678", email: "amy@exemple.fr" }, acc: {}, accs: {}, enf: {}, mom: {}, absent: {}, seulMoment: {}, v: {}, heb: {}, dep: {}, table: { regime: "non" }, fin: {}, ack: {} };
+  const S = { step: "recap", presence: "oui", coord: { civ: "Madame", nom: f.nom || "Martin", prenom: f.prenom || "Amy", ind: f.ind || "FR", tel: f.tel || "612345678", email: "amy@exemple.fr" }, acc: {}, accs: {}, enf: {}, mom: {}, absent: {}, seulMoment: {}, v: {}, heb: {}, dep: {}, table: { regime: "non" }, fin: {}, ack: {}, resa: { maison: "non" } };
   if (f.type === "deux" || f.type === "libre") S.acc.choix = "seul";
   if (f.type === "plusieurs") S.nbAcc = "0";
   if (f.enfants) S.nbEnf = "0";
