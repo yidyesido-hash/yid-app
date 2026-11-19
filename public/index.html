@@ -67,6 +67,10 @@
   .card.pliable > h3::after{ content:"−"; flex:0 0 auto; width:28px; height:28px; border-radius:14px; border:1px solid var(--line); display:grid; place-items:center; font:400 17px/1 Inter,sans-serif; color:var(--muted); }
   .card.pliable.plie > h3::after{ content:"+"; } .card.pliable.plie > :not(h3){ display:none !important; }
   .vise{ outline:2px solid var(--gold); outline-offset:6px; border-radius:14px; transition:outline-color .3s; }
+  .familles{ display:inline-flex; gap:4px; padding:4px; border-radius:24px; border:1px solid var(--line); background:var(--glass, rgba(255,255,255,.6)); margin:0 0 16px; }
+  .familles button{ min-height:38px; padding:0 16px; border:0; border-radius:19px; background:none; color:inherit; font:500 13px Inter,sans-serif; letter-spacing:0; text-transform:none; cursor:pointer; box-shadow:none; }
+  .familles button i{ font-style:normal; opacity:.55; margin-left:2px; } .familles button.on{ background:#1D1813; color:#F6EEDF; }
+  .fam-clos .wcard.photo > img{ filter:grayscale(.85); }
   .layout{ display:grid; grid-template-columns:300px 1fr; gap:24px; } @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   .steps{ border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .step{ display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
@@ -112,9 +116,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.25.0">
-<link rel="stylesheet" href="/cartes.css?v=1.25.0">
-<script src="/cartes.js?v=1.25.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.25.2">
+<link rel="stylesheet" href="/cartes.css?v=1.25.2">
+<script src="/cartes.js?v=1.25.2"></script>
 </head>
 <body>
 <header>
@@ -155,9 +159,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.0"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.2"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.0").then(function(){ return un("/formulaire/moteur.js?v=1.25.0"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.2").then(function(){ return un("/formulaire/moteur.js?v=1.25.2"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){
@@ -321,34 +325,42 @@
   }
 
   /* ---------- accueil ---------- */
+  var ACC_VUE = "";
   function accueil(){
     V.innerHTML = '<p class="muted">Chargement</p>';
     api("admin-accueil").then(function(j){
-      var encours = j.mariages.filter(function(m){ return m.statut !== "Clos" && m.statut !== "Test"; }), autres = j.mariages.filter(function(m){ return m.statut === "Clos" || m.statut === "Test"; });
+      /* trois familles, jamais mêlées : les vrais mariages en cours, les mariages test, les mariages clos */
+      var estClos = function(m){ return m.statut === "Clos" || !!(m.etapes || {})[7]; };
+      var tests = j.mariages.filter(function(m){ return m.statut === "Test"; }), clos = j.mariages.filter(function(m){ return m.statut !== "Test" && estClos(m); }), encours = j.mariages.filter(function(m){ return m.statut !== "Test" && !estClos(m); });
+      var FAM = { encours: { l: "En cours", L: encours, vide: "Aucun mariage en cours pour l'instant." }, tests: { l: "Tests", L: tests, vide: "Aucun mariage test." }, clos: { l: "Clos", L: clos, vide: "Aucun mariage clos pour l'instant." } };
+      if (!ACC_VUE || !FAM[ACC_VUE]) ACC_VUE = encours.length ? "encours" : tests.length ? "tests" : "encours";
       var PH = ["/img/mg290.jpg", "/img/p2186.jpg", "/img/mg3.jpg", "/img/p1959.jpg"];
       var photo = function(m){ if (m.photo_cle) return "/api/forms?action=photo&k=" + m.photo_cle; var h = 0; String(m.code).split("").forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 997; }); return PH[h % PH.length]; };
       var jours = function(d){ if (!d) return ""; var n = Math.round((new Date(String(d).slice(0,10) + "T12:00:00") - new Date()) / 864e5); return n >= 0 ? "J − " + n : "Passé"; };
-      var card = function(m){ return '<div class="wcard photo" onclick="location.hash=\'#/m/' + m.code + '\'"><img src="' + photo(m) + '" alt=""><div class="ombre"></div>' + (m.date_mariage ? '<span class="j">' + jours(m.date_mariage) + '</span>' : '') + '<div class="anneau">' + gauge(m.progression) + '</div><div class="txt"><h3>' + esc(m.prenoms) + '</h3><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "date à fixer") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div><div class="meta" style="display:flex;align-items:center;gap:8px;margin-top:10px"><span style="display:flex"><img src="/img/regis.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8)"><img src="/img/cess.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8);margin-left:-8px"></span>Étape ' + m.etape + ' · ' + esc(j.reglages.etapes[m.etape - 1] || "") + '</div><div class="meta" style="margin-top:8px">' + pill(m.statut, statutClass(m.statut)) + ' ' + pill((m.fiches || 0) + " invité(s)", "") + (function(){ var n = (j.afaire || []).filter(function(x){ return x.code === m.code; }).reduce(function(t, x){ return t + x.n; }, 0); return n ? ' ' + pill(n + " à faire", "warn") : ""; })() + '</div></div></div>'; };
-      var AF = j.afaire || [];
-      var nbF = encours.reduce(function(t, m){ return t + (m.fiches || 0); }, 0), nbA = AF.reduce(function(t, x){ return t + x.n; }, 0);
-      var chiffres = '<div class="chiffres"><div class="solide"><b>' + encours.length + '</b><span>mariages en cours</span></div><div class="verre"><b>' + nbF + '</b><span>invités suivis</span></div><div class="or"><b>' + nbA + '</b><span>à faire aujourd\'hui</span></div></div>';
-      var tous = encours.concat(autres), mobile = window.innerWidth < 860;
+      var card = function(m){ return '<div class="wcard photo" onclick="location.hash=\'#/m/' + m.code + '\'"><img src="' + photo(m) + '" alt=""><div class="ombre"></div>' + (m.date_mariage ? '<span class="j">' + (m.statut === "Test" ? "Test · " : estClos(m) ? "Clos · " : "") + jours(m.date_mariage) + '</span>' : (m.statut === "Test" ? '<span class="j">Test</span>' : '')) + '<div class="anneau">' + gauge(m.progression) + '</div><div class="txt"><h3>' + esc(m.prenoms) + '</h3><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "date à fixer") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div><div class="meta" style="display:flex;align-items:center;gap:8px;margin-top:10px"><span style="display:flex"><img src="/img/regis.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8)"><img src="/img/cess.jpg" alt="" style="width:24px;height:24px;border-radius:12px;object-fit:cover;border:2px solid rgba(20,16,12,.8);margin-left:-8px"></span>Étape ' + m.etape + ' · ' + esc(j.reglages.etapes[m.etape - 1] || "") + '</div><div class="meta" style="margin-top:8px">' + pill(m.statut, statutClass(m.statut)) + ' ' + pill((m.fiches || 0) + " invité(s)", "") + (function(){ var n = (j.afaire || []).filter(function(x){ return x.code === m.code; }).reduce(function(t, x){ return t + x.n; }, 0); return n ? ' ' + pill(n + " à faire", "warn") : ""; })() + '</div></div></div>'; };
+      var codesFam = {}; FAM[ACC_VUE].L.forEach(function(m){ codesFam[m.code] = 1; });
+      var AF = (j.afaire || []).filter(function(x){ return codesFam[x.code]; });
+      var nbF = FAM[ACC_VUE].L.reduce(function(t, m){ return t + (m.fiches || 0); }, 0), nbA = AF.reduce(function(t, x){ return t + x.n; }, 0);
+      var chiffres = '<div class="chiffres"><div class="solide"><b>' + FAM[ACC_VUE].L.length + '</b><span>' + (ACC_VUE === "tests" ? "mariages test" : ACC_VUE === "clos" ? "mariages clos" : "mariages en cours") + '</span></div><div class="verre"><b>' + nbF + '</b><span>invités suivis</span></div><div class="or"><b>' + nbA + '</b><span>à faire aujourd\'hui</span></div></div>';
+      var tous = FAM[ACC_VUE].L, mobile = window.innerWidth < 860;
+      var familles = '<div class="familles" id="familles">' + ["encours", "tests", "clos"].map(function(k){ return '<button type="button" data-fam="' + k + '" class="' + (k === ACC_VUE ? "on" : "") + '">' + FAM[k].l + ' <i>' + FAM[k].L.length + '</i></button>'; }).join("") + '</div>';
       var carteM = function(m, k){ return card(m).replace('<div class="wcard photo" onclick="location.hash=\'#/m/' + m.code + '\'">', '<div class="sc wcard photo t-photo" data-go="' + m.code + '">'); };
       var soir = AF.map(function(x){ return { h: x.h, t: (x.n > 1 || /\(s\)/.test(x.t) ? x.n + " " : "") + x.t, s: x.mariage, ic: x.ic, urgent: x.urgent }; });
-      encours.forEach(function(m){
+      (ACC_VUE === "clos" ? [] : FAM[ACC_VUE].L).forEach(function(m){
         if (m.date_remise) { var d = Math.round((new Date(String(m.date_remise).slice(0,10) + "T12:00:00") - new Date()) / 864e5); if (d >= 0 && d <= 14) soir.push({ h: "#/m/" + m.code + "/2", t: "Liste attendue " + (d ? "dans " + d + " jour(s)" : "aujourd'hui"), s: m.prenoms, ic: "date" }); }
       });
       var IC = { liste: '<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>', date: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>', message: '<path d="M4 5h16v11H8l-4 4z"/>', tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>', relance: '<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4"/>', appel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>' };
       var soirHtml = '<h2 class="sec" style="margin-top:28px">À faire aujourd\'hui</h2>' + (soir.length ? '<div style="display:grid;gap:10px;max-width:640px">' + soir.map(function(x){ return '<a class="verre" href="' + x.h + '" style="display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:22px;text-decoration:none;color:inherit"><span class="solide" style="width:42px;height:42px;border-radius:21px;flex:0 0 42px;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E4CDA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + IC[x.ic] + '</svg></span><span style="flex:1;min-width:0"><b style="display:block;font-size:14px">' + esc(x.t) + '</b><span class="muted small">' + esc(x.s) + '</span></span><span style="color:var(--gold)">›</span></a>'; }).join("") + '</div>' : '<p class="lead">Rien d\'urgent ce soir.</p>');
-      var maries = !tous.length ? '<div class="card"><p>Aucun mariage pour l\'instant. <a href="#/nouveau">Créer un mariage</a> ouvre l\'étape Fiche du mariage.</p></div>' :
+      var maries = !tous.length ? '<div class="card"><p>' + FAM[ACC_VUE].vide + (ACC_VUE === "encours" ? ' <a href="#/nouveau">Créer un mariage</a> ouvre l\'étape Fiche du mariage.' : '') + '</p></div>' :
         mobile ? '<div class="metap"><span class="hint">↔ Glissez</span><span id="mcnt" style="opacity:.6"></span></div><div class="pile2" id="mpile" style="height:300px">' + tous.map(carteM).join("") + '</div><div class="dots" id="mdots"></div>' :
         '<div class="grid">' + tous.map(card).join("") + '</div>';
       V.innerHTML =
-        chiffres + '<h2 class="sec">Vos mariages</h2>' + maries + soirHtml +
+        chiffres + '<h2 class="sec">Vos mariages</h2>' + familles + '<div class="' + (ACC_VUE === "clos" ? "fam-clos" : "") + '">' + maries + '</div>' + soirHtml +
         '<h2 class="sec" style="margin-top:28px">Partenaires</h2><a class="verre" href="#/partenaires" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;text-decoration:none;color:inherit;max-width:640px"><span style="flex:1"><b style="display:block">Répertoire des partenaires</b><span class="muted small">Hôtels, transporteurs, conciergerie, lieux et planners, avec chaque échange tracé.</span></span><span style="color:var(--gold)">›</span></a>' +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
         '<h2 class="sec" style="margin-top:26px">Journal récent</h2><p class="lead">Les douze dernières opérations, tous mariages confondus. Le journal maître complet est dans <a href="#/reglages">Réglages</a>, celui d\'un mariage dans sa page.</p>' + journalHtml(j.journal, true);
       $("check").onclick = runCheck;
+      $("familles").querySelectorAll("[data-fam]").forEach(function(b){ b.onclick = function(){ ACC_VUE = b.dataset.fam; accueil(); }; });
       if ($("mpile")) { YID.pileActive = YID.pile($("mpile"), { onChange: function(i, n){ $("mcnt").textContent = (i + 1) + " / " + n; YID.points($("mdots"), i, n); } }); V.querySelectorAll("[data-go]").forEach(function(c){ c.onclick = function(){ location.hash = "#/m/" + c.dataset.go; }; }); }
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
