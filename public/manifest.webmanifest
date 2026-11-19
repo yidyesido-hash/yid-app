@@ -1,17 +1,33 @@
 {
-  "name": "Yes I Do",
-  "short_name": "Yes I Do",
-  "description": "L'application de l'équipe Yes I Do : chaque mariage, étape par étape.",
+  "name": "YID Board",
+  "short_name": "YID Board",
+  "description": "YID Board : l'outil de l'équipe Yes I Do, chaque mariage étape par étape.",
   "lang": "fr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F5EFE6",
-  "theme_color": "#1D1813",
+  "theme_color": "#F5EFE6",
   "icons": [
-    { "src": "/img/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/img/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/img/app-512-m.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    {
+      "src": "/img/app-192.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app-512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app-512-m.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/"
 }

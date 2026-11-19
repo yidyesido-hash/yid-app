@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Yes I Do · L'application</title>
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#1D1813">
+<title>YID Board</title>
+<link rel="manifest" href="/manifest.webmanifest?v=2">
+<meta name="theme-color" content="#F5EFE6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Yes I Do">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="/img/app-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/img/app-192.png">
+<meta name="apple-mobile-web-app-title" content="YID Board">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/img/app-180.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="/img/app-192.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -124,9 +124,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.26.0">
-<link rel="stylesheet" href="/cartes.css?v=1.26.0">
-<script src="/cartes.js?v=1.26.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.26.1">
+<link rel="stylesheet" href="/cartes.css?v=1.26.1">
+<script src="/cartes.js?v=1.26.1"></script>
 </head>
 <body>
 <header>
@@ -168,9 +168,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.26.0"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.26.1"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.26.0").then(function(){ return un("/formulaire/moteur.js?v=1.26.0"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.26.1").then(function(){ return un("/formulaire/moteur.js?v=1.26.1"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){

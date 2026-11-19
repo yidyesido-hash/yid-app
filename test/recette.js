@@ -793,6 +793,8 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     /* 1.25 : l'espace mariés étape par étape, la décision du couple, le fil conducteur */
     const ej = (await call("POST", "/api/forms?action=admin-espace&w=" + code, { op: "creer" }, H)).json.espace.jeton;
     const E = async (action, corps) => (await call("POST", "/api/forms?action=" + action, Object.assign({ j: ej }, corps || {}))).json;
+    { const mf = await call("GET", "/api/forms?action=espace-manifeste&j=" + ej);
+      check("espace mariés installable : son manifeste porte son nom et s'ouvre sur le lien du couple", mf.status === 200 && mf.json.name === "YID - Personal Space" && mf.json.start_url === "/espace.html#" + ej && mf.json.icons.length === 3, JSON.stringify(mf.json).slice(0, 120)); }
     let ev = await E("espace-voir");
     check("espace par étape : une demande attend la décision du couple, le programme est montré", ev.ok && /demande/.test(ev.a_faire[4] || "") && ev.mariage.programme.length === 3, JSON.stringify(ev.a_faire));
     const e3 = await E("espace-etape", { n: 3 }), e4 = await E("espace-etape", { n: 4 }), e5 = await E("espace-etape", { n: 5 }), e6 = await E("espace-etape", { n: 6 }), e7 = await E("espace-etape", { n: 7 });
