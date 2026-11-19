@@ -116,9 +116,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.25.3">
-<link rel="stylesheet" href="/cartes.css?v=1.25.3">
-<script src="/cartes.js?v=1.25.3"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.25.4">
+<link rel="stylesheet" href="/cartes.css?v=1.25.4">
+<script src="/cartes.js?v=1.25.4"></script>
 </head>
 <body>
 <header>
@@ -159,9 +159,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.3"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.4"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.3").then(function(){ return un("/formulaire/moteur.js?v=1.25.3"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.4").then(function(){ return un("/formulaire/moteur.js?v=1.25.4"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){
@@ -294,7 +294,7 @@
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
     if (h.indexOf("#/guide") === 0) return guide();
-    if (h.indexOf("#/journal") === 0) return journalGlobal();
+    if (h.indexOf("#/journal") === 0) return MOI.role === "administrateur" ? journalGlobal() : accueil();
     if (h.indexOf("#/reglages") === 0) return MOI.role === "administrateur" ? reglages() : accueil();
     if (h.indexOf("#/nouveau") === 0 && MOI.role !== "administrateur") return accueil();
     return accueil();
@@ -359,7 +359,7 @@
         chiffres + '<h2 class="sec">Vos mariages</h2>' + familles + '<div class="' + (ACC_VUE === "clos" ? "fam-clos" : "") + '">' + maries + '</div>' + soirHtml +
         '<h2 class="sec" style="margin-top:28px">Partenaires</h2><a class="verre" href="#/partenaires" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;text-decoration:none;color:inherit;max-width:640px"><span style="flex:1"><b style="display:block">Répertoire des partenaires</b><span class="muted small">Hôtels, transporteurs, conciergerie, lieux et planners, avec chaque échange tracé.</span></span><span style="color:var(--gold)">›</span></a>' +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
-        '<div class="row" style="margin-top:26px"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>';
+        (MOI.role === "administrateur" ? '<div class="row" style="margin-top:26px"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>' : '');
       $("check").onclick = runCheck;
       $("familles").querySelectorAll("[data-fam]").forEach(function(b){ b.onclick = function(){ ACC_VUE = b.dataset.fam; accueil(); }; });
       if ($("mpile")) { YID.pileActive = YID.pile($("mpile"), { onChange: function(i, n){ $("mcnt").textContent = (i + 1) + " / " + n; YID.points($("mdots"), i, n); } }); V.querySelectorAll("[data-go]").forEach(function(c){ c.onclick = function(){ location.hash = "#/m/" + c.dataset.go; }; }); }

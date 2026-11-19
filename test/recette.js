@@ -124,6 +124,8 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   r = await call("POST", "/api/forms?action=admin-login", { prenom: "cécilia", password: "motdepasse-cecilia" });
   check("connexion de Cécilia par son prénom", r.status === 200 && r.json.nom === "Cécilia" && r.json.role === "équipe");
   const HC = { "x-admin-token": r.json.token };
+  { const jg = await call("POST", "/api/forms?action=admin-journal", { limit: 5 }, HC), ja = await call("POST", "/api/forms?action=admin-journal", { limit: 5 }, H), jm = await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 5 }, HC);
+    check("journal global : réservé aux administrateurs, le journal d'un mariage reste ouvert à l'équipe", jg.status === 403 && ja.status === 200 && jm.status === 200, [jg.status, ja.status, jm.status].join(" ")); }
   r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "faux" });
   check("mauvais mot de passe de Cécilia refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-utilisateurs", {}, HC);

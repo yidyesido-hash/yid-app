@@ -461,7 +461,7 @@ module.exports = async (req, res) => {
     if (action === "admin-accueil") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       for (const id of Object.keys(WEDDINGS)) await store.ensureMariage(WEDDINGS[id]);
-      const acc = await mariages.accueil(); acc.reglages = await mariages.reglages(u.role); acc.afaire = await afaire.tout();
+      const acc = await mariages.accueil(); acc.reglages = await mariages.reglages(u.role); acc.afaire = await afaire.tout(); if (u.role !== "administrateur") acc.journal = [];
       return send(res, 200, Object.assign({ ok: true, version: VERSION }, acc));
     }
     if (action === "admin-checklist") {
@@ -486,6 +486,8 @@ module.exports = async (req, res) => {
     if (action === "admin-journal") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       const m = q.w || b.w ? await store.mariage(q.w || b.w) : null;
+      /* le journal global, tous mariages confondus, est réservé aux administrateurs ; celui d'un mariage reste ouvert à l'équipe */
+      if (!m && u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Le journal global est réservé aux administrateurs." });
       return send(res, 200, { ok: true, journal: await store.readJournal(m ? m.id : null, Math.min(Number(b.limit) || 200, 1000)), libelles: mariages.LIBELLES, mariage: m ? { code: m.code, prenoms: m.prenoms } : null });
     }
     if (action === "admin-utilisateurs" || action === "admin-utilisateur") {
