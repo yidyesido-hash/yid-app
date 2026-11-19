@@ -357,7 +357,7 @@ module.exports = async (req, res) => {
     if (action === "admin-demo") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
       if (u.role !== "administrateur") return send(res, 403, { ok: false, error: "role", detail: "Réservé aux administrateurs." });
-      try { const D = require("../lib/demo"); if (b.phase === "extras") return send(res, 200, Object.assign({ ok: true }, await D.extras(u))); return send(res, 200, Object.assign({ ok: true }, await D.awaKevin(u, b.phase))); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+      try { const D = require("../lib/demo"); if (b.phase === "extras") { const x = await D.extras(u); try { await D.second(u); } catch (e) {} return send(res, 200, Object.assign({ ok: true }, x)); } return send(res, 200, Object.assign({ ok: true }, await D.awaKevin(u, b.phase))); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "admin-plan") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });

@@ -813,6 +813,11 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("fil conducteur : étape 2, les fiches restantes", /2 fiches restent/.test(G(Object.assign({}, base, { etape: 2 }), { contacts: [fic("à compléter"), fic("à voir"), fic("complète")] }).texte));
     check("fil conducteur : étape 3, l'appel guidé d'abord", /appel guidé/.test(G(Object.assign({}, base, { etape: 3 }), { contacts: [fic("complète")] }).texte));
     check("fil conducteur : étape 6, propose de terminer quand le plan est complet", G(Object.assign({}, base, { etape: 6, parametres: { plan: { tables: [{ id: "a" }], placements: {} } } }), { contacts: [] }).terminer === 6);
+    const s2 = await require("../lib/demo").second({ nom: "Recette", role: "administrateur" });
+    const g2 = (await call("POST", "/api/forms?action=admin-mariage&w=" + s2.code, {}, H)).json.mariage;
+    check("second mariage test : arrêté à l'étape 2, trois fiches à compléter, le fil conducteur le dit", s2.fiches === 12 && s2.a_completer === 3 && g2.etape === 2 && !!g2.etapes[1] && /3 fiches restent/.test(g2.guide.texte) && !!g2.espace_jeton, JSON.stringify([s2, g2.guide && g2.guide.texte]));
+    const s2b = await require("../lib/demo").second({ nom: "Recette", role: "administrateur" });
+    check("second mariage test : se relance sans doublon", s2b.code === s2.code && s2b.fiches === 12);
     r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
     check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 25);
   }
