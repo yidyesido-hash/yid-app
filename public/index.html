@@ -53,6 +53,20 @@
   :root[data-theme="sombre"] header img, :root[data-theme="sombre"] .login img{ filter:invert(1) hue-rotate(180deg); } .dot.ok{ background:var(--ok); } .dot.ko{ background:var(--bad); } .dot.wait{ background:var(--gold); }
   .light b{ display:block; font:600 18px/1.2 var(--h); margin-bottom:2px; } .light span{ font-size:13px; color:var(--muted); word-break:break-word; }
   /* mariage : étapes */
+  .fil{ position:relative; z-index:2; display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:0 16px 16px; border:1px solid rgba(228,205,164,.28); padding:16px 20px; border-radius:24px; background:#1D1813; color:#F6EEDF; box-shadow:0 14px 30px -16px rgba(0,0,0,.5); }
+  .fil.clos{ background:transparent; color:inherit; border:1px solid var(--line); box-shadow:none; }
+  .fil-c{ flex:1 1 260px; min-width:0; } .fil-k{ font:600 10.5px/1 Inter,sans-serif; letter-spacing:.18em; text-transform:uppercase; color:#E4CDA4; }
+  .fil-t{ font:500 21px/1.3 "Cormorant Garamond",Georgia,serif; margin-top:7px; } .fil .msg{ color:#E4CDA4; font-size:13px; }
+  .fil > button{ min-height:46px; padding:0 22px; border-radius:23px; border:0; background:linear-gradient(160deg,#EBD6B0,#D4B07A); color:#1D1813; font:600 13.5px Inter,sans-serif; cursor:pointer; }
+  .outils-m{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:0 0 14px; padding:2px 0; } .outils-m::-webkit-scrollbar{ display:none; }
+  .outils-m a{ position:relative; flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 16px; border-radius:20px; border:1px solid var(--line); background:var(--glass, rgba(255,255,255,.6)); color:inherit; text-decoration:none; font:500 13px Inter,sans-serif; }
+  .outils-m a i{ font-style:normal; opacity:.55; } .outils-m .badge-n{ position:static; margin-left:2px; }
+  details.ensemble{ margin:0 0 18px; } details.ensemble > summary{ cursor:pointer; list-style:none; font:500 13px Inter,sans-serif; color:var(--muted); padding:6px 2px; } details.ensemble > summary::-webkit-details-marker{ display:none; }
+  details.ensemble > summary::after{ content:" ›"; } details.ensemble[open] > summary::after{ content:" ‹"; } details.ensemble .resume{ margin:8px 0 0; }
+  .card.pliable > h3{ cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:0; } .card.pliable:not(.plie) > h3{ margin-bottom:10px; }
+  .card.pliable > h3::after{ content:"−"; flex:0 0 auto; width:28px; height:28px; border-radius:14px; border:1px solid var(--line); display:grid; place-items:center; font:400 17px/1 Inter,sans-serif; color:var(--muted); }
+  .card.pliable.plie > h3::after{ content:"+"; } .card.pliable.plie > :not(h3){ display:none !important; }
+  .vise{ outline:2px solid var(--gold); outline-offset:6px; border-radius:14px; transition:outline-color .3s; }
   .layout{ display:grid; grid-template-columns:300px 1fr; gap:24px; } @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   .steps{ border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .step{ display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
@@ -98,9 +112,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.24.0">
-<link rel="stylesheet" href="/cartes.css?v=1.24.0">
-<script src="/cartes.js?v=1.24.0"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.25.0">
+<link rel="stylesheet" href="/cartes.css?v=1.25.0">
+<script src="/cartes.js?v=1.25.0"></script>
 </head>
 <body>
 <header>
@@ -141,9 +155,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.24.0"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.0"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.24.0").then(function(){ return un("/formulaire/moteur.js?v=1.24.0"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.0").then(function(){ return un("/formulaire/moteur.js?v=1.25.0"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){
@@ -923,6 +937,52 @@
     $("aabandon").onclick = function(){ if (!window.confirm("Abandonner cet appel ? Ce qui a été saisi sur les fiches reste acquis.")) return; api("admin-appel", { op: "abandonner" }, code).then(function(r){ APPEL_IX = null; dessinerAppel(code, r, m); }); };
   }
 
+  /* ---------- le fil conducteur : la prochaine action, le passage à l'étape suivante, la visite guidée ---------- */
+  var ENSEMBLE = false, ANCRE = null;
+  var SUITE = { 2: "Importez la liste du couple, puis complétez les fiches jusqu'à ce que tout soit vert.", 3: "Menez l'appel guidé avec le couple, puis prenez contact avec chaque invité.", 4: "Suivez les réponses, traitez les points remontés et préparez les relances.", 5: "Vérifiez les hébergements, les arrivées et les navettes.", 6: "Composez le plan de table, puis préparez l'accueil du jour J.", 7: "Dressez le bilan avec le couple, puis supprimez les données des invités." };
+  function filHtml(m){
+    var g = m.guide; if (!g) return "";
+    return '<div class="fil' + (g.clos ? " clos" : "") + '" id="fil"><div class="fil-c"><div class="fil-k">' + (g.clos ? "Mariage clos" : "Prochaine action · étape " + g.etape + ", " + esc(g.libelle)) + '</div><div class="fil-t">' + esc(g.texte) + '</div><div class="msg" id="filmsg"></div></div>' + (g.bouton ? '<button type="button" id="filb">' + esc(g.bouton) + '</button>' : '') + '</div>';
+  }
+  function viserAncre(){ if (!ANCRE) return; var k = ANCRE, n = 0; ANCRE = null; (function essai(){ var el = $(k); if (el && el.offsetParent !== null) { var c = el.closest(".card.pliable"); if (c) c.classList.remove("plie"); window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 90, behavior: "smooth" }); el.classList.add("vise"); setTimeout(function(){ el.classList.remove("vise"); }, 2400); } else if (n++ < 20) setTimeout(essai, 250); })(); }
+  function lierFil(m){
+    var g = m.guide, b = $("filb"); viserAncre(); if (!g || !b) return;
+    b.onclick = function(){
+      if (g.terminer) { b.disabled = true; $("filmsg").textContent = "Enregistrement"; api("admin-etape", { n: g.terminer }, m.code).then(function(r){ if (!r.ok) { b.disabled = false; $("filmsg").textContent = r.detail || "Refusé."; return; } finEtape(m, g.terminer); }).catch(function(e){ b.disabled = false; $("filmsg").textContent = e.message; }); return; }
+      ANCRE = g.ancre || null;
+      if (location.hash === g.lien) { viserAncre(); if (!g.ancre && $("pane")) window.scrollTo({ top: window.scrollY + $("pane").getBoundingClientRect().top - 90, behavior: "smooth" }); } else location.hash = g.lien;
+    };
+  }
+  /* la seule fenêtre qui s'ouvre seule : la fin d'une étape, qui annonce la suivante */
+  function finEtape(m, n){
+    var v = $("finetape"); if (v) v.remove();
+    var s = n + 1, lib = (m.etapes_libelles || [])[s - 1];
+    v = document.createElement("div"); v.id = "finetape"; v.className = "voile";
+    v.innerHTML = '<div class="feuille"><div class="grip"></div><div class="fil-k" style="color:var(--gold)">Étape ' + n + ' terminée</div><h3 style="margin:8px 0 6px">' + esc((m.etapes_libelles || [])[n - 1] || "") + ' : c\'est fait.</h3>' + (lib ? '<p style="margin:0 0 4px"><b>La suite : étape ' + s + ', ' + esc(lib) + '.</b></p><p class="muted" style="margin:0 0 16px">' + esc(SUITE[s] || "") + '</p><div class="row"><button type="button" id="fe-go">Ouvrir l\'étape ' + s + '</button><button type="button" class="ghost" id="fe-non">Rester ici</button></div>' : '<div class="row"><button type="button" class="ghost" id="fe-non">Fermer</button></div>') + '</div>';
+    document.body.appendChild(v);
+    var fermer = function(){ v.remove(); mariage(m.code, n); };
+    $("fe-non").onclick = fermer; v.addEventListener("click", function(e){ if (e.target === v) fermer(); });
+    if ($("fe-go")) $("fe-go").onclick = function(){ v.remove(); var h = "#/m/" + m.code + "/" + s; if (location.hash === h) mariage(m.code, s); else location.hash = h; };
+  }
+  function visiteOutil(force){
+    if (!force && YID.visiteVue("outil")) return; if (!$("fil") && !force) return;
+    window.scrollTo(0, 0);
+    setTimeout(function(){ YID.visite([
+      { t: "Le fil conducteur d'un mariage", d: "Cinq repères suffisent pour s'y retrouver. Vous pourrez rejouer cette visite avec le bouton Me guider." },
+      { sel: "#fil", t: "La prochaine action", d: "Une seule ligne, toujours à jour : ce qui reste à faire sur l'étape en cours, et le bouton qui y mène. Quand tout est fait, il propose de terminer l'étape." },
+      { sel: ".steps", t: "Les sept étapes", d: "Le parcours du mariage, dans l'ordre. L'étape en cours est marquée, les étapes terminées sont cochées. Touchez une étape pour l'ouvrir." },
+      { sel: "#outils", t: "Les outils du mariage", d: "Les écrans que l'on ouvre le plus souvent : la liste, l'appel guidé, le premier contact, la messagerie, le site, les partenaires et l'espace mariés." },
+      { sel: "#pane", t: "Le contenu de l'étape", d: "L'essentiel est visible. Le reste est rangé dans des sections qui s'ouvrent d'un geste sur leur titre." },
+      { sel: "details.ensemble", t: "La vue d'ensemble", d: "L'avancement, les chiffres de la liste et les dates clés, à déplier quand vous en avez besoin." }
+    ], { cle: "outil" }); }, 250);
+  }
+  /* sections repliables : le titre ouvre et ferme, l'état est gardé le temps de la session */
+  var PLIS = {};
+  function plier(racine, ouverts){
+    racine.querySelectorAll(".card").forEach(function(c){ var h = c.querySelector(":scope > h3"); if (!h || c.classList.contains("pliable")) return; var k = h.textContent.trim(); c.classList.add("pliable"); c.dataset.pli = k; var ouvert = PLIS[k] !== undefined ? PLIS[k] : (ouverts || []).some(function(x){ return k.indexOf(x) === 0; }); c.classList.toggle("plie", !ouvert); });
+    if (racine.dataset.plis) return; racine.dataset.plis = "1";
+    racine.addEventListener("click", function(e){ var h = e.target.closest(".card.pliable > h3"); if (!h || !racine.contains(h)) return; var c = h.parentElement; c.classList.toggle("plie"); PLIS[c.dataset.pli] = !c.classList.contains("plie"); });
+  }
   function badgeMessagerie(code){ if (!$("msbadge")) return; api("admin-messagerie", { op: "non_lus" }, code).then(function(r){ var b = $("msbadge"); if (!b || !r.ok) return; b.hidden = !r.non_lus; b.textContent = r.non_lus > 99 ? "99+" : r.non_lus; }); }
   function mariage(code, etape){
     V.innerHTML = '<p class="muted">Chargement</p>';
@@ -931,16 +991,17 @@
       var steps = m.etapes_libelles.map(function(t, i){ var n = i + 1, cls = done[n] ? "done" : (n === m.etape ? "" : "off"); return '<div class="step ' + cls + (n === cur ? " on" : "") + '" onclick="location.hash=\'#/m/' + m.code + '/' + n + '\'"><div class="n">' + n + '</div><div class="t">' + esc(t) + '</div><div>' + (done[n] ? pill("terminée", "ok") : n === m.etape ? pill("en cours", "gold") : "") + '</div></div>'; }).join("");
       var PH = ["/img/mg290.jpg", "/img/p2186.jpg", "/img/mg3.jpg", "/img/p1959.jpg"], hh = 0; String(m.code).split("").forEach(function(ch){ hh = (hh * 31 + ch.charCodeAt(0)) % 997; });
       var jr = m.date_mariage ? Math.round((new Date(String(m.date_mariage).slice(0,10) + "T12:00:00") - new Date()) / 864e5) : null;
-      V.innerHTML = '<div class="bandeau"><img src="' + (m.photo_cle ? "/api/forms?action=photo&k=" + m.photo_cle : PH[hh % PH.length]) + '" alt=""><div class="ombre"></div><div class="contenu"><div class="actions"><button class="plein" onclick="location.hash=\'#/m/' + m.code + '/espace\'">Espace mariés</button><button onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal</button><button type="button" class="chphoto" id="mphoto" title="Changer la photo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Changer la photo</span></button></div><div class="msg" id="mphmsg" style="color:#F6EEDF"></div><div class="k">Mariage' + (jr !== null ? ' · J − ' + jr : '') + ' · code ' + esc(m.code) + '</div><h2>' + esc(m.prenoms) + '</h2><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div></div></div>' +
-        '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.liste ? m.liste.fiches : (m.foyers || 0)) + '</b><span>' + (m.liste ? 'fiches' : 'foyers') + '</span></div>' + (m.liste ? '<div><b' + (m.liste.a_completer ? ' style="color:var(--bad)"' : '') + '>' + m.liste.a_completer + '</b><span>à compléter</span></div>' : '<div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div>') + '<div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' +
-        '<div class="tuiles-m"><a class="solide tm" href="#/m/' + m.code + '/2"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E4CDA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><b>Invités</b>' + (m.liste ? '<span class="chiffre-t">' + m.liste.fiches + '</span><span class="sm">fiches' + (m.liste.attente ? ', ' + m.liste.attente + ' en attente' : '') + '</span><span class="sm" style="margin-top:6px">' + (m.liste.a_completer ? m.liste.a_completer + ' à compléter' : 'toutes complètes') + '</span><span class="sm">' + (m.liste.reponses ? m.liste.reponses + ' réponse' + (m.liste.reponses > 1 ? 's' : '') + ', ' + m.liste.presents + ' présent' + (m.liste.presents > 1 ? 's' : '') : 'aucune réponse encore') + '</span>' : '<span class="sm">' + (m.foyers || 0) + ' foyers</span>') + '</a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/espace"><span class="ic clair"><img src="/img/logo-noir.png" alt="" class="logo-noir" style="width:20px"><img src="/img/logo-blanc.png" alt="" class="logo-blanc" style="width:20px"></span><b>Espace mariés</b><span class="sm">lien, suivi en direct</span></a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/appel"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span><b>Appel guidé</b><span class="sm">' + ((m.parametres || {}).appel ? 'en cours, reprendre' : 'qualifier avec le couple') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/contact"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><b>Premier contact</b><span class="sm">' + (m.liste ? m.liste.fiches - m.liste.a_completer + ' fiche(s) prêtes, WhatsApp' : 'la file WhatsApp') + '</span></a><a class="verre tm" href="#/m/' + m.code + '/messagerie"><span class="ic clair" style="position:relative"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="badge-n" id="msbadge" hidden></span></span><b>Messagerie</b><span class="sm">reçus, envoyés, envois groupés</span></a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/site"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><b>Site des invités</b><span class="sm">' + (m.site ? 'pages, script, visites' : 'adresse à renseigner') + '</span></a>' +
-        '<a class="verre tm" href="#/m/' + m.code + '/partenaires"><span class="ic clair"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></span><b>Partenaires</b><span class="sm">hôtels, transport, conciergerie</span></a></div>' +
+      V.innerHTML = '<div class="bandeau"><img src="' + (m.photo_cle ? "/api/forms?action=photo&k=" + m.photo_cle : PH[hh % PH.length]) + '" alt=""><div class="ombre"></div><div class="contenu"><div class="actions"><button class="plein" onclick="location.hash=\'#/m/' + m.code + '/espace\'">Espace mariés</button><button onclick="location.hash=\'#/m/' + m.code + '/journal\'">Journal</button><button type="button" id="meguider">Me guider</button><button type="button" class="chphoto" id="mphoto" title="Changer la photo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Changer la photo</span></button></div><div class="msg" id="mphmsg" style="color:#F6EEDF"></div><div class="k">Mariage' + (jr !== null ? ' · J − ' + jr : '') + ' · code ' + esc(m.code) + '</div><h2>' + esc(m.prenoms) + '</h2><div class="meta">' + (m.date_mariage ? fdate(m.date_mariage) : "") + (m.lieu ? " · " + esc(m.lieu) : "") + '</div></div></div>' +
+        filHtml(m) +
+        '<div class="outils-m" id="outils"><a href="#/m/' + m.code + '/2">Invités' + (m.liste ? ' <i>' + m.liste.fiches + '</i>' : '') + '</a><a href="#/m/' + m.code + '/appel">Appel guidé</a><a href="#/m/' + m.code + '/contact">Premier contact</a><a href="#/m/' + m.code + '/messagerie">Messagerie<span class="badge-n" id="msbadge" hidden></span></a><a href="#/m/' + m.code + '/site">Site des invités</a><a href="#/m/' + m.code + '/partenaires">Partenaires</a><a href="#/m/' + m.code + '/espace">Espace mariés</a></div>' +
+        '<details class="ensemble"' + (ENSEMBLE ? " open" : "") + '><summary>Vue d\'ensemble</summary>' +
+        '<div class="resume verre">' + gauge(Math.round(Object.keys(done).length / 7 * 100)) + '<div class="cases"><div><b>' + (m.liste ? m.liste.fiches : (m.foyers || 0)) + '</b><span>' + (m.liste ? 'fiches' : 'foyers') + '</span></div>' + (m.liste ? '<div><b' + (m.liste.a_completer ? ' style="color:var(--bad)"' : '') + '>' + m.liste.a_completer + '</b><span>à compléter</span></div>' : '<div><b' + (m.anomalies ? ' style="color:var(--bad)"' : '') + '>' + (m.anomalies || 0) + '</b><span>à traiter</span></div>') + '<div><b>' + (m.date_remise ? fdate(m.date_remise).slice(0,5) : "·") + '</b><span>liste attendue</span></div><div><b>' + (m.date_arret ? fdate(m.date_arret).slice(0,5) : "·") + '</b><span>clôture</span></div></div><div class="small">' + pill(m.statut, statutClass(m.statut)) + ' ' + boitePill(m) + (m.sharepoint && m.sharepoint.dossier ? '<div class="muted small" style="margin-top:6px">SharePoint : ' + esc(m.sharepoint.dossier) + '</div>' : '') + '</div></div>' + '</details>' +
         '<div class="layout"><div class="steps">' + steps + '</div><div id="pane"></div></div>';
       $("mphoto").onclick = function(){ YID.choisirPhoto(1600, function(d){ $("mphmsg").textContent = "Envoi"; api("admin-photo-mariage", { photo: d }, m.code).then(function(r){ if (!r.ok) throw new Error(r.detail || "Envoi impossible"); V.querySelector(".bandeau > img").src = "/api/forms?action=photo&k=" + r.photo_cle; $("mphmsg").textContent = "Photo enregistrée."; setTimeout(function(){ $("mphmsg").textContent = ""; }, 2500); }).catch(function(e){ $("mphmsg").textContent = e.message; }); }); };
       var pane = $("pane"); if (m.boite_email) badgeMessagerie(m.code);
+      lierFil(m); var ens = V.querySelector("details.ensemble"); if (ens) ens.addEventListener("toggle", function(){ ENSEMBLE = ens.open; });
+      $("meguider").onclick = function(){ visiteOutil(true); };
+      setTimeout(function(){ visiteOutil(false); }, 900);
       if (isJournal) { pane.innerHTML = '<div class="card"><h3>Journal de ' + esc(m.prenoms) + '</h3><p>Tout ce qui a été fait sur ce mariage, le plus récent en premier : quoi, quand, par qui, et pour une modification la valeur avant et la valeur après.</p></div><div id="jm"><p class="muted">Chargement</p></div>'; api("admin-journal", { limit: 500 }, m.code).then(function(r){ LIB = r.libelles || LIB; $("jm").innerHTML = journalHtml(r.journal, false); }).catch(function(e){ $("jm").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }); return; }
       if (cur === "espace") { espaceMaries(m, pane); return; }
       if (cur === 1) { cadrage(m, pane); return; }
@@ -961,9 +1022,12 @@
         pane.innerHTML = '<div class="card"><h3>4. ' + esc(titles[3]) + '</h3><p class="muted">Les réponses arrivent par le lien personnel de chaque invité.</p><div class="cases" style="margin-top:12px"><div><b>' + (L.reponses || 0) + '</b><span>réponses</span></div><div><b>' + (L.presents || 0) + '</b><span>présents</span></div><div><b>' + ((L.reponses || 0) - (L.presents || 0)) + '</b><span>absents</span></div></div><p style="margin-top:14px"><a class="lienbas" href="#/m/' + m.code + '/2">Voir le détail dans la liste (vue Tableau, colonne Réponse)</a></p></div><div class="card" id="sig-zone" style="margin-top:14px"><h3>Points à traiter</h3><p class="muted">Chargement</p></div><div id="em-zone" style="margin-top:14px"></div>';
         api("admin-formulaire-signaux", {}, m.code).then(function(r){
           var F = r.foyers || [], z = $("sig-zone"); if (!z) return;
+          var DEC = r.decisions || [], decH = DEC.length ? '<div style="padding:10px 0 14px"><b>Demandes soumises aux mariés</b>' + DEC.map(function(d){ return '<div style="padding:8px 0;border-top:1px solid var(--line);margin-top:8px">' + esc(d.invite) + ' souhaite venir avec ' + esc(d.personne || "une autre personne") + ' · ' + (!d.decision ? pill("en attente des mariés", "warn") : pill(d.decision === "accord" ? "accord des mariés" : "refus des mariés", d.decision === "accord" ? "ok" : "") + (d.transmise ? ' <span class="muted">transmise à l\'invité</span>' : ' <button type="button" class="ghost" data-transmise="' + d.id + '" style="margin-left:6px">Transmise à l\'invité</button>')) + '</div>'; }).join("") + '</div>' : "";
           var prio = function(t){ return /Allergie sévère|soumettre|décliné|Nom à obtenir|Nourrisson|Présence à confirmer/.test(t) ? 0 : /Conciergerie|veille|Attention/.test(t) ? 1 : 2; };
-          z.innerHTML = '<h3>Points à traiter</h3><p class="muted">Ce que les réponses des invités demandent à l\'équipe, foyer par foyer : allergies sévères, demandes à soumettre aux mariés, hébergements déclinés, nourrissons, conciergerie. Ils remontent aussi dans le fichier wedding planner.</p>' +
+          z.innerHTML = '<h3>Points à traiter</h3><p class="muted">Ce que les réponses des invités demandent à l\'équipe, foyer par foyer : allergies sévères, demandes à soumettre aux mariés, hébergements déclinés, nourrissons, conciergerie. Ils remontent aussi dans le fichier wedding planner.</p>' + decH +
             (F.length ? F.map(function(f){ var L = f.signaux.slice().sort(function(a, b){ return prio(a) - prio(b); }); return '<div style="padding:10px 0;border-top:1px solid var(--line)"><b>' + esc(f.nom) + '</b> <span class="muted">' + esc(f.cle || "") + (f.repondu ? "" : " · sans réponse définitive") + '</span><ul style="margin:6px 0 0;padding-left:18px">' + L.map(function(t){ return '<li' + (prio(t) === 0 ? ' style="color:#8a3b2e"' : '') + '>' + esc(t) + '</li>'; }).join("") + '</ul></div>'; }).join("") : '<p>Aucun point à traiter pour l\'instant.</p>');
+          z.querySelectorAll("[data-transmise]").forEach(function(bt){ bt.onclick = function(){ bt.disabled = true; api("admin-formulaire-signaux", { op: "transmise", id: +bt.dataset.transmise }, m.code).then(function(){ mariage(m.code, 4); }); }; });
+          viserAncre();
         }).catch(function(){ var z = $("sig-zone"); if (z) z.remove(); });
         emailsEtape(m, $("em-zone"));
         return;
@@ -1229,6 +1293,7 @@
           return '<div class="card"><h3>' + esc(s.titre) + '</h3><p>' + esc(s.aide) + '</p>' + s.champs.map(function(f){ return field(f, vals[f.k]); }).join("") + '</div>';
         }).join("") + '<div class="card"><div class="row"><button id="save">' + (m ? "Enregistrer les modifications" : "Créer le mariage") + '</button><span class="muted" id="smsg"></span></div><div id="serr" class="err"></div><div id="sres"></div></div></form>';
       target.innerHTML = html;
+      if (m && pane) { plier(target, ["1. Fiche du mariage"]); new MutationObserver(function(){ if ($("serr") && $("serr").textContent.trim()) target.querySelectorAll("#chk .card.pliable").forEach(function(c){ c.classList.remove("plie"); }); }).observe($("serr"), { childList: true, characterData: true, subtree: true }); viserAncre(); }
       if (m) wireBoite(m);
       if (m) feuilleRoute(m);
       if (m && $("fapb")) $("fapb").onclick = function(){ apercuFormulaire(m, {}); };
@@ -1521,7 +1586,7 @@
     $("syncsp").onclick = function(){ $("rlmsg").textContent = "Mise à jour du classeur Pilotage"; api("admin-sharepoint", {}, m.code).then(function(){ $("rlmsg").textContent = "Onglet Base invités réécrit (ou mis en attente si SharePoint est injoignable)."; }).catch(function(e){ $("rlmsg").textContent = e.message; }); };
     if ($("ouvrir3")) $("ouvrir3").onclick = function(){ $("fmsg").textContent = "Ouverture"; api("admin-etape", { n: 3, ouvrir: true }, m.code).then(function(){ $("fmsg").textContent = "Premier contact ouvert : l'étape 3 est accessible, l'étape 2 reste ouverte."; $("ouvrir3").disabled = true; $("ouvrir3").textContent = "Premier contact ouvert"; m.etape = 3; }).catch(function(e){ $("fmsg").textContent = e.message; }); };
     pane.querySelectorAll("[data-att]").forEach(function(b){ b.onclick = function(){ var op = b.dataset.att; if (op === "retirer" && !confirm("Retirer cet invité de la liste d'attente ?")) return; b.disabled = true; api("admin-attente", { ids: [+b.dataset.aid], op: op }, m.code).then(function(rr){ var y = window.scrollY; renderListe(m, pane, rr, null); $("b-attente").classList.remove("ferme"); window.scrollTo(0, y); }).catch(function(e){ alert(e.message); b.disabled = false; }); }; });
-    $("finir").onclick = function(){ $("fmsg").textContent = "Enregistrement"; api("admin-etape", { n: 2 }, m.code).then(function(rr){ if (!rr.ok) { $("fmsg").textContent = rr.detail || "Refusé."; return; } location.hash = "#/m/" + m.code + "/3"; }).catch(function(e){ $("fmsg").textContent = e.message; }); };
+    $("finir").onclick = function(){ $("fmsg").textContent = "Enregistrement"; api("admin-etape", { n: 2 }, m.code).then(function(rr){ if (!rr.ok) { $("fmsg").textContent = rr.detail || "Refusé."; return; } finEtape(m, 2); }).catch(function(e){ $("fmsg").textContent = e.message; }); };
     if (admin) $("vider").onclick = function(){ $("vmsg").textContent = "Remise à zéro"; api("admin-vider", { confirmation: $("vcode").value }, m.code).then(function(rr){ if (!rr.ok) { $("vmsg").textContent = rr.detail; return; } renderListe(m, pane, rr, null); }).catch(function(e){ $("vmsg").textContent = e.message; }); };
   }
 

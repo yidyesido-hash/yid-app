@@ -52,7 +52,7 @@ body{display:flex;align-items:flex-start;justify-content:center}
   var dl = function (iso, jour) { var d = new Date(String(iso).slice(0, 10) + "T12:00:00Z"); return (jour ? JOURS[d.getUTCDay()] + " " : "") + (d.getUTCDate() === 1 ? "1er" : d.getUTCDate()) + " " + MOIS[d.getUTCMonth()] + " " + d.getUTCFullYear(); };
   var msg = function (t, s) { z.innerHTML = '<p class="msg"><b>' + t + '</b>' + (s || "") + '</p>'; };
   if (!/^[a-z0-9]{12}$/.test(jt)) return msg("Ce lien ne semble pas valide.", "Notre équipe reste à votre écoute.");
-  fetch("/api/forms?action=pass-info&yid=" + jt).then(function (r) { return r.json(); }).then(function (d) {
+  fetch("/api/forms?action=pass-info&yid=" + jt + (new URLSearchParams(location.search).get("j") ? "&j=" + encodeURIComponent(new URLSearchParams(location.search).get("j")) : "")).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.ok && d.error === "bientot") return msg("Votre pass arrive bientôt.", "Il vous sera adressé le " + dl(d.ouverture) + ", trois jours avant le mariage.");
     if (!d.ok) return msg("Ce pass n'est pas disponible.", "Notre équipe reste à votre écoute.");
     var p = d.prenoms || [], noms = p.length > 1 ? esc(p[0]) + "<i>&amp;</i>" + esc(p.slice(1).join(" ")) : esc(p[0] || "");

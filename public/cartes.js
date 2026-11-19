@@ -88,4 +88,36 @@
     window.addEventListener("scroll", maj, { passive: true }); maj();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", remonter); else remonter();
+
+  /* ---------- visite guidée : quelques bulles, une par zone clé, que l'on peut passer et rejouer ---------- */
+  YID.visiteVue = function(cle){ try { return !!localStorage.getItem("yid_visite_" + cle); } catch(e){ return true; } };
+  YID.visite = function(etapes, opts){
+    opts = opts || {};
+    var L = (etapes || []).filter(function(e){ if (!e.sel) return true; var el = document.querySelector(e.sel); return el && el.getClientRects().length > 0; });
+    if (!L.length) return;
+    var old = document.getElementById("yidvisite"); if (old) old.remove();
+    var v = document.createElement("div"); v.id = "yidvisite"; v.className = "vis";
+    v.innerHTML = '<div class="vis-trou"></div><div class="vis-bulle" role="dialog" aria-live="polite"><div class="vis-k"></div><div class="vis-t"></div><div class="vis-d"></div><div class="vis-b"><button type="button" class="vis-passer">Passer</button><span style="flex:1"></span><button type="button" class="vis-prec">Précédent</button><button type="button" class="vis-suiv">Suivant</button></div></div>';
+    document.body.appendChild(v);
+    var trou = v.querySelector(".vis-trou"), bulle = v.querySelector(".vis-bulle"), i = 0;
+    function finir(){ try { if (opts.cle) localStorage.setItem("yid_visite_" + opts.cle, "1"); } catch(e){} window.removeEventListener("resize", poser); v.remove(); if (opts.fin) opts.fin(); }
+    function poser(){
+      var e = L[i], el = e.sel ? document.querySelector(e.sel) : null, W = window.innerWidth, H = window.innerHeight;
+      v.querySelector(".vis-k").textContent = (i + 1) + " sur " + L.length; v.querySelector(".vis-t").textContent = e.t; v.querySelector(".vis-d").textContent = e.d;
+      v.querySelector(".vis-prec").hidden = i === 0; v.querySelector(".vis-suiv").textContent = i === L.length - 1 ? "Terminer" : "Suivant";
+      if (!el) { trou.style.cssText = "left:50%;top:50%;width:0;height:0"; bulle.style.left = Math.max(12, (W - bulle.offsetWidth) / 2) + "px"; bulle.style.top = Math.max(12, (H - bulle.offsetHeight) / 2) + "px"; return; }
+      var r = el.getBoundingClientRect(), fixe = false; for (var p = el; p && p !== document.body; p = p.parentElement) if (getComputedStyle(p).position === "fixed") { fixe = true; break; }
+      if (!fixe && (r.top < 70 || r.bottom > H - 40)) { window.scrollTo(0, Math.max(0, window.scrollY + r.top - Math.max(80, (H - Math.min(r.height, H * .5)) / 3))); r = el.getBoundingClientRect(); }
+      var m = 6, t = Math.max(4, r.top - m), hh = Math.min(r.height + 2 * m, H * .56), l = Math.max(4, r.left - m), ww = Math.min(r.width + 2 * m, W - 8);
+      trou.style.cssText = "left:" + l + "px;top:" + t + "px;width:" + ww + "px;height:" + hh + "px";
+      var bw = bulle.offsetWidth, bh = bulle.offsetHeight, bt = t + hh + 12; if (bt + bh > H - 10) bt = t - bh - 12; if (bt < 10) bt = Math.max(10, H - bh - 14);
+      bulle.style.left = Math.max(12, Math.min(W - bw - 12, l + ww / 2 - bw / 2)) + "px"; bulle.style.top = bt + "px";
+    }
+    v.querySelector(".vis-passer").onclick = finir;
+    v.querySelector(".vis-prec").onclick = function(){ if (i > 0) { i--; poser(); } };
+    v.querySelector(".vis-suiv").onclick = function(){ if (i < L.length - 1) { i++; poser(); } else finir(); };
+    v.addEventListener("click", function(e){ if (e.target === v) finir(); });
+    window.addEventListener("resize", poser);
+    poser(); setTimeout(poser, 350);
+  };
 })();

@@ -236,3 +236,15 @@ details.card summary{ cursor:pointer; } details.card input{ width:100%; box-sizi
 .tab-feuille .ch.sel, .pr-appel .ch.sel{ background:#1D1813; color:#fff; }
 .pr-ct a{ display:inline-flex; align-items:center; min-height:38px; padding:0 16px; border-radius:19px; border:1px solid rgba(127,112,98,.3); font:600 11px/1 Inter,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:inherit; background:rgba(255,255,255,.7); }
 .pr-ct a:first-child{ background:#1D1813; color:#fff; border-color:#1D1813; }
+
+/* Visite guidée */
+.vis{ position:fixed; inset:0; z-index:900; }
+.vis-trou{ position:fixed; border-radius:18px; box-shadow:0 0 0 9999px rgba(20,16,12,.55); transition:all .28s ease; pointer-events:none; outline:2px solid #E4CDA4; outline-offset:0; }
+.vis-bulle{ position:fixed; width:min(340px,calc(100vw - 24px)); background:#FFFDF9; color:#1D1813; border-radius:22px; padding:18px 18px 14px; box-shadow:0 24px 60px -18px rgba(0,0,0,.55); transition:top .28s ease,left .28s ease; }
+.vis-k{ font:600 10.5px/1 Inter,sans-serif; letter-spacing:.18em; text-transform:uppercase; color:#8A6A42; }
+.vis-t{ font:500 22px/1.2 "Cormorant Garamond",Georgia,serif; margin:8px 0 6px; }
+.vis-d{ font:400 14px/1.5 Inter,sans-serif; color:#5E554C; }
+.vis-b{ display:flex; gap:8px; align-items:center; margin-top:14px; }
+.vis-b button{ min-height:40px; padding:0 16px; border-radius:20px; border:1px solid rgba(120,90,60,.2); background:transparent; color:#1D1813; font:500 13px Inter,sans-serif; cursor:pointer; letter-spacing:0; text-transform:none; }
+.vis-b .vis-suiv{ background:#1D1813; color:#F6EEDF; border-color:#1D1813; }
+.vis-b .vis-passer{ border:0; padding:0 6px; color:#857A6F; text-decoration:underline; }

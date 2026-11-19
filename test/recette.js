@@ -290,7 +290,7 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("espace mariés : lien personnel créé par un administrateur", e.json.ok && /^[A-Za-z0-9_-]{30,}$/.test(J || ""));
     let v = await call("POST", "/api/forms?action=espace-voir", { j: J }, {});
     const txt = JSON.stringify(v.json);
-    check("espace mariés : le couple voit son parcours (sans Séjour et logistique), ses règles d'or et sa liste", v.json.ok && v.json.parcours.length === 6 && !v.json.parcours.some(p => /Séjour/.test(p.t)) && v.json.regles_or.length === 4 && v.json.contacts.length > 5);
+    check("espace mariés : le couple voit son parcours en sept étapes, séjour compris, ses règles d'or et sa liste", v.json.ok && v.json.parcours.length === 7 && v.json.parcours.some(p => /séjour/i.test(p.t)) && typeof v.json.a_faire === "object" && v.json.regles_or.length === 4 && v.json.contacts.length > 5);
     check("espace mariés : jamais les lots, anomalies, motifs, sources, notes ni le journal", !/"lots"|"anomalies"|"motifs"|"source"|"note"|"journal"|"cle"|"lot_id"/.test(txt));
     const rouge = v.json.contacts.find(c => c.etat === "à compléter");
     let q = await call("POST", "/api/forms?action=espace-qualifier", { j: J, id: rouge.id, champs: { lien: "Ami(e)", motif_desactivation: "x" } }, {});
@@ -785,6 +785,34 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
     check("réservation : les demandes d'hôtel des non logés remontent à l'équipe", sg.foyers.some(f => f.signaux.some(t => /^Réservation d'hôtel demandée/.test(t))));
     const em = (await call("POST", "/api/forms?action=admin-emails&w=" + code, {}, H)).json;
     check("emails : destinataires par typologie (logés, langue, réservation)", em.ok !== false && ["pres_loges", "pres_en", "pres_hotel", "pres_deux"].every(k => (em.audiences || []).some(a => a.k === k || a.cle === k || a.id === k)), JSON.stringify((em.audiences || []).slice(0, 3)));
+    /* 1.25 : l'espace mariés étape par étape, la décision du couple, le fil conducteur */
+    const ej = (await call("POST", "/api/forms?action=admin-espace&w=" + code, { op: "creer" }, H)).json.espace.jeton;
+    const E = async (action, corps) => (await call("POST", "/api/forms?action=" + action, Object.assign({ j: ej }, corps || {}))).json;
+    let ev = await E("espace-voir");
+    check("espace par étape : une demande attend la décision du couple, le programme est montré", ev.ok && /demande/.test(ev.a_faire[4] || "") && ev.mariage.programme.length === 3, JSON.stringify(ev.a_faire));
+    const e3 = await E("espace-etape", { n: 3 }), e4 = await E("espace-etape", { n: 4 }), e5 = await E("espace-etape", { n: 5 }), e6 = await E("espace-etape", { n: 6 }), e7 = await E("espace-etape", { n: 7 });
+    check("espace étape 3 : suivi du premier contact invité par invité", e3.ok && e3.detail.total === 25 && e3.detail.suivi.length === 25);
+    check("espace étape 4 : présents, personnes, choix à table et demande soumise", e4.ok && e4.detail.presents === 20 && e4.detail.personnes === 39 && e4.detail.plats.length === 2 && e4.detail.demandes.length === 1 && e4.detail.demandes[0].personne === "Pauline Girard");
+    check("espace étape 5 : qui loge où et les navettes, sans aucun prix", e5.ok && e5.detail.hotels.length === 4 && e5.detail.navettes.length === 1 && !/tarif|€|prix|accord/i.test(JSON.stringify(e5.detail)), JSON.stringify(e5.detail).slice(0, 120));
+    check("espace étape 6 : le plan table par table et un pass exemple", e6.ok && e6.detail.tables.length === 6 && e6.detail.a_placer === 0 && /pass\.html\?yid=/.test(e6.detail.pass_exemple || ""));
+    check("espace étape 7 : la date de suppression des données", e7.ok && e7.detail.purge_prevue === "2027-07-19");
+    check("espace : une étape hors parcours est refusée", (await E("espace-etape", { n: 9 })).ok === false);
+    let g = (await call("POST", "/api/forms?action=admin-mariage&w=" + code, {}, H)).json.mariage.guide;
+    check("fil conducteur : la prochaine action du mariage est calculée", g && g.etape >= 1 && !!g.texte, JSON.stringify(g));
+    const dec = await E("espace-decider", { id: e4.detail.demandes[0].id, accord: true });
+    check("espace : le couple accepte la demande, elle quitte ses actions à faire", dec.ok && dec.detail.demandes[0].decision === "accord" && !dec.a_faire[4]);
+    let sg5 = (await call("POST", "/api/forms?action=admin-formulaire-signaux&w=" + code, {}, H)).json;
+    check("équipe : la décision des mariés remonte dans les points à traiter", sg5.ok && sg5.decisions.length === 1 && sg5.decisions[0].decision === "accord" && !sg5.decisions[0].transmise);
+    sg5 = (await call("POST", "/api/forms?action=admin-formulaire-signaux&w=" + code, { op: "transmise", id: sg5.decisions[0].id }, H)).json;
+    check("équipe : la décision est marquée transmise à l'invité", sg5.ok && sg5.decisions[0].transmise === true);
+    const vp = await E("espace-valider-plan");
+    check("espace : le couple valide son plan de table", vp.ok && !!vp.detail.valide && !vp.a_faire[6]);
+    const G = require("../lib/guide").calculer, base = { code: "ZZ", statut: "Signé", etapes: {}, parametres: {} };
+    const fic = (etat, extra) => Object.assign({ id: 1, desactive: false, etat }, extra || {});
+    check("fil conducteur : étape 1, la fiche à compléter", /fiche/i.test(G(Object.assign({}, base, { etape: 1 }), { contacts: [] }).texte));
+    check("fil conducteur : étape 2, les fiches restantes", /2 fiches restent/.test(G(Object.assign({}, base, { etape: 2 }), { contacts: [fic("à compléter"), fic("à voir"), fic("complète")] }).texte));
+    check("fil conducteur : étape 3, l'appel guidé d'abord", /appel guidé/.test(G(Object.assign({}, base, { etape: 3 }), { contacts: [fic("complète")] }).texte));
+    check("fil conducteur : étape 6, propose de terminer quand le plan est complet", G(Object.assign({}, base, { etape: 6, parametres: { plan: { tables: [{ id: "a" }], placements: {} } } }), { contacts: [] }).terminer === 6);
     r = await call("POST", "/api/forms?action=admin-demo", { phase: "reponses" }, H);
     check("mariage test : se relance sans doublon", r.json.ok && r.json.foyers === 25);
   }

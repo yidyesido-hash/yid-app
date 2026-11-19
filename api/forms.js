@@ -71,6 +71,9 @@
      ?action=espace-demander  POST  « Je ne sais pas, demandez lui » : ce qui manque sera demandé à l'invité : id
      ?action=espace-retirer   POST  retirer ou remettre un invité : id, retire
      ?action=espace-deposer   POST  envoyer d'autres contacts : fichiers [{ name, b64 }], cote
+     ?action=espace-etape     POST  le détail d'une étape pour le couple : n (3 premier contact, 4 confirmations, 5 séjour, 6 plan et jour J, 7 après)
+     ?action=espace-decider   POST  le couple tranche une demande soumise : id, accord
+     ?action=espace-valider-plan POST le couple valide son plan de table
    ===================================================================== */
 const crypto = require("crypto");
 const store = require("../lib/store");
@@ -78,7 +81,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.24.0";
+const VERSION = "1.25.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -269,7 +272,9 @@ module.exports = async (req, res) => {
       const jt = String(q.yid || "").toLowerCase(), D = require("../lib/db");
       const c = /^[a-z0-9]{12}$/.test(jt) ? (await D.query("SELECT c.id, c.cle, c.reponse, c.reponse_le, c.jeton, c.desactive, c.nom_repertoire, m.id AS mid, m.code, m.site, m.statut, m.date_mariage, m.lieu, m.prenoms, m.photo_cle, m.parametres FROM contact_recu c JOIN mariage m ON m.id = c.mariage_id WHERE c.jeton = $1", [jt]))[0] : null;
       if (!c || c.desactive || !plan.present(c)) return send(res, 404, { ok: false, error: "pass" });
-      if (!passOuvert(c)) { const d = new Date(String(c.date_mariage).slice(0, 10) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - 3); return send(res, 403, { ok: false, error: "bientot", ouverture: d.toISOString().slice(0, 10) }); }
+      /* le couple voit un pass exemple depuis son espace, avant l'ouverture aux invités */
+      const couple = q.j ? await espace.parJeton(q.j) : null;
+      if (!passOuvert(c) && !(couple && couple.id === c.mid)) { const d = new Date(String(c.date_mariage).slice(0, 10) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - 3); return send(res, 403, { ok: false, error: "bientot", ouverture: d.toISOString().slice(0, 10) }); }
       const r = c.reponse || {}, P = (c.parametres || {}).plan || {}, t = (P.tables || []).find(x => x.id === (P.placements || {})[c.id]);
       const noms = Array.isArray(r.detail) ? r.detail.map(p => (p.civilite ? p.civilite + " " : "") + (p.nom || "Nom à communiquer")) : [c.nom_repertoire];
       const ck = (c.parametres || {}).checklist || {}, contenu = invite.lien({ site: c.site }, c.jeton) || "YID:" + c.jeton;
@@ -328,7 +333,12 @@ module.exports = async (req, res) => {
     }
     if (action === "admin-formulaire-signaux") {
       const u = who(req, b); if (!u) return send(res, 401, { ok: false, error: "password" });
-      try { return send(res, 200, { ok: true, foyers: await require("../lib/formulaire").signaux(q.w || b.w) }); } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
+      try {
+        const code = String(q.w || b.w || "").toUpperCase();
+        if (b.op === "transmise") await espace.transmise(code, b.id, u);
+        const mm = await store.mariageFresh(code), dem = espace.demandes(mm, await liste.liste(code));
+        return send(res, 200, { ok: true, foyers: await require("../lib/formulaire").signaux(code), decisions: dem });
+      } catch (e) { return send(res, 422, { ok: false, detail: e.message }); }
     }
     if (action === "invite-apercu") {
       /* l'aperçu du formulaire pour le couple (espace mariés) : un foyer fictif, rien n'est enregistré */
@@ -499,6 +509,9 @@ module.exports = async (req, res) => {
           const recu = await espace.deposer(m, fichiers, b.cote, !!b.attente);
           return send(res, 200, Object.assign({ ok: true, recu }, await espace.voir(await store.mariageFresh(m.code))));
         }
+        else if (action === "espace-etape") { const n = Number(b.n); if (!(n >= 3 && n <= 7)) return send(res, 400, { ok: false, error: "etape" }); return send(res, 200, { ok: true, n, detail: await espace.etape(m, n) }); }
+        else if (action === "espace-decider") { await espace.decider(m, b.id, !!b.accord); const f = await store.mariageFresh(m.code); return send(res, 200, Object.assign({ ok: true, n: 4, detail: await espace.etape(f, 4) }, await espace.voir(f))); }
+        else if (action === "espace-valider-plan") { await espace.validerPlan(m); const f = await store.mariageFresh(m.code); return send(res, 200, Object.assign({ ok: true, n: 6, detail: await espace.etape(f, 6) }, await espace.voir(f))); }
         else if (action !== "espace-voir") return send(res, 400, { ok: false, error: "action" });
       } catch (e) { return send(res, 422, { ok: false, error: "espace", detail: e.message }); }
       return send(res, 200, Object.assign({ ok: true }, await espace.voir(await store.mariageFresh(m.code))));

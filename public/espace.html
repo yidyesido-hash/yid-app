@@ -132,10 +132,44 @@
   .cercle-c{ font:500 22px/1.2 "Cormorant Garamond",Georgia,serif; margin:26px 0 10px; } .cercle-c span{ font:500 12px Inter,sans-serif; opacity:.55; margin-left:6px; }
   .direct{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
   .direct::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
+
+  /* une page par étape : la frise sert de navigation */
+  nav.tabs.frise-n{ max-width:calc(100vw - 20px); }
+  .pas{ display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; } .pas::-webkit-scrollbar{ display:none; }
+  nav.tabs .pas button{ position:relative; flex:0 0 auto; min-width:38px; padding:0 4px; display:flex; align-items:center; justify-content:center; gap:7px; }
+  nav.tabs .pas button .n{ width:26px; height:26px; border-radius:13px; display:grid; place-items:center; font:600 12px/1 Inter,sans-serif; border:1px solid rgba(120,90,60,.25); }
+  nav.tabs .pas button.faite .n{ background:#3F7A52; border-color:#3F7A52; color:#fff; }
+  nav.tabs .pas button.encours .n{ border-color:#B8956A; color:#7A5C38; }
+  nav.tabs .pas button .l{ display:none; }
+  nav.tabs .pas button.on{ padding:0 14px 0 8px; } nav.tabs .pas button.on .l{ display:inline; } nav.tabs .pas button.on .n{ background:#E4CDA4; border-color:#E4CDA4; color:#1D1813; }
+  nav.tabs .pas button .pt{ position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:#C45444; border:2px solid #FFFDF9; }
+  .pg-k{ text-align:center; font:600 10.5px/1 var(--b); letter-spacing:.2em; text-transform:uppercase; color:#8A6A42; margin:6px 0 12px; }
+  .afaire{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; max-width:620px; margin:0 auto 26px; padding:16px 18px; border-radius:24px; background:#1D1813; color:#F6EEDF; }
+  .afaire .k{ display:block; font:600 10px/1 var(--b); letter-spacing:.18em; text-transform:uppercase; color:#E4CDA4; margin-bottom:6px; }
+  .afaire b{ font:500 20px/1.25 var(--h); }
+  .afaire button{ margin-left:auto; min-height:42px; padding:0 18px; border-radius:21px; border:0; background:linear-gradient(160deg,#EBD6B0,#D4B07A); color:#1D1813; font:600 13px var(--b); cursor:pointer; }
+  .calme{ max-width:620px; margin:0 auto 26px; padding:13px 18px; border-radius:22px; text-align:center; font-size:14px; color:var(--muted); background:rgba(255,253,249,.5); border:1px solid var(--line); }
+  .calme.ok{ color:#2F6B45; }
+  .chiffres{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:0 0 18px; }
+  .chiffres .fait{ display:block; text-align:center; padding:16px 10px; } .chiffres .fait b{ display:block; font:500 34px/1 var(--h); margin-bottom:6px; } .chiffres .fait span{ font-size:12px; color:var(--muted); }
+  h3.st{ font:500 22px/1.2 var(--h); margin:30px 0 4px; text-align:center; } p.sd{ text-align:center; color:var(--muted); font-size:14px; max-width:600px; margin:0 auto 14px; }
+  .lg{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid var(--line); } .lg:first-child{ border-top:0; } .lg span{ color:var(--muted); font-size:13px; text-align:right; white-space:nowrap; }
+  .lg b{ font-weight:500; }
+  .prog{ display:grid; grid-template-columns:64px 1fr; gap:4px 14px; } .prog .h{ font:500 20px/1.3 var(--h); color:#7A5C38; } .prog .t b{ font-weight:500; } .prog .t span{ display:block; color:var(--muted); font-size:13px; margin-bottom:12px; }
+  .dem{ padding:18px; border-radius:24px; background:rgba(255,253,249,.82); border:1px solid rgba(184,149,106,.45); margin-bottom:12px; }
+  .dem p{ margin:0 0 4px; font:500 19px/1.35 var(--h); } .dem .act{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; } .dem .act button{ flex:1 1 130px; }
+  .dem.tranchee{ border-color:var(--line); background:rgba(255,253,249,.5); }
+  details.plus{ margin:10px 0 0; } details.plus > summary{ cursor:pointer; list-style:none; text-align:center; font:500 13px var(--b); color:#7A5C38; padding:10px; } details.plus > summary::-webkit-details-marker{ display:none; }
+  details.plus > summary::after{ content:" ›"; } details.plus[open] > summary::after{ content:" ‹"; }
+  .tablec{ padding:16px 18px; } .tablec h4{ margin:0 0 2px; font:500 21px/1.2 var(--h); } .tablec .o{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .tables{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+  .mail{ white-space:pre-line; font-size:14px; line-height:1.6; padding:14px 16px; border-radius:18px; background:rgba(255,255,255,.7); border:1px solid var(--line); margin-top:10px; }
+  .pied-e{ display:flex; gap:10px; justify-content:space-between; margin-top:34px; } .pied-e button{ flex:1 1 0; max-width:260px; } .pied-e span{ flex:1 1 0; }
+  .sousnav{ display:flex; justify-content:center; margin:0 0 20px; }
 </style>
-<link rel="stylesheet" href="/espace-habillage.css?v=1.24.0">
-<link rel="stylesheet" href="/cartes.css?v=1.24.0">
-<script src="/cartes.js?v=1.24.0"></script>
+<link rel="stylesheet" href="/espace-habillage.css?v=1.25.0">
+<link rel="stylesheet" href="/cartes.css?v=1.25.0">
+<script src="/cartes.js?v=1.25.0"></script>
 </head>
 <body>
 <div class="page">
@@ -148,17 +182,16 @@
   </header>
   <div id="erreur" class="surface vide" hidden></div>
   <div id="app" hidden>
-    <nav class="tabs" id="tabs">
-      <button data-t="parcours" class="on">Parcours</button>
-      <button data-t="liste">Votre liste</button>
-      <button data-t="contacts">Envoyer</button>
+    <nav class="tabs frise-n" id="tabs">
+      <div class="pas" id="pas"></div>
       <button class="joindre" id="joindre" type="button" aria-label="Nous joindre"><img src="/img/cess.jpg" alt=""><img src="/img/regis.jpg" alt=""></button>
     </nav>
     <section id="t-parcours"></section>
     <section id="t-liste" hidden></section>
     <section id="t-contacts" hidden></section>
+    <div id="t-pied"></div>
   </div>
-  <footer>Yes I Do · <span class="direct">mis à jour en direct</span><span class="souci">Une difficulté sur cette page ? <a href="#" id="souci">Dites le nous</a></span></footer>
+  <footer>Yes I Do · <span class="direct">mis à jour en direct</span><span class="souci">Une difficulté sur cette page ? <a href="#" id="souci">Dites le nous</a></span><span class="souci"><a href="#" id="guider">Me guider dans cet espace</a></span></footer>
   <div class="voile-c" id="contact" hidden><div class="feuille"><div class="grip"></div><h3>Nous joindre</h3><p class="muted small" style="margin:4px 0 6px">Vos interlocuteurs pour ce mariage, en ligne directe.</p><div id="equipe"></div><div style="text-align:center;margin-top:12px"><button class="pill light" type="button" id="fermer">Fermer</button></div></div></div>
 </div>
 <script>
@@ -194,40 +227,128 @@
       (q0 ? '<div style="font-size:14px;margin-top:8px;opacity:.82">' + esc(q0.q.replace("%s", prenom)) + '</div><div style="flex:1"></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + q0.o().map(function(v){ return '<button type="button" class="ch" data-pc="' + c.id + '" data-k="' + q0.k + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join("") + '</div>' : '<div style="font-size:14px;margin-top:8px;opacity:.82">À préciser : ' + esc(mq.join(", ")) + '</div><div style="flex:1"></div>') +
       (peut ? '<button type="button" class="lienbas" data-pd="' + c.id + '" style="margin-top:12px;align-self:flex-start">Je ne sais pas, demandez lui</button>' : '') + '</div>';
   }
-  function parcours(){
-    var m = D.mariage, ouverte = null;
+  var E = 0, SOUS = "liste", DET = {}, PLUS = {};
+  function statut(n){ var m = D.mariage; return m.etapes[n] ? "faite" : (m.etape === n ? "encours" : "avenir"); }
+  function frise(){
+    var af = D.a_faire || {};
+    $("pas").innerHTML = D.parcours.map(function(e){ var st = statut(e.n); return '<button type="button" data-e="' + e.n + '" class="' + st + (e.n === E ? " on" : "") + '" aria-label="Étape ' + e.n + ', ' + esc(e.t) + '"><span class="n">' + (st === "faite" && e.n !== E ? "✓" : e.n) + '</span><span class="l">' + esc(e.c) + '</span>' + (af[e.n] ? '<span class="pt"></span>' : '') + '</button>'; }).join("");
+    $("pas").querySelectorAll("button").forEach(function(b){ b.onclick = function(){ aller(+b.dataset.e); }; });
+    var on = $("pas").querySelector(".on"); if (on && on.scrollIntoView) { try { $("pas").scrollLeft = Math.max(0, on.offsetLeft - 60); } catch(e){} }
+  }
+  function entete(n){
+    var e = D.parcours[n - 1], st = statut(n), af = (D.a_faire || {})[n];
+    return '<div class="pg-k">Étape ' + n + ' sur 7 · ' + (st === "faite" ? "terminée" : st === "encours" ? "en cours" : "à venir") + '</div><h2>' + esc(e.t) + '</h2><p class="intro">' + esc(e.d) + '</p>' +
+      (af ? '<div class="afaire" id="afaire"><div><span class="k">À faire de votre côté</span><b>' + esc(af) + '</b></div><button type="button" id="afaire-b">Y aller</button></div>'
+          : '<div class="calme' + (st === "faite" ? " ok" : "") + '" id="afaire">' + (st === "faite" ? "Étape terminée. Rien à faire de votre côté." : st === "encours" ? "Rien à faire de votre côté pour l'instant : nous avançons pour vous." : "Cette étape viendra ensuite. Rien à faire de votre côté.") + '</div>');
+  }
+  function pied(n){
+    var a = D.parcours[n - 2], b = D.parcours[n];
+    $("t-pied").innerHTML = '<div class="pied-e">' + (a ? '<button type="button" class="pill light" data-va="' + a.n + '">‹ ' + esc(a.c) + '</button>' : '<span></span>') + (b ? '<button type="button" class="pill" data-va="' + b.n + '">' + esc(b.c) + ' ›</button>' : '<span></span>') + '</div>';
+    $("t-pied").querySelectorAll("[data-va]").forEach(function(x){ x.onclick = function(){ aller(+x.dataset.va); }; });
+  }
+  function chiffres(L){ return '<div class="chiffres">' + L.filter(function(x){ return x && x[0] != null; }).map(function(x){ return '<div class="fait"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></div>'; }).join("") + '</div>'; }
+  function plus(k, titre, corps){ return '<details class="plus" data-plus="' + k + '"' + (PLUS[k] ? " open" : "") + '><summary>' + esc(titre) + '</summary><div class="surface" style="margin-top:8px">' + corps + '</div></details>'; }
+  function lignes(L){ return L.map(function(x){ return '<div class="lg"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></div>'; }).join(""); }
+  function pers(n){ return n + (n > 1 ? " personnes" : " personne"); }
+  function chargerEtape(n){ return api("espace-etape", { n: n }).then(function(r){ var avant = JSON.stringify(DET[n] || null); DET[n] = r.detail; if (E === n && avant !== JSON.stringify(r.detail)) page(); }).catch(function(){}); }
+
+  /* le haut de l'étape 2 : l'anneau et les précisions à donner */
+  function tete2(){
     var t = D.tuiles, tot = (t.recues && t.recues.n) || 0, ok = (t.completees && t.completees.n) || 0, pc = tot ? Math.round(ok / tot * 100) : 0;
     var rouges = D.contacts.filter(function(c){ return c.etat === "à compléter"; });
     var C = 2 * Math.PI * 31, anneauS = '<svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/><circle cx="38" cy="38" r="31" fill="none" stroke="#E4CDA4" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pc / 100)).toFixed(1) + '" transform="rotate(-90 38 38)"/><text x="38" y="44" text-anchor="middle" font-family="Cormorant Garamond" font-size="21" fill="#F6EEDF">' + pc + '%</text></svg>';
     var tete = '<div class="sombre-c">' + anneauS + '<div style="flex:1;min-width:0"><div class="serif-c">' + (rouges.length ? "Votre liste est presque prête" : tot ? "Votre liste est complète" : "Votre liste vous attend") + '</div><div class="petit-c">' + ok + ' invité(s) complet(s) sur ' + tot + (rouges.length ? '. Plus que ' + rouges.length + ' précision(s).' : '.') + '</div></div></div>';
-    if (rouges.length) {
-      tete += '<div class="metap" style="margin-top:22px"><span class="k-c">Une précision, s\'il vous plaît</span><span id="pcnt" class="muted small"></span></div><div class="pile2" id="ppile" style="height:300px">' + rouges.map(function(c, k){ return precision(c, k); }).join("") + '</div><div class="dots" id="pdots"></div><div style="margin-top:14px"><button type="button" class="cta encre" id="psuiv"><span>Suivante</span></button></div><div class="msg" id="pmsg" style="text-align:center;margin-top:8px"></div>';
-    }
-    var html = tete + '<h2 style="margin-top:38px">Votre parcours</h2><p class="intro">Les grandes étapes de votre mariage avec Yes I Do. L\'étape en cours est ouverte, touchez les autres pour les lire.</p><div class="surface"><div class="frise">' +
-      D.parcours.map(function(e, i){
-        var faite = !!m.etapes[e.n], encours = !faite && (m.etape === e.n || (m.etape === 5 && e.n === 6)), cls = faite ? "faite" : encours ? "encours" : "avenir";
-        var ouvert = OUVERT["e" + e.n] !== undefined ? OUVERT["e" + e.n] : encours;
-        return '<div class="etape ' + cls + '" data-e="' + e.n + '"><div class="rond">' + (faite ? "✓" : (i + 1)) + '</div><div><div class="t">' + esc(e.t) + '</div><div class="s">' + (faite ? "Terminée" : encours ? "En cours" : "À venir") + '</div>' + (ouvert ? '<div class="d">' + esc(e.d) + '</div>' : '') + '</div></div>';
-      }).join("") + '</div></div>';
-    var faits = [["Date", dateLongue(m.date)], ["Lieu", m.lieu], ["Invités prévus", m.prevu], ["Au plus", m.plafond], ["Liste à remettre le", dateLongue(m.remise)], ["Liste close le", dateLongue(m.arret)]];
-    if (m.periodes && m.periodes.length) faits.push(["Les moments", m.periodes.join(" · ")]);
-    faits.push(["Enfants", m.enfants === "sans" ? "Mariage sans enfants" : m.enfants === "mixte" ? (m.consigne_enfants || "Selon les familles") : "Bienvenus"]);
-    if (m.hebergement !== "aucun") faits.push(["Hébergement", (m.lieux || []).filter(function(x){ return x !== "Par leurs propres moyens"; }).join(" · ") + (m.hebergement === "partie" ? " (une partie des invités)" : "")]);
-    html += '<h2 style="margin-top:34px">Le cadre de votre mariage</h2><p class="intro">Ce que nous avons posé ensemble lors de notre premier échange.</p><div class="faits">' + faits.filter(function(f){ return f[1]; }).map(function(f){ return '<div class="fait"><span>' + esc(f[0]) + '</span><b>' + esc(f[1]) + '</b></div>'; }).join("") + '</div>';
-    var liens = [];
-    if (m.formulaire) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="/formulaire/?apercu=' + encodeURIComponent(J || "") + '"><span>Le formulaire de vos invités</span><b>Voir l\'aperçu ›</b></a>');
-    if (m.site) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="' + esc(m.site) + '"><span>Le site de votre mariage</span><b>Ouvrir ›</b></a>');
-    if (liens.length) html += '<h2 style="margin-top:34px">Ce que reçoivent vos invités</h2><p class="intro">Le parcours de vos invités, tel qu\'ils le découvriront.</p><div class="faits">' + liens.join("") + '</div>';
-    if (m.feuille_route) html += '<h2 style="margin-top:34px">Votre feuille de route</h2><p class="intro">Le fil de notre accompagnement, épinglé dans le groupe de votre mariage.</p><div class="fait" style="display:block;white-space:pre-line;line-height:1.6">' + esc(m.feuille_route).replace(/\*([^*\n]+)\*/g, "<b>$1</b>") + '</div>';
-    $("t-parcours").innerHTML = html;
+    if (rouges.length && D.mariage.modifiable) tete += '<div id="bloc-afaire"><div class="metap" style="margin-top:22px"><span class="k-c">Une précision, s\'il vous plaît</span><span id="pcnt" class="muted small"></span></div><div class="pile2" id="ppile" style="height:300px">' + rouges.map(function(c, k){ return precision(c, k); }).join("") + '</div><div class="dots" id="pdots"></div><div style="margin-top:14px"><button type="button" class="cta encre" id="psuiv"><span>Suivante</span></button></div><div class="msg" id="pmsg" style="text-align:center;margin-top:8px"></div></div>';
+    return tete + '<div class="sousnav" style="margin-top:26px"><div class="vues-c"><button type="button" data-sous="liste" class="' + (SOUS === "liste" ? "on" : "") + '">Votre liste</button><button type="button" data-sous="contacts" class="' + (SOUS === "contacts" ? "on" : "") + '">Envoyer des contacts</button></div></div>';
+  }
+  function lier2(){
     if ($("ppile")) {
       var P = YID.pileActive = YID.pile($("ppile"), { index: PIDX, onChange: function(i, n){ PIDX = i; $("pcnt").textContent = (i + 1) + " sur " + n; YID.points($("pdots"), i, n); } });
       $("psuiv").onclick = function(){ if (P.index() < P.total - 1) P.suivante(); else P.secoue(); };
-      $("t-parcours").querySelectorAll("[data-pc]").forEach(function(b){ b.onclick = function(){ var ch = {}; ch[b.dataset.k] = b.dataset.k === "nb_enfants" ? +b.dataset.v : b.dataset.v; b.classList.add("sel"); OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-qualifier", { id: +b.dataset.pc, champs: ch }).then(function(r){ D = r; OCCUPE = false; $("pmsg").textContent = ""; parcours(); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
-      $("t-parcours").querySelectorAll("[data-pd]").forEach(function(b){ b.onclick = function(){ OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-demander", { id: +b.dataset.pd }).then(function(r){ D = r; OCCUPE = false; $("pmsg").textContent = "Nous le demanderons à l'invité."; parcours(); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
+      $("t-parcours").querySelectorAll("[data-pc]").forEach(function(b){ b.onclick = function(){ var ch = {}; ch[b.dataset.k] = b.dataset.k === "nb_enfants" ? +b.dataset.v : b.dataset.v; b.classList.add("sel"); OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-qualifier", { id: +b.dataset.pc, champs: ch }).then(function(r){ D = r; OCCUPE = false; $("pmsg").textContent = ""; rafraichir(true); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
+      $("t-parcours").querySelectorAll("[data-pd]").forEach(function(b){ b.onclick = function(){ OCCUPE = true; $("pmsg").textContent = "Enregistrement"; api("espace-demander", { id: +b.dataset.pd }).then(function(r){ D = r; OCCUPE = false; rafraichir(true); }).catch(function(e){ OCCUPE = false; $("pmsg").textContent = e.message; }); }; });
     }
-    $("t-parcours").querySelectorAll("[data-e]").forEach(function(el){ el.onclick = function(){ var k = "e" + el.dataset.e; OUVERT[k] = !(el.querySelector(".d")); parcours(); }; });
+    $("t-parcours").querySelectorAll("[data-sous]").forEach(function(b){ b.onclick = function(){ SOUS = b.dataset.sous; rafraichir(true); }; });
   }
+
+  function page1(){
+    var m = D.mariage, html = "";
+    var faits = [["Date", dateLongue(m.date)], ["Lieu", m.lieu], ["Invités prévus", m.prevu], ["Au plus", m.plafond], ["Liste à remettre le", dateLongue(m.remise)], ["Liste close le", dateLongue(m.arret)]];
+    faits.push(["Enfants", m.enfants === "sans" ? "Mariage sans enfants" : m.enfants === "mixte" ? (m.consigne_enfants || "Selon les familles") : "Bienvenus"]);
+    if (m.hebergement !== "aucun") faits.push(["Hébergement", (m.lieux || []).filter(function(x){ return x !== "Par leurs propres moyens"; }).join(" · ") + (m.hebergement === "partie" ? " (une partie des invités)" : "")]);
+    html += '<div class="faits">' + faits.filter(function(f){ return f[1]; }).map(function(f){ return '<div class="fait"><span>' + esc(f[0]) + '</span><b>' + esc(f[1]) + '</b></div>'; }).join("") + '</div>';
+    if (m.programme && m.programme.length) html += '<h3 class="st">Le programme de la journée</h3><p class="sd">Tel que nous l\'avons posé ensemble. Il guide les questions posées à vos invités.</p><div class="surface"><div class="prog">' + m.programme.map(function(x){ return '<div class="h">' + esc(String(x.heure).replace(":", " h ")) + '</div><div class="t"><b>' + esc(x.libelle) + '</b><span>' + esc(x.lieu) + (x.invitation ? " · sur invitation" : "") + '</span></div>'; }).join("") + '</div></div>';
+    var liens = [];
+    if (m.formulaire) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="/formulaire/?apercu=' + encodeURIComponent(J || "") + '"><span>Le formulaire de vos invités</span><b>Voir l\'aperçu ›</b></a>');
+    if (m.site) liens.push('<a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="' + esc(m.site) + '"><span>Le site de votre mariage</span><b>Ouvrir ›</b></a>');
+    if (liens.length) html += '<h3 class="st">Ce que reçoivent vos invités</h3><p class="sd">Le parcours de vos invités, tel qu\'ils le découvriront.</p><div class="faits">' + liens.join("") + '</div>';
+    if (m.feuille_route) html += '<h3 class="st">Votre feuille de route</h3><p class="sd">Le fil de notre accompagnement, épinglé dans le groupe de votre mariage.</p><div class="fait" style="display:block;white-space:pre-line;line-height:1.6">' + esc(m.feuille_route).replace(/\*([^*\n]+)\*/g, "<b>$1</b>") + '</div>';
+    return html;
+  }
+  function page3(d){
+    var html = chiffres([[d.contactes + " sur " + d.total, "invités contactés"], [d.acces, "ont reçu leur accès personnel"], [d.envois.length, d.envois.length > 1 ? "messages envoyés" : "message envoyé"]]);
+    html += '<h3 class="st">Ce que vos invités ont reçu</h3><p class="sd">Chaque message envoyé en votre nom, avec sa date. Touchez le pour le lire.</p>';
+    html += d.envois.length ? d.envois.map(function(e, k){ return '<div class="surface" style="padding:18px"><div class="lg" style="padding-top:0"><b>' + esc(e.nom) + '</b><span>' + (e.le ? dateLongue(e.le) + " · " : "") + e.n + ' invité(s)</span></div>' + plus("mail" + k, "Lire le message", '<div class="small muted">Objet : ' + esc(e.objet) + (e.exemple ? ' · tel que reçu par ' + esc(e.exemple) : '') + '</div><div class="mail">' + esc(e.texte) + '</div>').replace('<div class="surface" style="margin-top:8px">', '<div>') + '</div>'; }).join("") : '<div class="calme">Aucun message n\'est encore parti. Vous les verrez ici dès leur envoi.</div>';
+    html += plus("suivi", "Voir invité par invité", lignes(d.suivi.map(function(x){ return [x.nom, x.etat]; })) || '<p class="muted">La liste se remplira dès que les fiches seront complètes.</p>');
+    return html;
+  }
+  function page4(d){
+    var html = "", att = d.demandes.filter(function(x){ return !x.decision; }), faites = d.demandes.filter(function(x){ return x.decision; });
+    if (d.demandes.length) {
+      html += '<div id="bloc-afaire">' + (att.length ? '<h3 class="st" style="margin-top:0">Votre décision</h3><p class="sd">Vous avez souhaité que seules les personnes que vous avez conviées soient présentes. Voici ce qui demande votre accord. Nous transmettons ensuite votre réponse à l\'invité, avec tact.</p>' : '') +
+        att.map(function(x){ return '<div class="dem"><p>' + esc(x.invite) + ' souhaiterait venir avec ' + esc(x.personne || "une autre personne") + '.</p><div class="small muted">Cette personne ne figure pas sur votre liste.</div><div class="act"><button type="button" class="pill" data-dec="' + x.id + '" data-ok="1">Accepter</button><button type="button" class="pill light" data-dec="' + x.id + '" data-ok="0">Décliner</button></div></div>'; }).join("") +
+        faites.map(function(x){ return '<div class="dem tranchee"><div class="small muted">' + esc(x.invite) + ' · ' + esc(x.personne || "autre personne") + '</div><b>' + (x.decision === "accord" ? "Vous avez accepté" : "Vous avez décliné") + '</b><span class="small muted"> · ' + dateLongue(x.le) + '</span> <button type="button" class="lienretirer" data-dec="' + x.id + '" data-ok="' + (x.decision === "accord" ? 0 : 1) + '">Changer d\'avis</button></div>'; }).join("") + '<div class="msg" id="dmsg4" style="text-align:center"></div></div>';
+    }
+    html += '<h3 class="st">Les réponses</h3><p class="sd">' + (d.date_reponse ? "Réponses attendues avant le " + dateLongue(d.date_reponse) + ". Nous relançons avec tact ceux qui n'ont pas encore répondu." : "Nous relançons avec tact ceux qui n'ont pas encore répondu.") + '</p>' +
+      chiffres([[d.presents, "foyers présents"], [d.absents, "absents"], [d.attente, "en attente"], [d.personnes, "personnes attendues"]]);
+    if (d.personnes) html += '<div class="surface">' + lignes([["Adultes", d.adultes], ["Enfants", d.enfants]].concat(d.moments.map(function(x){ return [x.l, pers(x.n)]; }))) + '</div>';
+    if (d.plats.length || d.menus_enfant) html += '<h3 class="st">Les choix à table</h3><p class="sd">Ce que vos invités ont choisi, transmis au traiteur par nos soins.</p><div class="surface">' + lignes(d.plats.map(function(x){ return [x.l, x.n]; }).concat(d.menus_enfant ? [["Menu enfant", d.menus_enfant]] : [])) + '</div>';
+    html += plus("rep", "Voir invité par invité", lignes(d.liste.map(function(x){ return [x.nom, x.etat === "présent" ? "présent · " + pers(x.personnes) : x.etat]; })));
+    return html;
+  }
+  function page5(d){
+    var html = chiffres([[d.personnes, "personnes attendues"], [d.hotels.reduce(function(s, h){ return s + h.personnes; }, 0), "logées"], [d.navettes.reduce(function(s, v){ return s + v.places; }, 0) || null, "places de navette"]]);
+    if (d.hotels.length) html += '<h3 class="st">Qui loge où</h3><p class="sd">Les maisons retenues pour vos invités, et ceux qui y séjournent.</p><div class="tables">' + d.hotels.map(function(h){ return '<div class="surface tablec"><h4>' + esc(h.nom) + '</h4><div class="o">' + h.foyers + ' foyer(s) · ' + pers(h.personnes) + '</div>' + lignes(h.invites.map(function(i){ return [i.nom, i.personnes]; })) + '</div>'; }).join("") + '</div>';
+    if (d.reservations.length) html += '<h3 class="st">Chambres demandées</h3><p class="sd">Ces invités ont demandé une chambre dans une maison partenaire. Ils la règlent directement à l\'hôtel.</p><div class="surface">' + lignes(d.reservations.map(function(r){ return [r.nom, r.maison + " · " + r.chambres + " chambre(s)"]; })) + '</div>';
+    if (d.navettes.length) html += '<h3 class="st">Les navettes</h3><div class="surface">' + d.navettes.map(function(v){ return '<div class="lg"><b>' + esc(v.moment) + (v.depart ? ", départ " + esc(v.depart) : "") + '<div class="small muted" style="font-weight:400">' + esc(v.de) + ' vers ' + esc(v.vers) + '</div></b><span>' + v.places + ' place(s)</span></div>' + (v.retours || []).map(function(r){ return '<div class="lg"><b style="font-weight:400">Retour de ' + esc(r.heure) + '</b><span>' + r.places + ' place(s)</span></div>'; }).join(""); }).join("") + '</div>';
+    if (d.arrivees.length) html += plus("arr", "Voir les arrivées et les départs", d.arrivees.map(function(a){ return '<div class="lg"><b>' + esc(a.nom) + '<div class="small muted" style="font-weight:400">' + esc([a.arrivee && "Arrivée : " + a.arrivee, a.depart && "Départ : " + a.depart].filter(Boolean).join(" · ")) + '</div></b><span>' + a.personnes + '</span></div>'; }).join(""));
+    if (!d.hotels.length && !d.navettes.length && !d.arrivees.length) html += '<div class="calme">Le séjour de vos invités se dessinera ici au fil de leurs réponses.</div>';
+    return html;
+  }
+  function page6(d){
+    var html = "", pret = d.tables.length && !d.a_placer;
+    if (d.jour_j && d.foyers) { var p = d.personnes ? d.arrives / d.personnes : 0; html += '<div class="sombre-c"><div style="flex:1;min-width:0"><div class="serif-c">Le jour J, en direct</div><div class="petit-c">' + d.arrives + ' personne(s) accueillie(s) sur ' + d.personnes + ' · ' + d.foyers_arrives + ' foyer(s) sur ' + d.foyers + '</div><div class="barre" style="margin-top:12px;background:rgba(255,255,255,.14)"><i style="width:' + Math.round(p * 100) + '%;background:#E4CDA4"></i></div></div></div>'; }
+    if (d.tables.length) {
+      html += '<div id="bloc-afaire" style="margin-top:22px">' + (d.valide ? '<div class="calme ok">Vous avez validé votre plan de table le ' + dateLongue(d.valide.le) + '.</div>' : pret ? '<div class="dem"><p>Votre plan de table est prêt.</p><div class="small muted">Relisez le ci dessous. Un ajustement ? Dites le nous, nous le faisons pour vous.</div><div class="act"><button type="button" class="pill" id="vplan">Je valide ce plan</button><button type="button" class="pill light" id="vjoindre">Demander un ajustement</button></div><div class="msg" id="dmsg6"></div></div>' : '<div class="calme">Nous plaçons encore ' + d.a_placer + ' foyer(s). Le plan vous sera soumis une fois complet.</div>') + '</div>';
+      html += '<h3 class="st">Votre plan de table</h3><p class="sd">' + d.tables.length + ' tables · ' + pers(d.personnes) + '.</p><div class="tables">' + d.tables.map(function(t){ return '<div class="surface tablec"><h4>' + esc(t.nom) + '</h4><div class="o">' + t.occupees + (t.places ? ' sur ' + t.places : '') + ' place(s)</div>' + lignes(t.invites.map(function(i){ return [i.nom, i.personnes]; })) + '</div>'; }).join("") + '</div>';
+    } else html += '<div class="calme">Le plan de table se construit une fois les réponses reçues. Vous le verrez ici.</div>';
+    if (d.pass_exemple) html += '<h3 class="st">Le pass de vos invités</h3><p class="sd">' + (/sans QR/i.test(d.pass || "") ? "Chaque invité reçoit son pass trois jours avant le mariage." : /contrôle/i.test(d.pass || "") ? "Chaque invité reçoit son pass nominatif trois jours avant le mariage. Il est scanné à l'accueil : seules les personnes conviées entrent." : "Chaque invité reçoit son pass trois jours avant le mariage. Scanné à l'accueil, il nous permet de le conduire à sa table.") + '</p><div class="faits"><a class="fait" style="text-decoration:none" target="_blank" rel="noopener" href="' + esc(d.pass_exemple) + '"><span>Un pass, tel qu\'un invité le reçoit</span><b>Voir un exemple ›</b></a></div>';
+    return html;
+  }
+  function page7(d){
+    var b = d.bilan || {}, html = "";
+    if (d.passe) html += '<h3 class="st" style="margin-top:0">Votre mariage en quelques chiffres</h3>' + chiffres([[b.invites, "foyers invités"], [b.taux_reponse != null ? b.taux_reponse + " %" : null, "de réponses"], [b.personnes_attendues, "personnes attendues"], [b.personnes_accueillies, "personnes accueillies"], [b.tables, "tables"], [b.delai_median_jours != null ? b.delai_median_jours + " j" : null, "délai médian de réponse"]]);
+    else html += '<div class="calme">Après votre mariage, vous trouverez ici le bilan de l\'accueil de vos invités.</div>';
+    html += '<h3 class="st">Les données de vos invités</h3><div class="surface"><p style="margin:0">' + (d.purge ? "Les données personnelles de vos invités ont été supprimées, comme nous nous y étions engagés." : "Les données personnelles de vos invités sont supprimées au plus tard trente jours après votre mariage" + (d.purge_prevue ? ", soit le " + dateLongue(d.purge_prevue) : "") + ". Seuls les chiffres du bilan sont conservés.") + '</p></div>';
+    return html;
+  }
+  function page(){
+    var n = E, d = DET[n], corps;
+    $("t-liste").hidden = !(n === 2 && SOUS === "liste"); $("t-contacts").hidden = !(n === 2 && SOUS === "contacts");
+    if (n === 1) corps = page1();
+    else if (n === 2) corps = tete2();
+    else if (!d) corps = '<p class="vide">Un instant</p>';
+    else corps = n === 3 ? page3(d) : n === 4 ? page4(d) : n === 5 ? page5(d) : n === 6 ? page6(d) : page7(d);
+    $("t-parcours").innerHTML = entete(n) + corps;
+    pied(n);
+    if (n === 2) lier2();
+    var ab = $("afaire-b"); if (ab) ab.onclick = function(){ var c = $("bloc-afaire") || $("t-liste"); if (c) window.scrollTo({ top: window.scrollY + c.getBoundingClientRect().top - 90, behavior: "smooth" }); };
+    $("t-parcours").querySelectorAll("details.plus").forEach(function(x){ x.addEventListener("toggle", function(){ PLUS[x.dataset.plus] = x.open; }); });
+    $("t-parcours").querySelectorAll("[data-dec]").forEach(function(b){ b.onclick = function(){ OCCUPE = true; $("dmsg4").textContent = "Enregistrement"; api("espace-decider", { id: +b.dataset.dec, accord: b.dataset.ok === "1" }).then(function(r){ OCCUPE = false; DET[4] = r.detail; D = r; frise(); page(); }).catch(function(e){ OCCUPE = false; $("dmsg4").textContent = e.message; }); }; });
+    if ($("vplan")) $("vplan").onclick = function(){ OCCUPE = true; $("dmsg6").textContent = "Enregistrement"; api("espace-valider-plan").then(function(r){ OCCUPE = false; DET[6] = r.detail; D = r; frise(); page(); }).catch(function(e){ OCCUPE = false; $("dmsg6").textContent = e.message; }); };
+    if ($("vjoindre")) $("vjoindre").onclick = contact;
+  }
+  function aller(n){ E = n; frise(); rafraichir(true); window.scrollTo({ top: Math.max(0, window.scrollY + $("app").getBoundingClientRect().top - 20), behavior: "smooth" }); }
 
   /* ---------- liste ---------- */
   function anneau(p){ var r = 78, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, p))); return '<svg width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="' + r + '" fill="none" stroke="#F1EFEC" stroke-width="10"/><circle cx="90" cy="90" r="' + r + '" fill="none" stroke="' + (p >= 1 ? "#3F6B4E" : "#B8956A") + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg>'; }
@@ -387,23 +508,37 @@
   function contact(){ var eq = (D && D.equipe) || []; $("equipe").innerHTML = eq.map(function(p){ return '<div class="ligne"><img src="' + esc(p.photo) + '" alt=""><div style="flex:1"><b style="font-size:15px">' + esc(p.prenom) + '</b><div class="muted small">Ligne directe Yes I Do</div></div><a class="rond tel' + (p.tel ? '' : ' off') + '" href="' + esc(p.tel || "#") + '" aria-label="Appeler ' + esc(p.prenom) + '">' + PH + '</a><a class="rond wa' + (p.whatsapp ? '' : ' off') + '" href="' + esc(p.whatsapp || "#") + '" target="_blank" rel="noopener" aria-label="WhatsApp ' + esc(p.prenom) + '">' + WA + '</a></div>'; }).join(""); $("contact").hidden = false; }
   $("joindre").onclick = contact; $("souci").onclick = function(e){ e.preventDefault(); contact(); };
   $("fermer").onclick = function(){ $("contact").hidden = true; }; $("contact").onclick = function(e){ if (e.target === $("contact")) $("contact").hidden = true; };
-  function onglet(t){ ONGLET = t; document.querySelectorAll("#tabs button[data-t]").forEach(function(b){ b.classList.toggle("on", b.dataset.t === t); }); ["parcours", "liste", "contacts"].forEach(function(k){ $("t-" + k).hidden = k !== t; }); rafraichir(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function onglet(t){ SOUS = t === "contacts" ? "contacts" : "liste"; aller(2); }
   function rafraichir(tout){
     var m = D.mariage;
     $("prenoms").textContent = m.prenoms; $("sous").textContent = [dateLongue(m.date), m.lieu].filter(Boolean).join(" · ");
     document.title = m.prenoms + " · Votre espace";
-    if (ONGLET === "parcours") parcours();
-    if (ONGLET === "liste") { if (tout || !$("invites")) listeVue(); else { var y = window.scrollY, s = $("cherche").value; listeVue(); $("cherche").value = s; invites(); window.scrollTo(0, y); } }
-    if (ONGLET === "contacts" && tout) contacts();
+    if (!E) { var af = Object.keys(D.a_faire || {}).map(Number).sort(function(a, b){ return a - b; }); E = af[0] || Math.max(1, Math.min(7, m.etape || 1)); }
+    ONGLET = E === 2 ? SOUS : "parcours";
+    frise();
+    if (E === 2 && !tout && $("invites") && SOUS === "liste") { var y = window.scrollY, s = $("cherche").value; listeVue(); $("cherche").value = s; invites(); window.scrollTo(0, y); return; }
+    page();
+    if (E === 2 && SOUS === "liste") listeVue();
+    if (E === 2 && SOUS === "contacts" && tout) contacts();
+    if (E >= 3) chargerEtape(E);
   }
-  document.querySelectorAll("#tabs button[data-t]").forEach(function(b){ b.onclick = function(){ onglet(b.dataset.t); }; });
+  function visite(force){
+    if (!force && YID.visiteVue("espace")) return;
+    YID.visite([
+      { t: "Bienvenue dans votre espace", d: "Vous suivez ici, en direct, tout ce que nous faisons pour vos invités. Trois repères suffisent pour s'y retrouver." },
+      { sel: "#tabs", t: "Les sept étapes", d: "Chaque numéro ouvre une étape de votre mariage. Un point rouge signale que quelque chose vous attend." },
+      { sel: "#afaire", t: "Ce qui vous revient", d: "En haut de chaque page, une seule ligne : ce que vous avez à faire, ou la confirmation que nous avançons pour vous." },
+      { sel: "#joindre", t: "Nous joindre", d: "Cécilia et Régis, en ligne directe, par téléphone ou par WhatsApp." }
+    ], { cle: "espace" });
+  }
+  $("guider").onclick = function(e){ e.preventDefault(); window.scrollTo(0, 0); setTimeout(function(){ visite(true); }, 200); };
   function charger(){ return api("espace-voir").then(function(r){ var ph = document.querySelector(".hero img.ph"); if (ph && r.mariage && r.mariage.photo && ph.getAttribute("src") !== r.mariage.photo) ph.src = r.mariage.photo; var change = !D || r.signature !== D.signature || JSON.stringify(r.mariage) !== JSON.stringify(D.mariage); D = r; return change; }); }
   if (!J) { $("erreur").hidden = false; $("erreur").textContent = "Ce lien est incomplet. Utilisez le lien personnel que nous vous avons adressé."; return; }
-  charger().then(function(){ $("app").hidden = false; rafraichir(true); }).catch(function(e){ $("erreur").hidden = false; $("erreur").textContent = e.message; });
+  charger().then(function(){ $("app").hidden = false; rafraichir(true); setTimeout(function(){ visite(false); }, 900); }).catch(function(e){ $("erreur").hidden = false; $("erreur").textContent = e.message; });
   setInterval(function(){
     if (document.hidden || OCCUPE || !D) return;
     var a = document.activeElement; if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
-    charger().then(function(change){ if (change && ONGLET !== "contacts") rafraichir(false); }).catch(function(){});
+    charger().then(function(change){ if (ONGLET === "contacts" || document.getElementById("yidvisite")) return; if (change) rafraichir(false); else if (E >= 3) chargerEtape(E); }).catch(function(){});
   }, 15000);
 })();
 </script>
