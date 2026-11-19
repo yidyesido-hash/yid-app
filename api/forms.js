@@ -83,7 +83,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.26.1";
+const VERSION = "1.26.2";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -534,7 +534,7 @@ module.exports = async (req, res) => {
         else if (action === "espace-manifeste") {
           /* l'espace installé comme une application : il s'ouvre sur le lien personnel du couple */
           res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
-          return res.end(JSON.stringify({ id: "/espace", name: "YID - Personal Space", short_name: "Personal Space", description: "Votre espace Yes I Do : " + m.prenoms + ".", lang: "fr", start_url: "/espace.html#" + m.espace_jeton, scope: "/espace.html", display: "standalone", background_color: "#F5EFE6", theme_color: "#F5EFE6",
+          return res.end(JSON.stringify({ id: "/espace", name: "YID - Personal Space", short_name: "YID Space", description: "Votre espace Yes I Do : " + m.prenoms + ".", lang: "fr", start_url: "/espace.html#" + m.espace_jeton, scope: "/espace.html", display: "standalone", background_color: "#F5EFE6", theme_color: "#F5EFE6",
             icons: [{ src: "/img/app-192.png?v=2", sizes: "192x192", type: "image/png", purpose: "any" }, { src: "/img/app-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "any" }, { src: "/img/app-512-m.png?v=2", sizes: "512x512", type: "image/png", purpose: "maskable" }] }));
         }
         else if (action === "espace-etape") { const n = Number(b.n); if (!(n >= 3 && n <= 7)) return send(res, 400, { ok: false, error: "etape" }); return send(res, 200, { ok: true, n, detail: await espace.etape(m, n) }); }
