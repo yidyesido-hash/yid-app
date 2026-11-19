@@ -4,7 +4,7 @@ process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "test";
 const http = require("http"), fs = require("fs"), path = require("path");
 const handler = require("../api/forms");
 const root = path.join(__dirname, "..");
-const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".json": "application/json" };
+const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".jpg": "image/jpeg" };
 const port = +process.env.PORT || 8787;
 http.createServer((req, res) => {
   if (req.url.startsWith("/api/forms")) return handler(req, res);

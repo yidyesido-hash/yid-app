@@ -126,6 +126,9 @@ function check(label, cond, extra) { n++; if (!cond) ko++; console.log((cond ? "
   const HC = { "x-admin-token": r.json.token };
   { const jg = await call("POST", "/api/forms?action=admin-journal", { limit: 5 }, HC), ja = await call("POST", "/api/forms?action=admin-journal", { limit: 5 }, H), jm = await call("POST", "/api/forms?action=admin-journal&w=AC27", { limit: 5 }, HC);
     check("journal global : réservé aux administrateurs, le journal d'un mariage reste ouvert à l'équipe", jg.status === 403 && ja.status === 200 && jm.status === 200, [jg.status, ja.status, jm.status].join(" ")); }
+  { const o1 = await call("POST", "/api/forms?action=cle-options-entrer", { prenom: "Cécilia" }), o2 = await call("POST", "/api/forms?action=cle-liste", {}), o3 = await call("POST", "/api/forms?action=cle-options-creer", {}, HC), o4 = await call("POST", "/api/forms?action=cle-entrer", { defi: "faux.faux", reponse: { id: "x" } }), o5 = await call("POST", "/api/forms?action=cle-options-creer", {}, H);
+    check("empreinte ou visage : défi d'entrée sans clé connue, liste fermée sans session, défi de création pour un accès nommé, défi falsifié refusé, accès d'installation refusé",
+      o1.json.ok && o1.json.connu === false && !!o1.json.defi && o2.status === 401 && o3.json.ok && o3.json.options.rp.name === "Yes I Do" && o3.json.options.authenticatorSelection.userVerification === "required" && o4.status === 422 && o5.status === 422, [o1.status, o2.status, o3.status, o4.status, o5.status].join(" ")); }
   r = await call("POST", "/api/forms?action=admin-login", { prenom: "Cécilia", password: "faux" });
   check("mauvais mot de passe de Cécilia refusé", r.status === 401);
   r = await call("POST", "/api/forms?action=admin-utilisateurs", {}, HC);

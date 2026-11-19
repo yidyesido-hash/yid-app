@@ -66,6 +66,8 @@
      ?action=admin-utilisateur  POST  créer ou modifier un accès : nom, role, password, desactive (administrateur seulement)
      ?action=admin-espace    POST  le lien de l'espace mariés : op lire | creer | renouveler | couper | modifiable (valeur) (w=CODE)
    Côté mariés (lien personnel, clé j, sans compte) :
+     ?action=cle-options-entrer | cle-entrer POST  entrer avec l'empreinte ou le visage de l'appareil (clé d'accès) : prenom, puis reponse et defi
+     ?action=cle-options-creer | cle-creer | cle-liste | cle-retirer POST  poser, voir, retirer les clés d'accès de l'utilisateur connecté
      ?action=espace-voir      POST  leur mariage, leur parcours, leur liste (champs du couple seulement), les règles d'or
      ?action=espace-qualifier POST  compléter une ligne : id, champs { cote, invitation, lien, precision, nb_enfants, hebergement, assistance, nom, prenom, periodes }
      ?action=espace-demander  POST  « Je ne sais pas, demandez lui » : ce qui manque sera demandé à l'invité : id
@@ -81,7 +83,7 @@ const graph = require("../lib/graph");
 const engine = require("../lib/engine");
 const WEDDINGS = require("../lib/weddings");
 
-const VERSION = "1.25.0";
+const VERSION = "1.26.0";
 const liste = require("../lib/liste");
 const utilisateurs = require("../lib/utilisateurs");
 const mariages = require("../lib/mariage");
@@ -91,6 +93,7 @@ const appel = require("../lib/appel");
 const invite = require("../lib/invite");
 const contact = require("../lib/contact");
 const afaire = require("../lib/afaire");
+const passkeys = require("../lib/passkeys");
 const emails = require("../lib/emails");
 const messagerie = require("../lib/messagerie");
 const logistique = require("../lib/logistique");
@@ -242,6 +245,23 @@ module.exports = async (req, res) => {
       if (!u) return send(res, 401, { ok: false, error: "password" });
       await store.journal(null, "Connexion", u.nom + " · " + ip(req), null, null, u.nom);
       return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count(), theme: (await mariages.reglages(u.role)).theme_defaut });
+    }
+    /* ---------- empreinte ou reconnaissance faciale : clés d'accès de l'appareil, le mot de passe reste la clé de secours ---------- */
+    if (action.indexOf("cle-") === 0) {
+      if (!(await store.rateLimit(ip(req) + ":cle", 30))) return send(res, 429, { ok: false, error: "slow down" });
+      try {
+        if (action === "cle-options-entrer") return send(res, 200, Object.assign({ ok: true }, await passkeys.optionsEntrer(req, String(b.prenom || "").trim())));
+        if (action === "cle-entrer") {
+          const u = await passkeys.entrer(req, b);
+          await store.journal(null, "Connexion", u.nom + " · empreinte ou visage · " + ip(req), null, null, u.nom);
+          return send(res, 200, { ok: true, token: makeToken(12, u), nom: u.nom, role: u.role, version: VERSION, equipe: await utilisateurs.count(), theme: (await mariages.reglages(u.role)).theme_defaut });
+        }
+        const u = readToken(req.headers["x-admin-token"]); if (!u) return send(res, 401, { ok: false, error: "password" });
+        if (action === "cle-options-creer") return send(res, 200, Object.assign({ ok: true }, await passkeys.optionsCreer(req, u)));
+        if (action === "cle-creer") return send(res, 200, Object.assign({ ok: true }, await passkeys.creer(req, u, b)));
+        if (action === "cle-retirer") await passkeys.retirer(u, b.id);
+        return send(res, 200, { ok: true, cles: await passkeys.liste(u) });
+      } catch (e) { return send(res, 422, { ok: false, error: "cle", detail: e.message }); }
     }
     /* Un souci signalé depuis la note de bas de page : gardé au journal maître avec l'écran, la version et l'appareil. */
     if (action === "admin-signaler") {

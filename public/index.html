@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Yes I Do · L'application</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1D1813">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Yes I Do">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/app-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/img/app-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -116,9 +124,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.25.4">
-<link rel="stylesheet" href="/cartes.css?v=1.25.4">
-<script src="/cartes.js?v=1.25.4"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.26.0">
+<link rel="stylesheet" href="/cartes.css?v=1.26.0">
+<script src="/cartes.js?v=1.26.0"></script>
 </head>
 <body>
 <header>
@@ -138,7 +146,8 @@
       <input type="text" id="prenom" placeholder="Prénom" autocomplete="username" value="Régis" hidden>
       <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
       <button id="go">Entrer</button>
-      <p class="small" style="margin:0">La connexion par empreinte ou Face ID arrive avec la prochaine version.</p>
+      <button type="button" id="bio" class="ghost" hidden>Empreinte ou visage</button>
+      <p class="small" style="margin:0"><a href="#" data-installer hidden style="color:inherit">Installer l'application sur cet appareil</a></p>
       <div class="msg" id="lmsg"></div>
     </div>
   </div>
@@ -159,9 +168,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.4"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.26.0"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.4").then(function(){ return un("/formulaire/moteur.js?v=1.25.4"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.26.0").then(function(){ return un("/formulaire/moteur.js?v=1.26.0"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){
@@ -251,11 +260,77 @@
   function gauge(p){ var r = 40, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, p)) / 100); return '<div class="gauge"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="' + r + '" fill="none" style="stroke:var(--line)" stroke-width="7"/><circle cx="48" cy="48" r="' + r + '" fill="none" style="stroke:var(--gold)" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '"/></svg><b>' + p + '%</b></div>'; }
 
   /* ---------- connexion ---------- */
+  /* ---------- empreinte ou visage : la clé reste dans l'appareil, le mot de passe reste la clé de secours ---------- */
+  function b64u(buf){ var b = new Uint8Array(buf), t = ""; for (var i = 0; i < b.length; i++) t += String.fromCharCode(b[i]); return btoa(t).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function u8(t){ t = String(t).replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; var x = atob(t), o = new Uint8Array(x.length); for (var i = 0; i < x.length; i++) o[i] = x.charCodeAt(i); return o; }
+  function bioPossible(){ return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create); }
+  function bioCle(k){ return "yid_bio_" + String(k || "").toLowerCase(); }
+  function bioEtat(nom){ try { return localStorage.getItem(bioCle(nom)) || ""; } catch(e){ return ""; } }
+  function bioNote(nom, v){ try { if (v) localStorage.setItem(bioCle(nom), v); else localStorage.removeItem(bioCle(nom)); } catch(e){} }
+  function bioErreur(e){ return e && (e.name === "NotAllowedError" || e.name === "AbortError") ? "Demande annulée." : (e && e.message) || "Action impossible sur cet appareil."; }
+  function appareilNom(){ var u = navigator.userAgent; return (/Android/.test(u) ? "Téléphone Android" : /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Macintosh/.test(u) ? "Mac" : /Windows/.test(u) ? "PC Windows" : "Appareil") + " · " + (/Edg\//.test(u) ? "Edge" : /Chrome\//.test(u) ? "Chrome" : /Firefox\//.test(u) ? "Firefox" : /Safari\//.test(u) ? "Safari" : "navigateur"); }
+  function poste(action, corps){ return fetch("/api/forms?action=" + action, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": TOKEN || "" }, body: JSON.stringify(corps || {}) }).then(function(r){ return r.json(); }).then(function(j){ if (!j.ok) throw new Error(j.detail || "Action impossible."); return j; }); }
+  function ouvrirSession(j){ TOKEN = j.token; MOI = { nom: j.nom, role: j.role, version: j.version, equipe: j.equipe, theme: j.theme }; applyTheme(); try{ sessionStorage.setItem("yid_token", TOKEN); sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} opened(); }
+  function bioEntrer(){
+    var prenom = $("prenom").value.trim(); $("lmsg").textContent = "";
+    if (!prenom) { $("lmsg").textContent = "Indiquez d'abord votre prénom."; return; }
+    poste("cle-options-entrer", { prenom: prenom }).then(function(o){
+      if (!o.connu) throw new Error("Aucune empreinte enregistrée pour " + prenom + ". Entrez une fois avec votre mot de passe : l'application vous proposera de l'activer.");
+      var op = o.options; op.challenge = u8(op.challenge); (op.allowCredentials || []).forEach(function(c){ c.id = u8(c.id); });
+      return navigator.credentials.get({ publicKey: op }).then(function(c){ var r = c.response;
+        return poste("cle-entrer", { defi: o.defi, reponse: { id: c.id, rawId: b64u(c.rawId), type: c.type, authenticatorAttachment: c.authenticatorAttachment || undefined, clientExtensionResults: {}, response: { authenticatorData: b64u(r.authenticatorData), clientDataJSON: b64u(r.clientDataJSON), signature: b64u(r.signature), userHandle: r.userHandle ? b64u(r.userHandle) : undefined } } }); });
+    }).then(function(j){ bioNote(j.nom, "oui"); ouvrirSession(j); }).catch(function(e){ $("lmsg").textContent = bioErreur(e); });
+  }
+  function bioActiver(){
+    return poste("cle-options-creer").then(function(o){
+      var op = o.options; op.challenge = u8(op.challenge); op.user.id = u8(op.user.id); (op.excludeCredentials || []).forEach(function(c){ c.id = u8(c.id); });
+      return navigator.credentials.create({ publicKey: op }).then(function(c){ var r = c.response;
+        return poste("cle-creer", { defi: o.defi, appareil: appareilNom(), reponse: { id: c.id, rawId: b64u(c.rawId), type: c.type, authenticatorAttachment: c.authenticatorAttachment || undefined, clientExtensionResults: {}, response: { clientDataJSON: b64u(r.clientDataJSON), attestationObject: b64u(r.attestationObject), transports: r.getTransports ? r.getTransports() : [] } } }); });
+    }).then(function(j){ bioNote(MOI.nom, "oui"); return j; });
+  }
+  /* proposé une seule fois, après une entrée par mot de passe, sur un appareil qui sait le faire */
+  function bioProposer(){
+    if (!bioPossible() || !MOI.nom || MOI.nom === "administrateur" || bioEtat(MOI.nom)) return;
+    var dispo = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : Promise.resolve(false);
+    dispo.then(function(ok){ if (!ok || $("biop")) return;
+      var v = document.createElement("div"); v.id = "biop"; v.className = "voile";
+      v.innerHTML = '<div class="feuille"><div class="grip"></div><h3 style="margin:0 0 6px">Entrer avec votre empreinte ou votre visage ?</h3><p class="muted" style="margin:0 0 16px">La prochaine fois, cet appareil vous reconnaîtra, sans mot de passe. Rien ne quitte votre appareil : ni empreinte, ni image. Votre mot de passe reste valable.</p><div class="row"><button type="button" id="biop-oui">Activer</button><button type="button" class="ghost" id="biop-non">Plus tard</button></div><div class="msg" id="biop-msg"></div></div>';
+      document.body.appendChild(v);
+      $("biop-non").onclick = function(){ bioNote(MOI.nom, "plus tard"); v.remove(); };
+      $("biop-oui").onclick = function(){ $("biop-msg").textContent = "Suivez la demande de votre appareil"; bioActiver().then(function(){ $("biop-msg").textContent = "C'est activé."; appareilCarte(); setTimeout(function(){ v.remove(); }, 900); }).catch(function(e){ $("biop-msg").textContent = bioErreur(e); }); };
+    }).catch(function(){});
+  }
+  /* la carte « Cet appareil » de l'accueil : empreinte ou visage, et installation de l'application */
+  function appareilCarte(){
+    var z = $("appareil"); if (!z) return;
+    var nomme = MOI.nom && MOI.nom !== "administrateur";
+    var bio = !bioPossible() ? '<p class="muted" style="margin:0">Cet appareil ou ce navigateur ne propose pas l\'empreinte ni la reconnaissance faciale.</p>' : !nomme ? '<p class="muted" style="margin:0">L\'empreinte et la reconnaissance faciale se posent sur un accès nommé : entrez avec votre prénom.</p>' : '<div id="bioliste"><p class="muted" style="margin:0">Chargement</p></div><div class="row" style="margin-top:10px"><button type="button" class="ghost" id="bioplus">Activer l\'empreinte ou le visage sur cet appareil</button><span class="msg" id="biomsg"></span></div>';
+    z.innerHTML = '<h3>Cet appareil</h3>' + bio + '<div class="row" style="margin-top:12px"><button type="button" class="ghost" data-installer hidden>Installer l\'application</button><span class="muted small" id="instaide"></span></div>';
+    installerMaj();
+    if (!$("bioliste")) return;
+    var dessiner = function(L){ $("bioliste").innerHTML = L.length ? L.map(function(c){ return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)"><span><b>' + esc(c.appareil || "Appareil") + '</b><span class="muted small"> · activé le ' + fdate(c.cree_le) + (c.derniere_le ? ', utilisé le ' + fdate(c.derniere_le) : '') + '</span></span><button type="button" class="ghost" data-biox="' + c.id + '">Retirer</button></div>'; }).join("") : '<p class="muted" style="margin:0">Aucun appareil ne vous reconnaît encore par l\'empreinte ou le visage.</p>';
+      $("bioliste").querySelectorAll("[data-biox]").forEach(function(b){ b.onclick = function(){ b.disabled = true; poste("cle-retirer", { id: +b.dataset.biox }).then(function(r){ if (!r.cles.length) bioNote(MOI.nom, ""); dessiner(r.cles); }).catch(function(e){ $("biomsg").textContent = e.message; }); }; }); };
+    poste("cle-liste").then(function(r){ dessiner(r.cles); }).catch(function(){ $("bioliste").innerHTML = ""; });
+    $("bioplus").onclick = function(){ $("biomsg").textContent = "Suivez la demande de votre appareil"; bioActiver().then(function(r){ $("biomsg").textContent = "C'est activé."; dessiner(r.cles); }).catch(function(e){ $("biomsg").textContent = bioErreur(e); }); };
+  }
+  /* ---------- l'application installée : téléphone, tablette ou ordinateur ---------- */
+  var INSTALL = null;
+  function installee(){ return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true; }
+  function installerMaj(){
+    var ios = /iPhone|iPad/.test(navigator.userAgent) && !installee();
+    document.querySelectorAll("[data-installer]").forEach(function(b){ b.hidden = installee() || (!INSTALL && !ios); b.onclick = function(e){ e.preventDefault();
+      if (INSTALL) { INSTALL.prompt(); INSTALL.userChoice.then(function(){ INSTALL = null; installerMaj(); }); }
+      else window.alert("Sur iPhone ou iPad : touchez Partager, puis « Sur l'écran d'accueil ». L'application s'ouvrira ensuite comme les autres."); }; });
+    var a = $("instaide"); if (a) a.textContent = installee() ? "L'application est installée sur cet appareil." : (!INSTALL && !ios ? "Pour l'installer : ouvrez cette page dans Chrome ou Edge, menu, puis « Installer l'application »." : "");
+  }
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); INSTALL = e; installerMaj(); });
+  window.addEventListener("appinstalled", function(){ INSTALL = null; installerMaj(); });
+  if ("serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", function(){ navigator.serviceWorker.register("/sw.js").catch(function(){}); });
   function enter(){
     var pw = $("pw").value, prenom = $("prenom").value.trim(); $("lmsg").textContent = "";
     fetch("/api/forms?action=admin-login", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: pw, prenom: prenom }) })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? (prenom ? "Prénom ou mot de passe refusé" : "Mot de passe refusé") : (j.detail || "Connexion impossible")); TOKEN = j.token; MOI = { nom: j.nom, role: j.role, version: j.version, equipe: j.equipe, theme: j.theme }; applyTheme(); try{ sessionStorage.setItem("yid_token", TOKEN); sessionStorage.setItem("yid_moi", JSON.stringify(MOI)); }catch(e){} opened(); })
+      .then(function(j){ if (!j.ok) throw new Error(j.error === "password" ? (prenom ? "Prénom ou mot de passe refusé" : "Mot de passe refusé") : (j.detail || "Connexion impossible")); ouvrirSession(j); setTimeout(bioProposer, 1200); })
       .catch(function(e){ $("lmsg").textContent = e.message; });
   }
   var PHOTOS = {};
@@ -263,6 +338,7 @@
   function avatarHtml(nom, taille){ var p = photoDe(nom), t = taille || 42; return p ? '<img class="avatar" src="' + p + '" alt="' + esc(nom) + '" style="width:' + t + 'px;height:' + t + 'px">' : '<span class="avatar" style="width:' + t + 'px;height:' + t + 'px">' + esc(String(nom || "?").charAt(0).toUpperCase()) + '</span>'; }
   function opened(){ $("login").hidden = true; V.hidden = false; $("nav").hidden = false; $("moi").hidden = false; $("pied").hidden = false; document.querySelectorAll('#nav a[data-v="reglages"], #nav a[data-v="nouveau"]').forEach(function(a){ a.hidden = MOI.role !== "administrateur"; }); var h = new Date().getHours(), prenom = String(MOI.nom || "").split(" ")[0]; $("who").textContent = (h >= 18 || h < 5 ? "Bonsoir " : "Bonjour ") + (prenom === "administrateur" ? "" : prenom); $("ladate").textContent = new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" }); $("avatar").innerHTML = avatarHtml(MOI.nom); if (MOI.version) $("ver").textContent = "Version " + MOI.version; route(); }
   function logout(msg){ try{ sessionStorage.removeItem("yid_token"); sessionStorage.removeItem("yid_moi"); }catch(e){} TOKEN = ""; MOI = {}; $("login").hidden = false; V.hidden = true; $("nav").hidden = true; $("moi").hidden = true; $("pied").hidden = true; if (msg) $("lmsg").textContent = msg; }
+  if (bioPossible()) { $("bio").hidden = false; $("bio").onclick = bioEntrer; } installerMaj();
   $("go").onclick = enter; $("pw").onkeydown = function(e){ if (e.key === "Enter") enter(); }; $("prenom").onkeydown = function(e){ if (e.key === "Enter") $("pw").focus(); };
   /* Les textes longs se replient sur deux lignes, avec un Voir plus */
   (function(){ var t = null; new MutationObserver(function(){ clearTimeout(t); t = setTimeout(function(){ V.querySelectorAll(".card > p, p.lead, .bloc .lead").forEach(function(p){ if (p.hasAttribute("data-replie") || p.closest(".feuille,.sc,table") || p.querySelector("input,select,textarea,button") || (p.textContent || "").length < 170) return; p.setAttribute("data-replie", ""); }); YID.voirPlus(V); }, 60); }).observe(V, { childList: true, subtree: true }); })();
@@ -359,7 +435,9 @@
         chiffres + '<h2 class="sec">Vos mariages</h2>' + familles + '<div class="' + (ACC_VUE === "clos" ? "fam-clos" : "") + '">' + maries + '</div>' + soirHtml +
         '<h2 class="sec" style="margin-top:28px">Partenaires</h2><a class="verre" href="#/partenaires" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;text-decoration:none;color:inherit;max-width:640px"><span style="flex:1"><b style="display:block">Répertoire des partenaires</b><span class="muted small">Hôtels, transporteurs, conciergerie, lieux et planners, avec chaque échange tracé.</span></span><span style="color:var(--gold)">›</span></a>' +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
-        (MOI.role === "administrateur" ? '<div class="row" style="margin-top:26px"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>' : '');
+        '<div class="card" id="appareil" style="margin-top:26px;max-width:640px"></div>' +
+        (MOI.role === "administrateur" ? '<div class="row" style="margin-top:18px"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>' : '');
+      appareilCarte();
       $("check").onclick = runCheck;
       $("familles").querySelectorAll("[data-fam]").forEach(function(b){ b.onclick = function(){ ACC_VUE = b.dataset.fam; accueil(); }; });
       if ($("mpile")) { YID.pileActive = YID.pile($("mpile"), { onChange: function(i, n){ $("mcnt").textContent = (i + 1) + " / " + n; YID.points($("mdots"), i, n); } }); V.querySelectorAll("[data-go]").forEach(function(c){ c.onclick = function(){ location.hash = "#/m/" + c.dataset.go; }; }); }
