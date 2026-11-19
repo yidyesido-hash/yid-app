@@ -116,9 +116,9 @@
   }
   .kpi{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; } .kpi b{ display:block; font:500 34px/1 var(--h); font-variant-numeric:tabular-nums; } .kpi span{ font-size:12.5px; color:var(--muted); }
 </style>
-<link rel="stylesheet" href="/habillage.css?v=1.25.2">
-<link rel="stylesheet" href="/cartes.css?v=1.25.2">
-<script src="/cartes.js?v=1.25.2"></script>
+<link rel="stylesheet" href="/habillage.css?v=1.25.3">
+<link rel="stylesheet" href="/cartes.css?v=1.25.3">
+<script src="/cartes.js?v=1.25.3"></script>
 </head>
 <body>
 <header>
@@ -159,9 +159,9 @@
   var MOTEUR_PRET = null;
   function chargerMoteur(){
     if (MOTEUR_PRET) return MOTEUR_PRET;
-    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.2"; document.head.appendChild(css);
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "/formulaire/formulaire.css?v=1.25.3"; document.head.appendChild(css);
     var un = function(src){ return new Promise(function(ok, ko){ var x = document.createElement("script"); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); };
-    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.2").then(function(){ return un("/formulaire/moteur.js?v=1.25.2"); });
+    MOTEUR_PRET = un("/formulaire/pays.js?v=1.25.3").then(function(){ return un("/formulaire/moteur.js?v=1.25.3"); });
     return MOTEUR_PRET;
   }
   function apercuFormulaire(m, o){
@@ -294,6 +294,7 @@
     if (m) return mariage(m[1].toUpperCase(), m[2] === "journal" || m[2] === "espace" ? m[2] : (m[2] ? +m[2] : null));
     if (h.indexOf("#/nouveau") === 0) return cadrage(null);
     if (h.indexOf("#/guide") === 0) return guide();
+    if (h.indexOf("#/journal") === 0) return journalGlobal();
     if (h.indexOf("#/reglages") === 0) return MOI.role === "administrateur" ? reglages() : accueil();
     if (h.indexOf("#/nouveau") === 0 && MOI.role !== "administrateur") return accueil();
     return accueil();
@@ -358,7 +359,7 @@
         chiffres + '<h2 class="sec">Vos mariages</h2>' + familles + '<div class="' + (ACC_VUE === "clos" ? "fam-clos" : "") + '">' + maries + '</div>' + soirHtml +
         '<h2 class="sec" style="margin-top:28px">Partenaires</h2><a class="verre" href="#/partenaires" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;text-decoration:none;color:inherit;max-width:640px"><span style="flex:1"><b style="display:block">Répertoire des partenaires</b><span class="muted small">Hôtels, transporteurs, conciergerie, lieux et planners, avec chaque échange tracé.</span></span><span style="color:var(--gold)">›</span></a>' +
         '<h2 class="sec">Connexions</h2><p class="lead">Base de données, SharePoint et boîte email : tout est routé quand les trois voyants sont verts.</p><div class="row" style="margin-bottom:14px"><button id="check">Vérifier la connexion</button><span class="muted" id="cmsg"></span></div>' + lightsHtml() +
-        '<h2 class="sec" style="margin-top:26px">Journal récent</h2><p class="lead">Les douze dernières opérations, tous mariages confondus. Le journal maître complet est dans <a href="#/reglages">Réglages</a>, celui d\'un mariage dans sa page.</p>' + journalHtml(j.journal, true);
+        '<div class="row" style="margin-top:26px"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>';
       $("check").onclick = runCheck;
       $("familles").querySelectorAll("[data-fam]").forEach(function(b){ b.onclick = function(){ ACC_VUE = b.dataset.fam; accueil(); }; });
       if ($("mpile")) { YID.pileActive = YID.pile($("mpile"), { onChange: function(i, n){ $("mcnt").textContent = (i + 1) + " / " + n; YID.points($("mdots"), i, n); } }); V.querySelectorAll("[data-go]").forEach(function(c){ c.onclick = function(){ location.hash = "#/m/" + c.dataset.go; }; }); }
@@ -383,6 +384,13 @@
   }
 
   /* ---------- réglages ---------- */
+  /* ---------- journal global : une page à part, hors du menu, ouverte par un bouton ---------- */
+  function journalGlobal(){
+    V.innerHTML = '<p><a class="lienbas" href="#/">‹ Retour à l\'accueil</a></p><h2 class="sec">Journal global</h2><p class="lead">Toutes les opérations, tous mariages confondus, les plus récentes en premier. Chaque mariage a aussi son propre journal, dans sa page.</p><div class="row" style="margin-bottom:12px"><input id="jsearch" placeholder="Filtrer (mariage, opération, qui)" style="max-width:360px"><span class="muted small" id="jcount"></span></div><div id="jmaster"><p class="muted">Chargement</p></div>';
+      var JL = [];
+      function jtable(){ var s = ($("jsearch").value || "").toLowerCase(); var list = JL.filter(function(l){ return !s || ((l.mariage_code || "") + " " + l.operation + " " + (l.detail || "") + " " + (l.operateur || "")).toLowerCase().indexOf(s) >= 0; }); $("jcount").textContent = list.length + " ligne(s)"; $("jmaster").innerHTML = journalHtml(list, true); }
+      api("admin-journal", { limit: 500 }).then(function(r){ LIB = r.libelles || LIB; JL = r.journal || []; jtable(); $("jsearch").oninput = jtable; }).catch(function(e){ $("jmaster").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+  }
   function reglages(){
     V.innerHTML = '<p class="muted">Chargement</p>';
     var admin = MOI.role === "administrateur";
@@ -399,7 +407,7 @@
         '<div class="card" id="equipe"><h3>L\'équipe</h3><p>Un accès par personne, avec son prénom et son mot de passe : le journal retient ainsi qui a fait quoi. Un accès ne se supprime pas, il se désactive.</p><div id="ulist" class="muted">Chargement</div>' +
           (admin ? '<div class="row" style="margin-top:14px"><input id="unom" placeholder="Prénom" style="max-width:200px"><select id="urole" style="max-width:200px"><option value="équipe">équipe</option><option value="administrateur">administrateur</option></select><input id="upw" type="password" placeholder="Mot de passe (8 caractères au moins)" style="max-width:300px" autocomplete="new-password"><button id="uadd">Ajouter ou mettre à jour</button></div><div class="msg" id="umsg"></div><p class="small muted" style="margin-top:8px">Pour changer le mot de passe ou le rôle d\'une personne, saisissez son prénom avec les nouvelles valeurs. Le mot de passe d\'installation reste la clé de secours, au nom « administrateur ».</p>' : '<p class="small muted">Seul un administrateur peut créer ou modifier des accès.</p>') + '</div>' +
         '<div class="card"><h3>Les sept étapes</h3><p>Les intitulés des étapes d\'un mariage, identiques à la feuille de route remise au couple.</p><ol>' + j.etapes.map(function(e){ return "<li>" + esc(e) + "</li>"; }).join("") + '</ol></div>' +
-        '<h2 class="sec" style="margin-top:26px">Journal maître</h2><p class="lead">Toutes les opérations, tous mariages confondus, les plus récentes en premier. Chaque mariage a aussi son propre journal, dans sa page.</p><div class="row" style="margin-bottom:12px"><input id="jsearch" placeholder="Filtrer (mariage, opération, qui)" style="max-width:360px"><span class="muted small" id="jcount"></span></div><div id="jmaster"><p class="muted">Chargement</p></div>';
+        '<h2 class="sec" style="margin-top:26px">Journal global</h2><p class="lead">Toutes les opérations, tous mariages confondus, sont réunies sur une page à part.</p><div class="row"><button type="button" class="ghost" onclick="location.hash=\'#/journal\'">Ouvrir le journal global</button></div>';
       $("savechem").onclick = function(){ $("rmsg").textContent = "Enregistrement"; api("admin-reglages", { cle: "cheminement", valeur: $("chem").value }).then(function(){ $("rmsg").textContent = "Enregistré."; }).catch(function(e){ $("rmsg").textContent = e.message; }); };
       $("photo").onclick = function(){ YID.choisirPhoto(1200, function(d){ $("phmsg").textContent = "Envoi"; api("admin-photo", { photo: d }).then(function(r){ if (r && r.ok === false) throw new Error(r.detail || "Envoi impossible"); PHOTOS[MOI.nom] = d; $("maphoto").innerHTML = avatarHtml(MOI.nom, 72); $("avatar").innerHTML = avatarHtml(MOI.nom); $("phmsg").textContent = "Enregistrée."; }).catch(function(e){ $("phmsg").textContent = e.message; }); }); };
       if ($("savetel")) $("savetel").onclick = function(){ $("telmsg").textContent = "Enregistrement"; Promise.all(["tel_cecilia", "tel_regis", "tel_ligne", "plafond_whatsapp", "delai_whatsapp"].filter(function(k){ return $(k); }).map(function(k){ return api("admin-reglages", { cle: k, valeur: $(k).value.trim() }); })).then(function(){ $("telmsg").textContent = "Enregistré."; }).catch(function(e){ $("telmsg").textContent = e.message; }); };
@@ -415,9 +423,6 @@
         }).catch(function(e){ $("ulist").textContent = e.message; }); }
       users();
       if (admin) $("uadd").onclick = function(){ $("umsg").textContent = "Enregistrement"; api("admin-utilisateur", { nom: $("unom").value, role: $("urole").value, password: $("upw").value }).then(function(r){ if (!r.ok) { $("umsg").textContent = r.error; return; } $("umsg").textContent = "Accès enregistré."; $("unom").value = ""; $("upw").value = ""; users(); }).catch(function(e){ $("umsg").textContent = e.message; }); };
-      var JL = [];
-      function jtable(){ var s = ($("jsearch").value || "").toLowerCase(); var list = JL.filter(function(l){ return !s || ((l.mariage_code || "") + " " + l.operation + " " + (l.detail || "") + " " + (l.operateur || "")).toLowerCase().indexOf(s) >= 0; }); $("jcount").textContent = list.length + " ligne(s)"; $("jmaster").innerHTML = journalHtml(list, true); }
-      api("admin-journal", { limit: 500 }).then(function(r){ LIB = r.libelles || LIB; JL = r.journal || []; jtable(); $("jsearch").oninput = jtable; }).catch(function(e){ $("jmaster").innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
     }).catch(function(e){ V.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
   }
 
